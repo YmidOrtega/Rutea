@@ -13,4 +13,21 @@
   <artifactId>rutea-solver</artifactId>
   <name>Rutea :: Solver</name>
   <description>Solver CVRP en Java puro, sin dependencias en tiempo de ejecución</description>
+
+  <!-- Sin <dependencies>: el solver solo hereda del padre las dependencias de test -->
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Los tests leen las instancias directamente de data/, sin copiarlas a src/test/resources -->
+          <systemPropertyVariables>
+            <rutea.cvrplib.dir>${maven.multiModuleProjectDirectory}/data/cvrplib/X</rutea.cvrplib.dir>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
