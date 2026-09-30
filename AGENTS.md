@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/` y `rutea-domain/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/` y la base de `web/`.
 
 ```
 rutea/

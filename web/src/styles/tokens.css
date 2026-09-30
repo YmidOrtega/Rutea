@@ -1,0 +1,30 @@
+/* Tokens de diseño. Fuente de verdad: docs/diseno.md. Ningún componente usa colores literales. */
+:root {
+  --bg: #0b0f14;
+  --panel: rgb(16 22 30 / 0.82);
+  --line: rgb(148 163 184 / 0.16);
+  --fg: #e6edf3;
+  --fg-muted: #8b98a8;
+  --sodium: #f5a524;
+
+  /* Estado de llenado de contenedores */
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --crit: #f87171;
+
+  /* Corrientes de residuo (Resolución 2184 de 2019), adaptadas al mapa oscuro */
+  --stream-recyclable: #f1f5f9;
+  --stream-organic: #34d399;
+  --stream-non-recyclable: #0a0a0a;
+  --stream-non-recyclable-edge: #cbd5e1;
+
+  --font-ui: 'Schibsted Grotesk Variable', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-18: 18px;
+  --text-24: 24px;
+  --text-32: 32px;
+}

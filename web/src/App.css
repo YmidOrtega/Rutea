@@ -1,0 +1,29 @@
+.app {
+  position: relative;
+  height: 100%;
+}
+
+.topbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.brand {
+  font-size: var(--text-18);
+  font-weight: 700;
+}
+
+.tag {
+  font-size: var(--text-12);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sodium);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
