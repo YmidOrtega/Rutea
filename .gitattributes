@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.jar binary
+
+# Instancias CVRPLIB: se conservan byte a byte como vienen de la fuente
+data/cvrplib/** -text
