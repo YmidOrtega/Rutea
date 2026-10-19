@@ -35,10 +35,20 @@
   </dependencies>
 
   <build>
+    <!-- Nombre estable: npm run demo:data y el despliegue lo usan sin depender de la versión -->
+    <finalName>rutea-app</finalName>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <!-- Sin spring-boot-starter-parent, repackage no se enlaza solo: sin esto el jar no es ejecutable -->
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
