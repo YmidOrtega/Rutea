@@ -42,6 +42,19 @@
         </executions>
       </plugin>
       <plugin>
+        <!-- Arnés de benchmarks: mvn -pl rutea-solver compile exec:java -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>me.ymid.rutea.solver.benchmark.BenchmarkHarness</mainClass>
+          <arguments>
+            <argument>${maven.multiModuleProjectDirectory}/data/cvrplib/X</argument>
+            <argument>--out</argument>
+            <argument>${project.build.directory}/benchmarks</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

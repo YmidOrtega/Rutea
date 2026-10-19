@@ -21,8 +21,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - [x] Estructura Maven multi-módulo y frontend Vite.
 - [x] Lector de instancias y soluciones CVRPLIB (`EUC_2D`).
 - [x] Modelo de instancia y solución; evaluador de costo y factibilidad.
-- [ ] Solver de referencia (vecino más cercano con capacidad) para probar el arnés de punta a punta.
-- [ ] Arnés de benchmarks que escribe CSV.
+- [x] Solver de referencia (vecino más cercano con capacidad) para probar el arnés de punta a punta.
+- [x] Arnés de benchmarks que escribe CSV.
 - [ ] Dominio inicial: corrientes de residuo (Res. 2184/2019) y reglas de recolección con `NormRef`.
 - [ ] Mapa de demo con datos simulados sobre cuadrícula.
 - [ ] Correr `mvn verify` en local y en CI.

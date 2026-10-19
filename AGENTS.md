@@ -56,8 +56,8 @@ Comandos previstos; se activan cuando exista cada módulo. Actualiza esta secci�
 # Backend
 mvn verify                                   # compila y corre todos los tests
 mvn -pl rutea-solver test                    # solo el solver
-mvn -pl rutea-solver exec:java \
-  -Dexec.args="../data/cvrplib/X"            # arnés de benchmarks → rutea-solver/target/benchmarks/*.csv
+mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-solver/target/benchmarks/*.csv
+                                             # opciones: -Dexec.args="<dir> --solver <n> --seed <n> --time-limit <s> --out <dir>"
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
