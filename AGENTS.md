@@ -61,10 +61,10 @@ mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-sol
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
-cd web && npm install
-npm run dev                                  # http://localhost:5173 (proxy /api → :8080)
-npm run build
-npm run demo:data                            # regenera web/public/demo/plan-suba.json
+cd web && pnpm install
+pnpm dev                                     # http://localhost:5173 (proxy /api → :8080)
+pnpm build
+pnpm demo:data                               # regenera web/public/demo/plan-suba.json
 ```
 
 ## Convenciones de código (Java)

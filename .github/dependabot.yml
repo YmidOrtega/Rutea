@@ -8,7 +8,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # El ecosistema "npm" de Dependabot también actualiza proyectos pnpm (lee pnpm-lock.yaml)
   - package-ecosystem: npm
     directory: /web
     schedule:
       interval: weekly
+    # Mismo plazo que minimumReleaseAge en web/pnpm-workspace.yaml
+    cooldown:
+      default-days: 7
