@@ -96,11 +96,11 @@ npm run demo:data                            # regenera web/public/demo/plan-sub
 
 - Decreto 1077 de 2015, Título 2 (compila el Decreto 2981 de 2013): macrorrutas y microrrutas, horarios, frecuencias, vehículos.
   - No aprovechables: frecuencia mínima de **2 veces por semana**.
-  - Recolección entre **21:00 y 06:00** en zonas residenciales, hoteles u hospitales: requiere medidas de mitigación de ruido.
+  - Recolección entre **21:00 y 06:00** en zonas residenciales, hoteles, hospitales, clínicas y centros asistenciales: requiere medidas para mitigar el ruido de la recolección y la compactación.
   - Avería de un vehículo: el servicio se restablece en máximo **3 horas**.
-  - Cambios de ruta u horario: aviso con **3 días** de anticipación, salvo emergencias.
-  - Municipios con más de 5.000 usuarios: vehículos con **caja compactadora** cerrada (excepto recolección selectiva de aprovechables y RCD).
-  - Cerca de centros educativos, hospitales y centros de salud no se compacta.
+  - Cambios de ruta, horario o frecuencia: aviso con **3 días** de anticipación, salvo caso fortuito o fuerza mayor.
+  - Municipios con más de 5.000 usuarios: vehículos con **equipo de compactación** (excepto aprovechables, RCD y no compactables); cajas de compactación cerrada hacia disposición final.
+  - Nunca se compacta frente a centros educativos, hospitales, clínicas o centros asistenciales.
 - Decreto 596 de 2016: la actividad de aprovechamiento la prestan organizaciones de recicladores de oficio. En Rutea, las rutas de aprovechables son selectivas y terminan en una ECA, no en el relleno.
 - Resolución 2184 de 2019: código de colores. **Blanco** aprovechables, **verde** orgánicos aprovechables, **negro** no aprovechables. Rutea usa este código como semántica visual.
 - Bogotá: PGIRS adoptado por Decreto 345 de 2020, hoy en el Título 12 del Decreto 653 de 2025, modificado por el Decreto 045 de 2026. Contratos de aseo prorrogados hasta 2028 (Resolución CRA 1027 de 2026, según prensa: verificar).
