@@ -61,4 +61,26 @@ public final class Evaluator {
         }
         return new Evaluation(cost, violations);
     }
+
+    /**
+     * Costo de una sola ruta, con la salida y la vuelta al depósito. La suma sobre todas las rutas
+     * es el costo de {@link #evaluate}.
+     *
+     * @throws IllegalArgumentException si la ruta visita un nodo que no es cliente
+     */
+    public static long routeCost(Instance instance, Solution solution, int route) {
+        Objects.requireNonNull(instance, "instance");
+        Objects.requireNonNull(solution, "solution");
+        long cost = 0;
+        int previous = 0;
+        for (int p = 0; p < solution.routeLength(route); p++) {
+            int customer = solution.customer(route, p);
+            if (customer < 1 || customer >= instance.size()) {
+                throw new IllegalArgumentException("Ruta #" + (route + 1) + ": el nodo " + customer + " no es un cliente");
+            }
+            cost += instance.distance(previous, customer);
+            previous = customer;
+        }
+        return cost + instance.distance(previous, 0);
+    }
 }

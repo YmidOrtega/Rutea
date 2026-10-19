@@ -44,6 +44,12 @@ class EvaluatorTest {
 
         assertThat(evaluation.violations()).isEmpty();
         assertThat(evaluation.cost()).isEqualTo(bks.cost());
+
+        long sumOfRoutes = 0;
+        for (int k = 0; k < bks.solution().routeCount(); k++) {
+            sumOfRoutes += Evaluator.routeCost(instance, bks.solution(), k);
+        }
+        assertThat(sumOfRoutes).isEqualTo(bks.cost());
     }
 
     @Test
