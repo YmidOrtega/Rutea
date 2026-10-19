@@ -41,6 +41,21 @@ class DistanceMatrixTest {
     }
 
     @Test
+    void keepsPrecomputedAsymmetricDistances() {
+        DistanceMatrix matrix = DistanceMatrix.of(new int[][] {{0, 7}, {9, 0}});
+
+        assertThat(matrix.get(0, 1)).isEqualTo(7);
+        assertThat(matrix.get(1, 0)).isEqualTo(9);
+    }
+
+    @Test
+    void rejectsNonSquareNegativeOrNonZeroDiagonal() {
+        assertThatIllegalArgumentException().isThrownBy(() -> DistanceMatrix.of(new int[][] {{0, 1}, {1}}));
+        assertThatIllegalArgumentException().isThrownBy(() -> DistanceMatrix.of(new int[][] {{0, -1}, {1, 0}}));
+        assertThatIllegalArgumentException().isThrownBy(() -> DistanceMatrix.of(new int[][] {{3, 1}, {1, 0}}));
+    }
+
+    @Test
     void rejectsCoordinatesOfDifferentLength() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> DistanceMatrix.euclidean(new double[3], new double[2]));
