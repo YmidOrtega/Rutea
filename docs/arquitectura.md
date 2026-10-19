@@ -38,13 +38,14 @@ flowchart LR
 
 Java puro, sin dependencias en tiempo de ejecución.
 
-- `model`: `Instance` (capacidad, demandas, matriz), `DistanceMatrix` (enteros, arreglo plano), `Solution` (rutas como `int[]`).
-- `io`: lectura de `.vrp` y `.sol` de CVRPLIB.
-- `eval`: `Evaluator`, la única fuente de verdad del costo y la factibilidad.
-- `api`: interfaz `Solver` y `SolveOptions` (semilla, límite de tiempo).
-- `baseline`: solver de referencia por vecino más cercano.
-- `bench`: arnés que corre un solver sobre un directorio de instancias y escribe CSV.
-- Más adelante: `construct` (Clarke-Wright), `local` (búsqueda local), `alns`.
+- Paquete raíz `me.ymid.rutea.solver`: el núcleo que comparten todos los solvers.
+  - `Instance` (capacidad, demandas, matriz), `DistanceMatrix` (enteros `nint`, arreglo plano), `Solution` (rutas como `int[]`).
+  - `Evaluator` y `Evaluation`: la única fuente de verdad del costo y la factibilidad.
+  - `Solver`, `SolverSettings` (semilla, límite de tiempo) y `Solvers`, el registro que leen el arnés y `SolverContractTest`.
+  - `NearestNeighborSolver`: solver de referencia.
+- `cvrplib`: lectura de `.vrp` y `.sol` de CVRPLIB.
+- `benchmark`: arnés que corre los solvers sobre un directorio de instancias y escribe CSV.
+- Más adelante, un paquete por técnica: `construct` (Clarke-Wright), `local` (búsqueda local), `alns`.
 
 ### rutea-domain
 
