@@ -19,8 +19,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - [x] Documentación inicial (AGENTS.md, normativa, arquitectura, diseño, ADRs).
 - [x] Instancias CVRPLIB del set X (n ≤ 200) con sus BKS en `data/cvrplib/X`.
 - [x] Estructura Maven multi-módulo y frontend Vite.
-- [ ] Lector de instancias y soluciones CVRPLIB (`EUC_2D`).
-- [ ] Modelo de instancia y solución; evaluador de costo y factibilidad.
+- [x] Lector de instancias y soluciones CVRPLIB (`EUC_2D`).
+- [x] Modelo de instancia y solución; evaluador de costo y factibilidad.
 - [ ] Solver de referencia (vecino más cercano con capacidad) para probar el arnés de punta a punta.
 - [ ] Arnés de benchmarks que escribe CSV.
 - [ ] Dominio inicial: corrientes de residuo (Res. 2184/2019) y reglas de recolección con `NormRef`.
