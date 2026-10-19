@@ -25,7 +25,7 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - [x] Arnés de benchmarks que escribe CSV.
 - [x] Dominio inicial: corrientes de residuo (Res. 2184/2019) y reglas de recolección con `NormRef`.
 - [ ] Mapa de demo con datos simulados sobre cuadrícula.
-- [ ] Correr `mvn verify` en local y en CI.
+- [x] Correr `mvn verify` en local y en CI.
 - [x] Verificar contra el texto oficial al menos R02, R03 y R09 de `docs/normativa.md`.
 
 **Criterio de cierre:** el evaluador reproduce el costo publicado de todas las BKS de `data/cvrplib/X` y el arnés produce un CSV con el gap del solver de referencia.
