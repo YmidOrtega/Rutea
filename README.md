@@ -18,6 +18,7 @@ Planificador de microrrutas de recolección de residuos sólidos para Bogotá (p
 cd web && pnpm install
 pnpm dev                       # http://localhost:5173 (proxy /api → :8080)
 pnpm build
+pnpm demo:data                 # regenera el plan de demo con el solver real
 ```
 
 ## Documentación
