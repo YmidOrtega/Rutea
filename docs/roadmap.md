@@ -24,7 +24,7 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - [x] Solver de referencia (vecino más cercano con capacidad) para probar el arnés de punta a punta.
 - [x] Arnés de benchmarks que escribe CSV.
 - [x] Dominio inicial: corrientes de residuo (Res. 2184/2019) y reglas de recolección con `NormRef`.
-- [ ] Mapa de demo con datos simulados sobre cuadrícula.
+- [x] Mapa de demo con datos simulados sobre cuadrícula, generados por el solver de referencia (`pnpm demo:data`).
 - [x] Correr `mvn verify` en local y en CI.
 - [x] Verificar contra el texto oficial al menos R02, R03 y R09 de `docs/normativa.md`.
 

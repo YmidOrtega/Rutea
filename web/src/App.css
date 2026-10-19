@@ -27,3 +27,65 @@
   border-radius: 999px;
   padding: 2px 8px;
 }
+
+/* La hora actual es lo único que lleva el acento (docs/diseno.md, principio 2) */
+.clock {
+  font-size: var(--text-18);
+  color: var(--sodium);
+}
+
+.play {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--fg);
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.play:hover {
+  background: var(--line);
+}
+
+.tooltip strong,
+.tooltip span {
+  display: block;
+}
+
+.tooltip span {
+  color: var(--fg-muted);
+}
+
+.status {
+  position: absolute;
+  top: 72px;
+  left: 16px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  font-size: var(--text-13);
+}
+
+.status strong {
+  color: var(--crit);
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    right: 16px;
+    gap: 8px;
+  }
+
+  /* La zona ya la dice el mapa; el espacio es para el reloj y el control */
+  .topbar .label {
+    display: none;
+  }
+
+  .topbar .play {
+    margin-left: auto;
+  }
+}
