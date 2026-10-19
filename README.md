@@ -6,12 +6,18 @@ Planificador de microrrutas de recolección de residuos sólidos para Bogotá (p
 
 - JDK 21
 - Maven 3.9+ (o el wrapper incluido `./mvnw`)
+- Node.js 22+ (solo para `web/`)
 
 ## Comandos
 
 ```bash
 ./mvnw verify                  # compila y corre todos los tests
 ./mvnw -pl rutea-solver test   # solo el solver
+./mvnw -pl rutea-app spring-boot:run   # API en http://localhost:8080
+
+cd web && npm install
+npm run dev                    # http://localhost:5173 (proxy /api → :8080)
+npm run build
 ```
 
 ## Documentación
