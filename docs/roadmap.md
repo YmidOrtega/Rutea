@@ -6,8 +6,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 
 | Fase | Nombre | Estado |
 |---|---|---|
-| F0 | Fundamentos | **En curso** |
-| F1 | Primer solver | Pendiente |
+| F0 | Fundamentos | Completa |
+| F1 | Primer solver | **Siguiente** |
 | F2 | Metaheurística y paralelismo | Pendiente |
 | F3 | Mapa real | Pendiente |
 | F4 | Restricciones del dominio | Pendiente |
@@ -36,6 +36,7 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - Búsqueda local: 2-opt intra-ruta, relocate, swap, 2-opt* inter-ruta.
 - Evaluación de movimientos en O(1) con cargas acumuladas por ruta.
 - Listas de vecinos (granular) para no explorar movimientos inútiles.
+- Matrices asimétricas desde el inicio: con calles de un solo sentido, ir de A a B no cuesta lo mismo que de B a A. Los movimientos que invierten tramos (2-opt) recalculan el costo en el sentido nuevo, y se prueban también con instancias asimétricas, porque las de CVRPLIB son todas simétricas.
 
 **Criterio de cierre:** gap promedio menor a 5 % en las instancias X con n ≤ 200 de `data/cvrplib`.
 
@@ -87,6 +88,10 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - Horarios estimados de paso por sector (R04).
 - Docker Compose: un comando para levantar todo.
 - Caso escrito en ymid.me con las métricas.
+
+## Más adelante (sin fase asignada)
+
+- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá.
 
 **Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
 
