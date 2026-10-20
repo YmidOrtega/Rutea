@@ -91,7 +91,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Dijkstra. Centro de Suba → Doña Juana: 32,6 km de ida y 34,0 km de vuelta.
 - [ ] Ubicar la portería real de Doña Juana: hoy el destino es el vértice más cercano al centro del rectángulo que encierra el relleno, a 1.155 m de ese centro.
 - [x] Matriz de distancias y tiempos en paralelo (`TravelMatrix`): 1.701 × 1.701 sobre el grafo real en 377 ms con 16 hilos y 3,6 s con uno. Sale idéntica en los dos casos; el 97,5 % de las celdas es asimétrico.
-- [ ] Contenedores simulados, viajes de descarga, escala del solver y frontend sobre las geometrías reales.
+- [x] 850 contenedores negros simulados (`SimulatedContainers`, semilla 1) sobre 693,9 km de calle local de Suba (terciaria, sin clasificar, residencial y `living_street`), repartidos según la longitud de calle porque los edificios de OSM en Suba están incompletos. Separación mínima de 50 m; la mediana al vecino más cercano es de 116 m. La matriz con el relleno (851 × 851) sale en 230 ms.
+- [ ] Demanda por contenedor, base de los camiones, viajes de descarga, escala del solver y frontend sobre las geometrías reales.
 
 ## F4 — Restricciones del dominio (3 semanas)
 
