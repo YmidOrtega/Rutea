@@ -1,7 +1,42 @@
-import { PathLayer, ScatterplotLayer } from '@deck.gl/layers'
+import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Trip } from '../demo/plan'
 import { fillColor, strokeColor, type Palette } from './colors'
+import suba from './suba.json'
+
+/** Contorno de la localidad de Suba (OpenStreetMap; fuente y licencia en suba.json). */
+const SUBA = suba.geometry.coordinates[0] as LonLat[]
+
+/** Rectángulo holgado alrededor de Bogotá: lo que queda fuera de Suba dentro de él se oscurece. */
+const SURROUNDINGS: LonLat[] = [
+  [-75, 4],
+  [-73, 4],
+  [-73, 5.6],
+  [-75, 5.6],
+  [-75, 4],
+]
+
+/** Foco en la zona piloto: oscurece el resto de la ciudad y traza el borde de la localidad. */
+export function zoneLayers(palette: Palette) {
+  return [
+    new PolygonLayer<LonLat[][]>({
+      id: 'zone-mask',
+      data: [[SURROUNDINGS, SUBA]],
+      getPolygon: (rings) => rings,
+      getFillColor: [...palette.bg, 150],
+      stroked: false,
+    }),
+    new PathLayer<LonLat[]>({
+      id: 'zone-edge',
+      data: [SUBA],
+      getPath: (ring) => ring,
+      getColor: [...palette.fgMuted, 200],
+      getWidth: 1.5,
+      widthUnits: 'pixels',
+      jointRounded: true,
+    }),
+  ]
+}
 
 /** Capas que solo cambian con el plan o con las rutas visibles. */
 export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
