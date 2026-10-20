@@ -86,4 +86,16 @@ public final class DistanceMatrix {
     public int get(int from, int to) {
         return distances[from * size + to];
     }
+
+    /** Si ir de {@code i} a {@code j} cuesta siempre lo mismo que volver. Recorre la matriz: O(n²). */
+    public boolean isSymmetric() {
+        for (int i = 0; i < size; i++) {
+            for (int j = i + 1; j < size; j++) {
+                if (distances[i * size + j] != distances[j * size + i]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }

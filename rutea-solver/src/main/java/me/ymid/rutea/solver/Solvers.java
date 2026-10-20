@@ -9,7 +9,7 @@ import java.util.Optional;
  */
 public final class Solvers {
 
-    private static final List<Solver> ALL = List.of(new NearestNeighborSolver());
+    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver());
 
     private Solvers() {
     }

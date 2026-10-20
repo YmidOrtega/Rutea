@@ -42,10 +42,10 @@ Java puro, sin dependencias en tiempo de ejecución.
   - `Instance` (capacidad, demandas, matriz), `DistanceMatrix` (enteros `nint`, arreglo plano), `Solution` (rutas como `int[]`).
   - `Evaluator` y `Evaluation`: la única fuente de verdad del costo y la factibilidad.
   - `Solver`, `SolverSettings` (semilla, límite de tiempo) y `Solvers`, el registro que leen el arnés y `SolverContractTest`.
-  - `NearestNeighborSolver`: solver de referencia.
+  - Constructivos, de una sola clase cada uno: `NearestNeighborSolver` (referencia) y `ClarkeWrightSolver` (ahorros, válido con distancias asimétricas).
 - `cvrplib`: lectura de `.vrp` y `.sol` de CVRPLIB.
 - `benchmark`: arnés que corre los solvers sobre un directorio de instancias y escribe CSV.
-- Más adelante, un paquete por técnica: `construct` (Clarke-Wright), `local` (búsqueda local), `alns`.
+- Más adelante, un paquete por técnica que necesite varias clases: `local` (búsqueda local), `alns`.
 
 ### rutea-domain
 
