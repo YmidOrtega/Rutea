@@ -19,7 +19,7 @@ importers:
         version: 9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.5.2)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@deck.gl/maplibre':
         specifier: ^9.4.0
-        version: 9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(maplibre-gl@6.11.2)
+        version: 9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(maplibre-gl@6.14.0)
       '@fontsource-variable/schibsted-grotesk':
         specifier: ^5.3.0
         version: 5.3.0
@@ -27,8 +27,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       maplibre-gl:
-        specifier: ^6.11.2
-        version: 6.11.2
+        specifier: ^6.14.0
+        version: 6.14.0
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -37,7 +37,7 @@ importers:
         version: 19.3.0(react@19.3.0)
       react-map-gl:
         specifier: ^8.1.3
-        version: 8.1.3(maplibre-gl@6.11.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 8.1.3(maplibre-gl@6.14.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     devDependencies:
       '@types/node':
         specifier: ^24.13.3
@@ -145,6 +145,11 @@ packages:
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
 
+  '@loaders.gl/draco@4.5.4':
+    resolution: {integrity: sha512-CK0AgHxSC+goyyIh4rEyemN3eOtINtTfXcdyO390+8mRn3zGFccITSwl7eKHS8PKkFjQfJC+E4B8MUDVRSZvhA==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+
   '@loaders.gl/geoarrow@4.5.2':
     resolution: {integrity: sha512-DwhZo5b24+RbsbRpndNysD85Q4Sw+6bAzIUsktubWXJcCnHwj22AVsBFv5tZhmkyi/Ma/DFbfpmyj1FAkJciZg==}
     peerDependencies:
@@ -165,6 +170,11 @@ packages:
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
 
+  '@loaders.gl/gltf@4.5.4':
+    resolution: {integrity: sha512-xkAyyVzXV3dkAgf0HU4Ft16lvu+tZROxqj+4jmeIRxKb0Agj9mmmS22zfIebPGDQh6rj7+AwpmaQVYlHxL8HGg==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+
   '@loaders.gl/images@4.4.5':
     resolution: {integrity: sha512-7/odHt5n67OVLHelTm1euNNw5gCwycezQI7Wg3NBUg7q3bHWmTPY++Z4uz2egiuzJNY3GLegfg8AI1c3fD64Jw==}
     peerDependencies:
@@ -175,11 +185,19 @@ packages:
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
 
+  '@loaders.gl/images@4.5.4':
+    resolution: {integrity: sha512-Z/7SSC9v+iQdcpwkr7nSloCpgAREuO2/3yD4niAhk+ar7nrgRByaiBH16L51M5Juse8MG3oC67gaO85VuUb3jA==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+
   '@loaders.gl/loader-utils@4.4.5':
     resolution: {integrity: sha512-c4h2RUMEru+hbfvgZEIy5cLQKyQka2TPQZW/2Wy+yIPr3FU7RKwfp+vLwIfir6Xkdn2zniWyWretZwE02aY/Ug==}
 
   '@loaders.gl/loader-utils@4.5.2':
     resolution: {integrity: sha512-ov5se9HOmvgJasOHq9v2dyEfYGClSVQFyFwaD78BD8Nqz1xRxU5O5TRk19WpIExs9MFpNyqVgUHq1yE1PTwWLQ==}
+
+  '@loaders.gl/loader-utils@4.5.4':
+    resolution: {integrity: sha512-ZUNn/4+DEn8yTKGUKdjlbA7ok2JyNrica/Lvf1d8dwx7vCUSZ84PBB9cNtrx8VDXmVjkIClQzmnriz16QHjTMQ==}
 
   '@loaders.gl/math@4.5.2':
     resolution: {integrity: sha512-w1GCMMoRAPz1rDjRiOAMp/07INlFIQgbLsoKYaXfXWKid7KRG7yry/4rO9piLCvxJEm2Cn/9Omc9+6F2oroc2w==}
@@ -201,11 +219,19 @@ packages:
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
 
+  '@loaders.gl/schema-utils@4.5.4':
+    resolution: {integrity: sha512-vV52aT4RJiHzzbHlwdkX254d/ubdNzcxJuFfrfDeyUZkKDa//YPhVFjCxfNlxXgS+7pS0TGakfNB18vyYkk3FA==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+
   '@loaders.gl/schema@4.4.5':
     resolution: {integrity: sha512-q2XNquegw+hX+ZEshacKYL/+FKBUIS5FHA+2Ft3JWmcNiR6umGnYCdXQhDcFCqAm8Ks87fMCV+z/zTloxaIZgQ==}
 
   '@loaders.gl/schema@4.5.1':
     resolution: {integrity: sha512-qrMqcwIHQRCfAx/zkujuI8ZfiwaOXvh82y5OXVfPkGtAw5EhLBM3fQxqdNOpfVhy0m4GCC6QvlXyurJXcx++yQ==}
+
+  '@loaders.gl/schema@4.5.4':
+    resolution: {integrity: sha512-5CO/TY2OkmM53+qfSvzMt17LwVJhBatqi/QaO45VOn8poTK1jqyZvnI0qvKFqOsMWzHh4yoQVUnxaWiV4CZ41w==}
 
   '@loaders.gl/terrain@4.5.2':
     resolution: {integrity: sha512-d7aaAyNHYZVgdfLoPtRyC2qQdehZgZeDNYQkIytUIgLP49VWnxK+747ai9a/L1CJfOKzVCawxp56jpdlcnOpDQ==}
@@ -219,6 +245,15 @@ packages:
 
   '@loaders.gl/textures@4.5.2':
     resolution: {integrity: sha512-X3ocrevlzXmUQFVUuxGciWoemwC8ZsU0CAKGP1vDrWawENHCuZB6l/gXWiAi2O/xSe8tAvbTLPAqpDV/FLSNVQ==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+      texture-compressor: ^1.0.2
+    peerDependenciesMeta:
+      texture-compressor:
+        optional: true
+
+  '@loaders.gl/textures@4.5.4':
+    resolution: {integrity: sha512-rfLWejZo0QKlTHSUhPDhZnRDC7Fuk+dw+sBojggRG2NLLAo1UAz/uN7sM//7iyxfd0R3LhNntVYKSi41xbYKrQ==}
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
       texture-compressor: ^1.0.2
@@ -243,6 +278,11 @@ packages:
 
   '@loaders.gl/worker-utils@4.5.2':
     resolution: {integrity: sha512-w5zWjtWQZRYME9Gk7v+u5tAs5bHa+09at10106vZ7wNI0YP4kbcVu424+vxP2dfppR54U2goiS1RY4QGYGXXcQ==}
+    peerDependencies:
+      '@loaders.gl/core': ~4.5.0
+
+  '@loaders.gl/worker-utils@4.5.4':
+    resolution: {integrity: sha512-OvVMMLh56QdBQgyMDxuho9doWq6oiz7paqP3rwidb+LqgJB5GvdqcoL+GbUcku2X8k0ZxCldvo+l46Yhpv0bfQ==}
     peerDependencies:
       '@loaders.gl/core': ~4.5.0
 
@@ -312,6 +352,9 @@ packages:
   '@mapbox/tiny-sdf@2.2.0':
     resolution: {integrity: sha512-LVL4wgI9YAum5V+LNVQO6QgFBPw7/MIIY4XJPNsPDMrjEwcE+JfKk1LuIl8GnF197ejVdC9QdPaxrx5gfgdGXg==}
 
+  '@mapbox/tiny-sdf@2.3.0':
+    resolution: {integrity: sha512-gBvcNDBBB66bgQYvnaJ6Jk+VCaMmVq5+IZR2kWPisT88Z8s0kBQt6hfVi8QgRW8Vpg0UWZzBA4ZSyzHHC+VeRA==}
+
   '@mapbox/unitbezier@0.0.1':
     resolution: {integrity: sha512-nMkuDXFv60aBr9soUG5q+GvZYL+2KZHVvsqFCzqnkGEf46U2fvmytHaEVc1/YZbiLn8X+eR3QzX1+dwDO1lxlw==}
 
@@ -324,8 +367,8 @@ packages:
   '@mapbox/vector-tile@3.0.0':
     resolution: {integrity: sha512-Qf10S1uIHMk20ri/IVBnpS+esUEkVaR5Hftmz88jTInrpmWgPGJfPe3LVjjlE77trLx8tH6qjTG7uWH9hIq/0Q==}
 
-  '@maplibre/geojson-vt@6.1.1':
-    resolution: {integrity: sha512-FVMOcmSP/yqol45t7StApEyTL5/vmqBCuFhH9n+fFuINenhaX+YgHHIt1yJ86S8kln3uJLcMvmEU2cfn6E2eCQ==}
+  '@maplibre/geojson-vt@6.1.2':
+    resolution: {integrity: sha512-2ZYhobdAY+y4/P/z1xe0698165LywD0yDdWugdu3NRUrajgVWut+tLkcz7i/RJguMTURwK7gxwmwYMFJbgbQFw==}
 
   '@maplibre/maplibre-gl-style-spec@19.3.3':
     resolution: {integrity: sha512-cOZZOVhDSulgK0meTsTkmNXb1ahVvmTmWmfx9gRBwc6hq98wS9JP35ESIoNq3xqEan+UN+gn8187Z6E4NKhLsw==}
@@ -950,8 +993,8 @@ packages:
   lz4js@0.2.0:
     resolution: {integrity: sha512-gY2Ia9Lm7Ep8qMiuGRhvUq0Q7qUereeldZPP1PMEJxPtEWHJLqw9pgX68oHajBH0nzJK4MaZEA/YNV3jT8u8Bg==}
 
-  maplibre-gl@6.11.2:
-    resolution: {integrity: sha512-Xh06pxoipjX/Ad1sUPGhiNh9go9naCNGZZ1IJm3sIeqK1kYGuMaMDSTIGDQ2igOLfVyukJU7kvEOA089VO7Z7g==}
+  maplibre-gl@6.14.0:
+    resolution: {integrity: sha512-L7U9y9TyPJ3P/JJbW+eH+A3FzdPq+3fnZFqqeCwf/S6cRGganHwVI5b/C8/zOYzreUzsloDPZVVaMQA94wOt4A==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
   md5@2.3.0:
@@ -1276,17 +1319,17 @@ snapshots:
       '@types/geojson': 7946.0.16
       earcut: 2.2.4
 
-  '@deck.gl/maplibre@9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(maplibre-gl@6.11.2)':
+  '@deck.gl/maplibre@9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(maplibre-gl@6.14.0)':
     dependencies:
       '@deck.gl/core': 9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@luma.gl/core': 9.4.2
-      maplibre-gl: 6.11.2
+      maplibre-gl: 6.14.0
 
   '@deck.gl/mesh-layers@9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.5.2)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))(@luma.gl/gltf@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))(texture-compressor@1.0.2)':
     dependencies:
       '@deck.gl/core': 9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
-      '@loaders.gl/gltf': 4.5.2(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)
-      '@loaders.gl/schema': 4.5.1
+      '@loaders.gl/gltf': 4.5.4(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)
+      '@loaders.gl/schema': 4.5.4
       '@luma.gl/core': 9.4.2
       '@luma.gl/engine': 9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))
       '@luma.gl/gltf': 9.4.2(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))
@@ -1375,6 +1418,15 @@ snapshots:
       '@loaders.gl/worker-utils': 4.5.2(@loaders.gl/core@4.5.2)
       draco3d: 1.5.7
 
+  '@loaders.gl/draco@4.5.4(@loaders.gl/core@4.5.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+      '@loaders.gl/loader-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/schema': 4.5.4
+      '@loaders.gl/schema-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/worker-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      draco3d: 1.5.7
+
   '@loaders.gl/geoarrow@4.5.2(@loaders.gl/core@4.5.2)':
     dependencies:
       '@loaders.gl/core': 4.5.2
@@ -1416,6 +1468,19 @@ snapshots:
     transitivePeerDependencies:
       - texture-compressor
 
+  '@loaders.gl/gltf@4.5.4(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+      '@loaders.gl/draco': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/images': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/loader-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/schema': 4.5.4
+      '@loaders.gl/textures': 4.5.4(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)
+      '@math.gl/core': 4.1.0
+      meshoptimizer: 1.3.0
+    transitivePeerDependencies:
+      - texture-compressor
+
   '@loaders.gl/images@4.4.5(@loaders.gl/core@4.4.5)':
     dependencies:
       '@loaders.gl/core': 4.4.5
@@ -1425,6 +1490,11 @@ snapshots:
     dependencies:
       '@loaders.gl/core': 4.5.2
       '@loaders.gl/loader-utils': 4.5.2(@loaders.gl/core@4.5.2)
+
+  '@loaders.gl/images@4.5.4(@loaders.gl/core@4.5.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+      '@loaders.gl/loader-utils': 4.5.4(@loaders.gl/core@4.5.2)
 
   '@loaders.gl/loader-utils@4.4.5(@loaders.gl/core@4.4.5)':
     dependencies:
@@ -1439,6 +1509,15 @@ snapshots:
     dependencies:
       '@loaders.gl/schema': 4.5.1
       '@loaders.gl/worker-utils': 4.5.2(@loaders.gl/core@4.5.2)
+      '@probe.gl/log': 4.1.2
+      '@probe.gl/stats': 4.1.2
+    transitivePeerDependencies:
+      - '@loaders.gl/core'
+
+  '@loaders.gl/loader-utils@4.5.4(@loaders.gl/core@4.5.2)':
+    dependencies:
+      '@loaders.gl/schema': 4.5.4
+      '@loaders.gl/worker-utils': 4.5.4(@loaders.gl/core@4.5.2)
       '@probe.gl/log': 4.1.2
       '@probe.gl/stats': 4.1.2
     transitivePeerDependencies:
@@ -1478,12 +1557,25 @@ snapshots:
       '@types/geojson': 7946.0.16
       apache-arrow: 21.2.0
 
+  '@loaders.gl/schema-utils@4.5.4(@loaders.gl/core@4.5.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+      '@loaders.gl/schema': 4.5.4
+      '@math.gl/types': 4.1.0
+      '@types/geojson': 7946.0.16
+      apache-arrow: 21.2.0
+
   '@loaders.gl/schema@4.4.5':
     dependencies:
       '@types/geojson': 7946.0.16
       apache-arrow: 21.2.0
 
   '@loaders.gl/schema@4.5.1':
+    dependencies:
+      '@types/geojson': 7946.0.16
+      apache-arrow: 21.2.0
+
+  '@loaders.gl/schema@4.5.4':
     dependencies:
       '@types/geojson': 7946.0.16
       apache-arrow: 21.2.0
@@ -1519,6 +1611,18 @@ snapshots:
     optionalDependencies:
       texture-compressor: 1.0.2
 
+  '@loaders.gl/textures@4.5.4(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+      '@loaders.gl/images': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/loader-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      '@loaders.gl/schema': 4.5.4
+      '@loaders.gl/worker-utils': 4.5.4(@loaders.gl/core@4.5.2)
+      '@math.gl/types': 4.1.0
+      ktx-parse: 0.7.1
+    optionalDependencies:
+      texture-compressor: 1.0.2
+
   '@loaders.gl/tiles@4.5.2(@loaders.gl/core@4.5.2)':
     dependencies:
       '@loaders.gl/core': 4.5.2
@@ -1545,6 +1649,10 @@ snapshots:
       '@loaders.gl/core': 4.4.5
 
   '@loaders.gl/worker-utils@4.5.2(@loaders.gl/core@4.5.2)':
+    dependencies:
+      '@loaders.gl/core': 4.5.2
+
+  '@loaders.gl/worker-utils@4.5.4(@loaders.gl/core@4.5.2)':
     dependencies:
       '@loaders.gl/core': 4.5.2
 
@@ -1631,6 +1739,8 @@ snapshots:
 
   '@mapbox/tiny-sdf@2.2.0': {}
 
+  '@mapbox/tiny-sdf@2.3.0': {}
+
   '@mapbox/unitbezier@0.0.1': {}
 
   '@mapbox/unitbezier@1.0.0': {}
@@ -1645,7 +1755,7 @@ snapshots:
       '@types/geojson': 7946.0.16
       pbf: 5.1.2
 
-  '@maplibre/geojson-vt@6.1.1':
+  '@maplibre/geojson-vt@6.1.2':
     dependencies:
       kdbush: 4.1.0
 
@@ -1880,13 +1990,13 @@ snapshots:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
-  '@vis.gl/react-maplibre@8.1.3(maplibre-gl@6.11.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@vis.gl/react-maplibre@8.1.3(maplibre-gl@6.14.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@maplibre/maplibre-gl-style-spec': 19.3.3
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
     optionalDependencies:
-      maplibre-gl: 6.11.2
+      maplibre-gl: 6.14.0
 
   '@vitejs/plugin-react@6.1.1(vite@8.3.1(@types/node@24.19.0))':
     dependencies:
@@ -2107,13 +2217,13 @@ snapshots:
   lz4js@0.2.0:
     optional: true
 
-  maplibre-gl@6.11.2:
+  maplibre-gl@6.14.0:
     dependencies:
       '@mapbox/point-geometry': 1.1.0
-      '@mapbox/tiny-sdf': 2.2.0
+      '@mapbox/tiny-sdf': 2.3.0
       '@mapbox/unitbezier': 1.0.0
       '@mapbox/vector-tile': 3.0.0
-      '@maplibre/geojson-vt': 6.1.1
+      '@maplibre/geojson-vt': 6.1.2
       '@maplibre/maplibre-gl-style-spec': 26.4.4
       '@maplibre/mlt': 1.3.0
       '@maplibre/vt-pbf': 4.3.2
@@ -2202,14 +2312,14 @@ snapshots:
       react: 19.3.0
       scheduler: 0.28.0
 
-  react-map-gl@8.1.3(maplibre-gl@6.11.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  react-map-gl@8.1.3(maplibre-gl@6.14.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@vis.gl/react-mapbox': 8.1.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@vis.gl/react-maplibre': 8.1.3(maplibre-gl@6.11.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@vis.gl/react-maplibre': 8.1.3(maplibre-gl@6.14.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
     optionalDependencies:
-      maplibre-gl: 6.11.2
+      maplibre-gl: 6.14.0
 
   react@19.3.0: {}
 
