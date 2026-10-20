@@ -38,9 +38,14 @@ public final class BenchmarkHarness {
     }
 
     public static void main(String[] args) throws IOException {
+        main(args, Solvers.all());
+    }
+
+    /** Con {@code available} otro módulo agrega solvers que el solver no puede conocer, como Timefold. */
+    public static void main(String[] args, List<Solver> available) throws IOException {
         Path instances = null;
         Path out = Path.of("target", "benchmarks");
-        List<Solver> solvers = Solvers.all();
+        List<Solver> solvers = available;
         long seed = 1;
         Duration timeLimit = Duration.ofSeconds(60);
         long iterationLimit = Long.MAX_VALUE;
@@ -53,9 +58,10 @@ public final class BenchmarkHarness {
                     case "--iterations" -> iterationLimit = Long.parseLong(value(args, ++i));
                     case "--solver" -> {
                         String name = value(args, ++i);
-                        solvers = List.of(Solvers.byName(name).orElseThrow(() -> new IllegalArgumentException(
-                                "solver desconocido '" + name + "'; disponibles: "
-                                        + Solvers.all().stream().map(Solver::name).toList())));
+                        solvers = List.of(available.stream().filter(solver -> solver.name().equals(name))
+                                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                                        "solver desconocido '" + name + "'; disponibles: "
+                                                + available.stream().map(Solver::name).toList())));
                     }
                     default -> {
                         if (args[i].startsWith("--") || instances != null) {
