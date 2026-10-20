@@ -3,6 +3,7 @@ package me.ymid.rutea.solver;
 import java.util.List;
 import java.util.Optional;
 
+import me.ymid.rutea.solver.alns.AlnsSolver;
 import me.ymid.rutea.solver.local.LocalSearchSolver;
 
 /**
@@ -11,7 +12,7 @@ import me.ymid.rutea.solver.local.LocalSearchSolver;
  */
 public final class Solvers {
 
-    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver());
+    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver(), new AlnsSolver());
 
     private Solvers() {
     }
