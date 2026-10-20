@@ -73,29 +73,14 @@ public final class ShortestPaths {
             throw new IllegalArgumentException("el vértice " + target + " no se alcanza desde " + source);
         }
         int count = 0;
-        for (int v = target; v != source; v = sourceOf(parentEdge[v])) {
+        for (int v = target; v != source; v = graph.source(parentEdge[v])) {
             count++;
         }
         int[] edges = new int[count];
-        for (int v = target, i = count - 1; v != source; v = sourceOf(parentEdge[v]), i--) {
+        for (int v = target, i = count - 1; v != source; v = graph.source(parentEdge[v]), i--) {
             edges[i] = parentEdge[v];
         }
         return edges;
-    }
-
-    private int sourceOf(int edge) {
-        // El CSR no guarda el origen de cada arco: se busca el vértice cuyo rango lo contiene.
-        int lo = 0;
-        int hi = graph.vertexCount() - 1;
-        while (lo < hi) {
-            int mid = (lo + hi + 1) >>> 1;
-            if (graph.firstEdge(mid) <= edge) {
-                lo = mid;
-            } else {
-                hi = mid - 1;
-            }
-        }
-        return lo;
     }
 
     private void runUntil(int source, int[] targets) {

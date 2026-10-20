@@ -43,6 +43,7 @@ class RoadGraphFileTest {
         assertThat(read.firstShapePoint()).isEqualTo(GRAPH.firstShapePoint());
         assertThat(read.shapeLatE7()).isEqualTo(GRAPH.shapeLatE7());
         assertThat(read.shapeLonE7()).isEqualTo(GRAPH.shapeLonE7());
+        assertThat(read.shapeInLocality()).isEqualTo(GRAPH.shapeInLocality());
         assertThat(dir.resolve("g.rgraph.tmp")).doesNotExist();
     }
 

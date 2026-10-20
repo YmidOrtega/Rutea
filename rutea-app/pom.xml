@@ -24,6 +24,16 @@
       <artifactId>rutea-domain</artifactId>
     </dependency>
     <dependency>
+      <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-geo</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-geo</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>

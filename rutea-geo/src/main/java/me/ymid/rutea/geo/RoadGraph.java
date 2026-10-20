@@ -26,17 +26,19 @@ public final class RoadGraph {
     private final int[] firstShapePoint;
     private final int[] shapeLatE7;
     private final int[] shapeLonE7;
+    private final boolean[] shapeInLocality;
 
     RoadGraph(long[] osmNodeIds, int[] latE7, int[] lonE7, int[] firstEdge, int[] edgeTarget, int[] edgeMeters,
             int[] edgeSeconds, byte[] edgeRoadClass, int[] edgeShape, int[] firstShapePoint, int[] shapeLatE7,
-            int[] shapeLonE7) {
+            int[] shapeLonE7, boolean[] shapeInLocality) {
         int vertices = osmNodeIds.length;
         int edges = edgeTarget.length;
         if (latE7.length != vertices || lonE7.length != vertices || firstEdge.length != vertices + 1
                 || firstEdge[vertices] != edges || edgeMeters.length != edges || edgeSeconds.length != edges
                 || edgeRoadClass.length != edges || edgeShape.length != edges
                 || shapeLatE7.length != shapeLonE7.length
-                || firstShapePoint[firstShapePoint.length - 1] != shapeLatE7.length) {
+                || firstShapePoint[firstShapePoint.length - 1] != shapeLatE7.length
+                || shapeInLocality.length != firstShapePoint.length - 1) {
             throw new IllegalArgumentException("arreglos del grafo con longitudes incoherentes");
         }
         this.osmNodeIds = osmNodeIds;
@@ -51,6 +53,7 @@ public final class RoadGraph {
         this.firstShapePoint = firstShapePoint;
         this.shapeLatE7 = shapeLatE7;
         this.shapeLonE7 = shapeLonE7;
+        this.shapeInLocality = shapeInLocality;
     }
 
     public int vertexCount() {
@@ -90,6 +93,21 @@ public final class RoadGraph {
         return edgeTarget[edge];
     }
 
+    /** Origen del arco. El CSR no lo guarda: se busca por bisección el vértice cuyo rango lo contiene. */
+    public int source(int edge) {
+        int lo = 0;
+        int hi = vertexCount() - 1;
+        while (lo < hi) {
+            int mid = (lo + hi + 1) >>> 1;
+            if (firstEdge[mid] <= edge) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        return lo;
+    }
+
     public int meters(int edge) {
         return edgeMeters[edge];
     }
@@ -121,6 +139,11 @@ public final class RoadGraph {
 
     public int shapeLonE7(int point) {
         return shapeLonE7[point];
+    }
+
+    /** Si el trazo está dentro de la localidad (por su punto medio), no en el corredor hacia el destino. */
+    public boolean shapeInLocality(int shape) {
+        return shapeInLocality[shape];
     }
 
     /** Vértice más cercano a un punto, en línea recta. Recorre todos los vértices: es para consultas sueltas. */
@@ -183,5 +206,9 @@ public final class RoadGraph {
 
     int[] shapeLonE7() {
         return shapeLonE7;
+    }
+
+    boolean[] shapeInLocality() {
+        return shapeInLocality;
     }
 }

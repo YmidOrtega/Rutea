@@ -59,6 +59,12 @@
         <artifactId>rutea-geo</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>me.ymid.rutea</groupId>
+        <artifactId>rutea-geo</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>

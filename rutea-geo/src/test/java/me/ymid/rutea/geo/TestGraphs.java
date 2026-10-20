@@ -49,6 +49,6 @@ final class TestGraphs {
             shapeLon[2 * i + 1] = lon[sorted[i][1]];
         }
         return new RoadGraph(ids, lat, lon, firstEdge, target, meters, seconds, new byte[e], shape, firstShapePoint,
-                shapeLat, shapeLon);
+                shapeLat, shapeLon, new boolean[e]);
     }
 }

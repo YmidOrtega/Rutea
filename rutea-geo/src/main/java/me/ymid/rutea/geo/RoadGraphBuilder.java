@@ -310,6 +310,7 @@ public final class RoadGraphBuilder {
         firstShapePoint.add(0);
         IntList shapeLat = new IntList(shapes.size() * 4);
         IntList shapeLon = new IntList(shapes.size() * 4);
+        List<Boolean> shapeInLocality = new ArrayList<>();
         long streetMeters = 0;
         int edgeCount = keptEdges.size();
         int[] edgeTarget = new int[edgeCount];
@@ -327,18 +328,22 @@ public final class RoadGraphBuilder {
             int base = oldShape >= 0 ? oldShape : ~oldShape;
             if (newShapeId[base] < 0) {
                 newShapeId[base] = firstShapePoint.size() - 1;
-                for (int node : shapes.get(base)) {
+                int[] points = shapes.get(base);
+                for (int node : points) {
                     shapeLat.add(nodes.latE7[node]);
                     shapeLon.add(nodes.lonE7[node]);
                 }
                 firstShapePoint.add(shapeLat.size());
+                int middle = points[points.length / 2];
+                shapeInLocality.add(locality.contains(nodes.latE7[middle], nodes.lonE7[middle]));
                 streetMeters += edgeMeters[e];
             }
             edgeShape[e] = oldShape >= 0 ? newShapeId[base] : ~newShapeId[base];
         }
 
         RoadGraph graph = new RoadGraph(osmIds, lat, lon, newFirstEdge, edgeTarget, edgeMeters, edgeSeconds,
-                edgeRoadClass, edgeShape, firstShapePoint.toArray(), shapeLat.toArray(), shapeLon.toArray());
+                edgeRoadClass, edgeShape, firstShapePoint.toArray(), shapeLat.toArray(), shapeLon.toArray(),
+                toBooleans(shapeInLocality));
         int[] center = center(destination);
         int destinationVertex = graph.nearestVertex(center[0], center[1]);
         int destinationMeters = (int) Math.round(Haversine.meters(center[0], center[1],
@@ -348,6 +353,14 @@ public final class RoadGraphBuilder {
                 kept, edgeCount, graph.shapeCount(), streetMeters, localityVertices,
                 graph.nearestVertex(localityCenter[0], localityCenter[1]), destinationVertex, destinationMeters);
         return new Result(graph, report);
+    }
+
+    private static boolean[] toBooleans(List<Boolean> values) {
+        boolean[] array = new boolean[values.size()];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = values.get(i);
+        }
+        return array;
     }
 
     private static void addEdge(IntList source, IntList target, IntList meters, IntList seconds, IntList roadClass,

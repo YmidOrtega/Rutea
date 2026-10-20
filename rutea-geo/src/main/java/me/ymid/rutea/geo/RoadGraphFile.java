@@ -22,6 +22,7 @@ import java.util.zip.CRC32;
  * "RUTEAGRF" · versión · SHA-256 del PBF de origen · AreaSpec
  * vértices · arcos · trazos · puntos de trazo
  * ids OSM · lat · lon · primer arco · destino · metros · segundos · clase · trazo · primer punto · lat · lon
+ * · trazo en la localidad (un byte por trazo)
  * CRC32 de todo lo anterior
  * </pre>
  *
@@ -29,7 +30,7 @@ import java.util.zip.CRC32;
  */
 public final class RoadGraphFile {
 
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     private static final byte[] MAGIC = "RUTEAGRF".getBytes(StandardCharsets.US_ASCII);
     private static final int HEADER_BYTES = MAGIC.length + 4 + 32 + 8 + 8 + 8 + 4 + 4 * 4;
@@ -50,7 +51,7 @@ public final class RoadGraphFile {
         int s = graph.shapeCount();
         int p = graph.shapeLatE7().length;
         long size = HEADER_BYTES + 8L * v + 4L * (v + v + v + 1) + 4L * (e + e + e + e) + e + 4L * (s + 1)
-                + 4L * (p + p) + 4;
+                + 4L * (p + p) + s + 4;
         if (size > Integer.MAX_VALUE - 8) {
             throw new IOException("grafo de " + size + " bytes: no cabe en un solo archivo de este formato");
         }
@@ -71,6 +72,9 @@ public final class RoadGraphFile {
         putInts(buffer, graph.firstShapePoint());
         putInts(buffer, graph.shapeLatE7());
         putInts(buffer, graph.shapeLonE7());
+        for (boolean inLocality : graph.shapeInLocality()) {
+            buffer.put((byte) (inLocality ? 1 : 0));
+        }
         CRC32 crc = new CRC32();
         crc.update(buffer.array(), 0, buffer.position());
         buffer.putInt((int) crc.getValue());
@@ -119,11 +123,18 @@ public final class RoadGraphFile {
         int[] firstShapePoint = getInts(buffer, s + 1);
         int[] shapeLat = getInts(buffer, p);
         int[] shapeLon = getInts(buffer, p);
+        if (buffer.remaining() < s + 4) {
+            throw new IOException(name + ": grafo cortado en las marcas de localidad");
+        }
+        boolean[] inLocality = new boolean[s];
+        for (int i = 0; i < s; i++) {
+            inLocality[i] = buffer.get() != 0;
+        }
         if (buffer.remaining() != 4) {
             throw new IOException(name + ": sobran " + (buffer.remaining() - 4) + " bytes");
         }
         RoadGraph graph = new RoadGraph(osmIds, lat, lon, firstEdge, target, meters, seconds, roadClass, shape,
-                firstShapePoint, shapeLat, shapeLon);
+                firstShapePoint, shapeLat, shapeLon, inLocality);
         return new Stored(graph, sha, spec);
     }
 
