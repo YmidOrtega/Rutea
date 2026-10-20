@@ -129,4 +129,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F0 — Fundamentos.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F3 — Mapa real: Suba completa.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.

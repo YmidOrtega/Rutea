@@ -110,11 +110,11 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Docker Compose: un comando para levantar todo.
 - Caso escrito en ymid.me con las métricas.
 
+**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
+
 ## Más adelante (sin fase asignada)
 
 - **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá.
-
-**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
 
 ## Después (fuera de alcance por ahora)
 
