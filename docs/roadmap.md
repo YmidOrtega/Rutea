@@ -7,8 +7,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Fundamentos | Completa |
-| F1 | Primer solver | **Siguiente** |
-| F2 | Metaheurística y paralelismo | Pendiente |
+| F1 | Primer solver | Completa |
+| F2 | Metaheurística y paralelismo | **Siguiente** |
 | F3 | Mapa real | Pendiente |
 | F4 | Restricciones del dominio | Pendiente |
 | F5 | Operación en tiempo real | Pendiente |
@@ -39,6 +39,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - Matrices asimétricas desde el inicio: con calles de un solo sentido, ir de A a B no cuesta lo mismo que de B a A. Los movimientos que invierten tramos (2-opt) recalculan el costo en el sentido nuevo, y se prueban también con instancias asimétricas, porque las de CVRPLIB son todas simétricas.
 
 **Criterio de cierre:** gap promedio menor a 5 % en las instancias X con n ≤ 200 de `data/cvrplib`.
+
+**Resultado** (semilla 1, i5-14400F, Java 21): `clarke-wright` 6,44 %; `local-search` **3,43 %**, entre 15 y 36 ms por instancia. Hizo falta arrancar desde Clarke-Wright con varios λ (parámetro de forma del ahorro): desde un solo arranque la búsqueda local se quedaba en 5,16 %. Se sumó Or-opt (tramos de 2 y 3 clientes, también invertidos) a los movimientos previstos.
 
 ## F2 — Metaheurística y paralelismo (3–4 semanas)
 
