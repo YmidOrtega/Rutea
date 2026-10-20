@@ -63,6 +63,7 @@ mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-sol
                                              # opciones: -Dexec.args="<dir> --solver <n> --seed <n> --time-limit <s> --iterations <n> --out <dir>"
 mvn -pl rutea-bench -am compile exec:java@compare   # el mismo arnés con Timefold disponible (--solver timefold)
 mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de evaluación de movimientos
+mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend

@@ -81,6 +81,15 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 **Criterio de cierre:** el solver planifica la zona piloto y las rutas se dibujan sobre calles reales.
 
+**Avance** (2026-10-20; extracto `colombia-261019`; i5-14400F, 16 hilos, Java 21.0.12):
+
+- [x] Lector PBF propio: lee los 333 MB de Colombia en 0,95 s en frío y 0,64 s en caliente, y coincide con libosmium en conteos y sumas de coordenadas.
+- [x] Grafo dirigido compacto (CSR), con sentidos viales y velocidades por tipo de vía (supuestas, no medidas). Se construye en 5,4 s: 18.134 vértices (8.195 en Suba), 34.071 arcos y 2.227 km de calles. Pesa 1,86 MB en `.rgraph`. La poda a la componente fuertemente conexa quita 99 de los 8.294 vértices de Suba (1,2 %).
+- [x] Dijkstra. Centro de Suba → Doña Juana: 32,6 km de ida y 34,0 km de vuelta.
+- [ ] Ubicar la portería real de Doña Juana: hoy el destino es el vértice más cercano al centro del rectángulo que encierra el relleno, a 1.155 m de ese centro.
+- [ ] Matriz de distancias en paralelo para los contenedores.
+- [ ] Contenedores simulados, viajes de descarga, escala del solver y frontend sobre las geometrías reales.
+
 ## F4 — Restricciones del dominio (3 semanas)
 
 - Ventanas horarias y turnos (R02).

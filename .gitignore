@@ -32,3 +32,4 @@ Thumbs.db
 # Extractos OSM (se descargan; ver data/osm/README.md)
 data/osm/*.pbf
 data/osm/*.pbf.md5
+data/osm/*.rgraph
