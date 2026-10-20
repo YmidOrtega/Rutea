@@ -64,7 +64,7 @@ Comparación externa y microbenchmarks, fuera del solver para que este siga sin 
 
 ### rutea-geo (F3)
 
-Grafo vial en arreglos compactos (CSR), Dijkstra y A*, y construcción de la matriz de distancias y tiempos.
+Grafo vial en arreglos compactos (CSR), Dijkstra y A*, y construcción de la matriz de distancias y tiempos. Lee OpenStreetMap con un lector PBF propio y guarda el grafo compilado en un binario versionado ([ADR 0004](adr/0004-grafo-vial-pbf-propio.md)).
 
 ### rutea-sim (F5)
 
