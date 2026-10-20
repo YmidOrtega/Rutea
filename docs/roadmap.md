@@ -71,7 +71,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Contenedores **simulados realistas** en toda Suba: unos 1.700, sobre calles residenciales reales y con densidad según la vivienda. La cifra sale de repartir por población los 10.746 contenedores que tenía Bogotá en 2022. Se reemplazan cuando aparezca un inventario oficial (UAESP o Área Limpia, operador del ASE 5).
   - Fuentes verificadas (2026-10-20): la UAESP cita "los 10.746 contenedores con los que contaba la ciudad" ([Bogotá.gov.co, 9 de marzo de 2022](https://bogota.gov.co/mi-ciudad/habitat/contenedores-soterrados-mejoraran-disposicion-de-residuos-en-bogota)). Según la UAESP en 2025, la licitación exigió contenerizar "más de 12,5 millones de litros": "más de 10.700 contenedores", "la mitad para residuos no aprovechables y la mitad para promover el reciclaje", y después "se pidieron 490 contenedores más" ([Bogotá.gov.co, 26 de febrero de 2025](https://bogota.gov.co/mi-ciudad/habitat/contenedores-de-basuras-en-bogota-apoyan-prestacion-servicio-aseo-2025)).
   - Consecuencia: solo la mitad negra (no aprovechables) va a Doña Juana. La blanca es ruta selectiva hacia una ECA (Decreto 596 de 2016).
-  - `PENDIENTE_VERIFICAR`: la participación de Suba en la población de Bogotá. La serie oficial es la de proyecciones DANE–SDP–RMBC 2005–2035 (agosto de 2025), y aún no encuentro su valor para Suba en una fuente primaria.
+  - El reparto por población quedó reemplazado por el 15 % del ASE 5 en las toneladas de la ciudad (PGIRS): 10.746 × 15 % × 1/2 = 806 contenedores negros. Cifras y fuentes en `docs/datos.md`.
 - Red vial: todas las calles de Suba más las vías principales de Bogotá hasta el relleno Doña Juana (Usme).
 - Operación con **viajes a Doña Juana**: el camión se llena, descarga y vuelve; turno nocturno; tiempo por contenedor. Datos de referencia: ~5.600 t/día de ordinarios en Bogotá (UAESP, 2025), unas ~900 t/día estimadas para Suba por población, compactadores de 16 y 25 yardas con 7–10 t por viaje y 40–90 min de descarga en el relleno.
 - Escala: la memoria de `Plan` (n²) y los ahorros de Clarke-Wright (todos los pares) hay que ajustarlos para ~1.700 nodos.
@@ -88,11 +88,13 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 - [x] Lector PBF propio: lee los 333 MB de Colombia en 0,95 s en frío y 0,64 s en caliente, y coincide con libosmium en conteos y sumas de coordenadas.
 - [x] Grafo dirigido compacto (CSR), con sentidos viales y velocidades por tipo de vía (supuestas, no medidas). Se construye en 5,4 s: 18.134 vértices (8.195 en Suba), 34.071 arcos y 2.227 km de calles. Pesa 1,86 MB en `.rgraph`. La poda a la componente fuertemente conexa quita 99 de los 8.294 vértices de Suba (1,2 %).
-- [x] Dijkstra. Centro de Suba → Doña Juana: 32,6 km de ida y 34,0 km de vuelta.
-- [ ] Ubicar la portería real de Doña Juana: hoy el destino es el vértice más cercano al centro del rectángulo que encierra el relleno, a 1.155 m de ese centro.
+- [x] Dijkstra.
+- [x] Sitios ancla en el grafo: la base de Área Limpia en Fontibón (Av. Calle 17 × Carrera 124) y la portería noreste de Doña Juana (nodo `barrier=swing_gate` sobre el borde del relleno), con sus vías privadas de acceso. El lector PBF lee ahora las etiquetas de nodo y coincide con libosmium (639.874 nodos con etiquetas). Con los sitios, el grafo tiene 18.729 vértices, 35.364 arcos y 2.287 km. Centro de Suba → portería: 30,6 km de ida y 32,9 km de vuelta. Base → centro de Suba: 18,7 km.
+- [x] Calibración: desde el centroide del ASE 5 del PGIRS, el grafo da 29,1 km hasta la portería; el PGIRS dice 32,589 km (10,7 % más). Ver `docs/datos.md`.
 - [x] Matriz de distancias y tiempos en paralelo (`TravelMatrix`): 1.701 × 1.701 sobre el grafo real en 377 ms con 16 hilos y 3,6 s con uno. Sale idéntica en los dos casos; el 97,5 % de las celdas es asimétrico.
-- [x] 850 contenedores negros simulados (`SimulatedContainers`, semilla 1) sobre 693,9 km de calle local de Suba (terciaria, sin clasificar, residencial y `living_street`), repartidos según la longitud de calle porque los edificios de OSM en Suba están incompletos. Separación mínima de 50 m; la mediana al vecino más cercano es de 116 m. La matriz con el relleno (851 × 851) sale en 230 ms.
-- [ ] Demanda por contenedor, base de los camiones, viajes de descarga, escala del solver y frontend sobre las geometrías reales.
+- [x] Contenedores negros simulados (hoy 806, ver `docs/datos.md`) (`SimulatedContainers`, semilla 1) sobre 693,9 km de calle local de Suba (terciaria, sin clasificar, residencial y `living_street`), repartidos según la longitud de calle porque los edificios de OSM en Suba están incompletos. Separación mínima de 50 m; la mediana al vecino más cercano es de 116 m. La matriz con el relleno (851 × 851) sale en 230 ms; la corrida se hizo con 850.
+- [x] Demanda: 160 kg de media por contenedor y recolección (110.760 kg/día en contenedores × 7/6 ÷ 806), con fuentes en `docs/datos.md`.
+- [ ] Viajes de descarga, escala del solver y frontend sobre las geometrías reales.
 
 ## F4 — Restricciones del dominio (3 semanas)
 
