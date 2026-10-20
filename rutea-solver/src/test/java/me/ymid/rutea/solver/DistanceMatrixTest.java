@@ -46,6 +46,8 @@ class DistanceMatrixTest {
 
         assertThat(matrix.get(0, 1)).isEqualTo(7);
         assertThat(matrix.get(1, 0)).isEqualTo(9);
+        assertThat(matrix.isSymmetric()).isFalse();
+        assertThat(DistanceMatrix.euclidean(new double[] {0, 3, 1}, new double[] {0, 4, 2}).isSymmetric()).isTrue();
     }
 
     @Test
