@@ -6,16 +6,9 @@ import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
 
 /**
- * Rutas modificables durante la búsqueda, con los acumulados que permiten evaluar un movimiento
- * en O(1).
- *
- * <p>Cada ruta se guarda con el depósito en los dos extremos: la posición {@code 0} es la salida y
- * la {@code length + 1} la vuelta. Por posición se acumulan la carga, el costo de recorrerla hacia
- * adelante y el de recorrerla al revés; con este último, invertir un tramo cuesta lo mismo de
- * calcular con distancias simétricas que asimétricas.
- *
- * <p>Evaluar no reserva memoria. Aplicar un movimiento reconstruye solo las rutas que toca, en
- * O(longitud de la ruta).
+ * Cada ruta lleva el depósito en ambos extremos y, por posición, la carga y el costo acumulados
+ * hacia adelante y al revés. El acumulado al revés permite evaluar en O(1) la inversión de un tramo
+ * también con distancias asimétricas.
  */
 final class Routes {
 
@@ -45,12 +38,10 @@ final class Routes {
         return routeOf[customer];
     }
 
-    /** Posición del cliente en su ruta, de {@code 1} a {@code length}. */
     int position(int customer) {
         return position[customer];
     }
 
-    /** Número de clientes de la ruta. */
     int length(int route) {
         return nodes[route].length - 2;
     }
@@ -67,7 +58,6 @@ final class Routes {
         return nodes[routeOf[customer]][position[customer] + 1];
     }
 
-    /** Carga desde la salida hasta {@code position}, inclusive. */
     int loadUpTo(int route, int position) {
         return load[route][position];
     }
@@ -76,17 +66,14 @@ final class Routes {
         return load[route][nodes[route].length - 1];
     }
 
-    /** Costo de recorrer de la posición {@code from} a la {@code to} hacia adelante. */
     long forwardCost(int route, int from, int to) {
         return forward[route][to] - forward[route][from];
     }
 
-    /** Costo de recorrer de la posición {@code to} a la {@code from}, es decir, al revés. */
     long backwardCost(int route, int from, int to) {
         return backward[route][to] - backward[route][from];
     }
 
-    /** Costo total de todas las rutas. O(número de rutas). */
     long cost() {
         long total = 0;
         for (long[] ahead : forward) {
@@ -95,12 +82,10 @@ final class Routes {
         return total;
     }
 
-    /** Clientes de la ruta, sin el depósito. */
     int[] customers(int route) {
         return Arrays.copyOfRange(nodes[route], 1, nodes[route].length - 1);
     }
 
-    /** Reemplaza la ruta por {@code customers}, que puede quedar vacía. */
     void set(int route, int[] customers) {
         int length = customers.length + 2;
         int[] path = new int[length];
@@ -123,7 +108,6 @@ final class Routes {
         backward[route] = behind;
     }
 
-    /** La solución sin las rutas que quedaron vacías. */
     Solution toSolution() {
         return new Solution(Arrays.stream(nodes)
                 .filter(path -> path.length > 2)

@@ -9,9 +9,7 @@ import { loadDemoPlan, STREAM_NAMES, toTrips, type Container, type DemoPlan } fr
 import { PlanPanel } from './panels/PlanPanel'
 import './App.css'
 
-/** Hora simulada de salida de los camiones; la recolección de no aprovechables es nocturna. */
 const SHIFT_START_SECONDS = 21 * 3600
-/** Segundos simulados por segundo real. */
 const PLAYBACK_SPEED = 60
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches

@@ -5,13 +5,7 @@ import java.util.Arrays;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
 
-/**
- * Rutas modificables por los operadores de ALNS: quitar clientes y volver a insertarlos.
- *
- * <p>Cada ruta es un arreglo con espacio para todos los clientes, así insertar no reserva memoria.
- * Las rutas que se vacían se conservan como huecos y se reutilizan al abrir una ruta nueva.
- * El costo total se mantiene al día con cada cambio.
- */
+/** Cada ruta reserva espacio para todos los clientes: insertar y copiar no reservan memoria. */
 final class Plan {
 
     private final Instance instance;
@@ -34,7 +28,6 @@ final class Plan {
         loads = new int[customers];
     }
 
-    /** Reemplaza el plan por {@code solution}, sin reservar memoria. */
     void assign(Solution solution) {
         for (int r = 0; r < count; r++) {
             lengths[r] = 0;
@@ -52,14 +45,12 @@ final class Plan {
         count = solution.routeCount();
     }
 
-    /** Copia independiente; copia solo la parte ocupada de cada ruta. */
     Plan copy() {
         Plan copy = new Plan(instance);
         copyInto(copy);
         return copy;
     }
 
-    /** Sobrescribe {@code target} con este plan, sin reservar memoria. */
     void copyInto(Plan target) {
         for (int r = 0; r < count; r++) {
             System.arraycopy(routes[r], 0, target.routes[r], 0, lengths[r]);
@@ -78,7 +69,6 @@ final class Plan {
         return cost;
     }
 
-    /** Rutas abiertas, incluidas las que quedaron vacías. */
     int routeCount() {
         return count;
     }
@@ -95,17 +85,14 @@ final class Plan {
         return loads[route];
     }
 
-    /** Cliente anterior en la ruta, o el depósito ({@code 0}) si es el primero. */
     int before(int route, int position) {
         return position == 0 ? 0 : routes[route][position - 1];
     }
 
-    /** Cliente siguiente en la ruta, o el depósito ({@code 0}) si es el último. */
     int after(int route, int position) {
         return position == lengths[route] - 1 ? 0 : routes[route][position + 1];
     }
 
-    /** Quita los clientes marcados en {@code removed}, conservando el orden de los demás. */
     void remove(boolean[] removed) {
         for (int r = 0; r < count; r++) {
             int[] route = routes[r];
@@ -125,10 +112,6 @@ final class Plan {
         }
     }
 
-    /**
-     * Costo de insertar {@code customer} antes de la posición {@code position} de {@code route}
-     * ({@code position == length} lo pone al final). Una ruta vacía cuesta la ida y la vuelta.
-     */
     long insertionCost(int customer, int route, int position) {
         int previous = position == 0 ? 0 : routes[route][position - 1];
         int next = position == lengths[route] ? 0 : routes[route][position];
@@ -136,15 +119,10 @@ final class Plan {
                 - instance.distance(previous, next);
     }
 
-    /** Si {@code customer} cabe en {@code route}. */
     boolean fits(int customer, int route) {
         return loads[route] + instance.demand(customer) <= instance.capacity();
     }
 
-    /**
-     * Una ruta vacía donde abrir una nueva: un hueco existente o una ruta más al final. Siempre hay,
-     * porque nunca puede haber más rutas que clientes.
-     */
     int emptyRoute() {
         for (int r = 0; r < count; r++) {
             if (lengths[r] == 0) {
@@ -166,7 +144,6 @@ final class Plan {
         }
     }
 
-    /** La solución sin las rutas vacías. */
     Solution toSolution() {
         int[][] nonEmpty = new int[count][];
         int k = 0;

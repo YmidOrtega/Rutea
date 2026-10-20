@@ -3,8 +3,8 @@ import type { WasteStream } from '../demo/plan'
 export type RGB = [number, number, number]
 
 /**
- * deck.gl pide colores como [r, g, b] y no lee variables CSS. Se leen de tokens.css al arrancar,
- * así los tokens siguen siendo la única fuente de verdad del color.
+ * deck.gl no lee variables CSS: los colores se leen de tokens.css al arrancar para que los tokens
+ * sigan siendo la única fuente de verdad.
  */
 function token(name: string): RGB {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -35,7 +35,6 @@ export function readPalette() {
 
 export type Palette = ReturnType<typeof readPalette>
 
-/** Umbrales de llenado (simulados) para el borde del contenedor. */
 export const FILL_WARN = 0.6
 export const FILL_CRIT = 0.85
 
@@ -45,7 +44,7 @@ export function fillColor(palette: Palette, fill: number): RGB {
   return palette.ok
 }
 
-/** Color visible del trazo: el negro oficial no se lee sobre el mapa, su trazo usa el borde claro. */
+/** El negro oficial no se ve sobre el mapa oscuro: su trazo usa el borde claro. */
 export function strokeColor(palette: Palette, stream: WasteStream): RGB {
   return stream === 'NON_RECYCLABLE' ? palette.nonRecyclableEdge : palette.stream[stream]
 }

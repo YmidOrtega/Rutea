@@ -11,37 +11,22 @@ import me.ymid.rutea.solver.local.LocalSearch;
 import me.ymid.rutea.solver.local.LocalSearchSolver;
 
 /**
- * Búsqueda adaptativa de vecindario grande (ALNS, Ropke y Pisinger 2006). Parte de la solución de
- * {@link LocalSearchSolver} y repite: quitar una parte de los clientes, volver a insertarlos,
- * pulir con búsqueda local y decidir con recocido simulado si el resultado reemplaza al actual.
- *
- * <p>Operadores para quitar: al azar, los que más cuestan donde están, grupos de clientes cercanos
- * entre sí (Shaw) y tramos de rutas vecinas (como en SISR, Christiaens y Vanden Berghe 2020).
- * Para insertar: voraz en orden aleatorio, que a veces se salta una posición para diversificar, y
- * regret-2, que inserta primero al cliente que más perdería si se le acaba su mejor opción.
- * Cada operador gana peso cuando produce soluciones nuevas que se aceptan o mejoran.
- *
- * <p>La temperatura baja con el avance de la corrida: por iteraciones si hay límite de iteraciones
- * y por tiempo si no. Con límite de iteraciones la corrida no depende del reloj y, con la misma
- * semilla, devuelve la misma solución en cualquier máquina.
+ * ALNS (Ropke y Pisinger 2006) sobre la búsqueda local; la remoción por tramos viene de SISR
+ * (Christiaens y Vanden Berghe 2020).
  */
 public final class AlnsSolver implements Solver {
 
-    /** Iteraciones entre ajustes de los pesos de los operadores. */
     static final int SEGMENT = 100;
-    /** Cuánto pesa el último segmento al ajustar los pesos. */
     static final double REACTION = 0.1;
-    /** Puntos por producir: una mejor solución global, una mejor que la actual, una peor aceptada. */
     static final double SCORE_BEST = 33;
     static final double SCORE_BETTER = 9;
     static final double SCORE_ACCEPTED = 13;
-    /** Empeoramiento, como fracción del costo inicial, que se acepta con probabilidad ½ al empezar. */
+    /**
+     * Empeoramiento, como fracción del costo inicial, que se acepta con probabilidad ½ al empezar.
+     */
     static final double START_WORSENING = 0.005;
-    /** Factor entre la temperatura inicial y la final. */
     static final double COOLING = 100;
-    /** Probabilidad de que la inserción voraz se salte una posición. */
     static final double BLINK = 0.01;
-    /** Largo máximo de un tramo en la remoción por tramos. */
     static final int MAX_STRING = 10;
 
     private static final int DESTROY_RANDOM = 0;
@@ -67,7 +52,6 @@ public final class AlnsSolver implements Solver {
         return new Search(instance, settings, start, deadline).run(initial);
     }
 
-    /** Clientes de cada cliente ordenados del más cercano al más lejano, en cualquier sentido. */
     static int[][] closest(Instance instance) {
         int size = instance.size();
         int[][] closest = new int[size][];
@@ -89,7 +73,6 @@ public final class AlnsSolver implements Solver {
         return closest;
     }
 
-    /** Una corrida de ALNS. */
     private static final class Search {
 
         private final Instance instance;
@@ -110,7 +93,6 @@ public final class AlnsSolver implements Solver {
         private final int[] destroyUses = new int[4];
         private final int[] repairUses = new int[2];
 
-        // Memoria de trabajo, reutilizada en cada iteración
         private final boolean[] removed;
         private final int[] removedList;
         private final int[] routeOf;
@@ -188,7 +170,10 @@ public final class AlnsSolver implements Solver {
             return best;
         }
 
-        /** Avance de 0 a 1: por iteraciones si hay límite de iteraciones, si no por tiempo. */
+        /**
+         * Por iteraciones si hay límite de iteraciones: así la temperatura, y con ella la corrida,
+         * no depende del reloj.
+         */
         private double progress(long iteration, long now) {
             if (settings.hasIterationLimit()) {
                 return (double) iteration / settings.iterationLimit();
@@ -221,9 +206,6 @@ public final class AlnsSolver implements Solver {
             }
         }
 
-        // --- Quitar -------------------------------------------------------------------------
-
-        /** Marca en {@link #removed} los clientes a quitar de {@code plan} y devuelve cuántos son. */
         private int destroy(int operator, Plan plan) {
             Arrays.fill(removed, false);
             int target = minRemoved + random.nextInt(maxRemoved - minRemoved + 1);
@@ -256,9 +238,7 @@ public final class AlnsSolver implements Solver {
         }
 
         /**
-         * Los clientes que más ahorran al salir de donde están, elegidos con sesgo: la posición en
-         * la lista ordenada es {@code y³·n} con {@code y} uniforme, así casi siempre sale uno de los
-         * primeros pero no siempre el mismo.
+         * Sesgo y³: casi siempre sale uno de los primeros de la lista, pero no siempre el mismo.
          */
         private int worstRemoval(Plan plan, int target) {
             int k = 0;
@@ -268,7 +248,6 @@ public final class AlnsSolver implements Solver {
                     int a = plan.before(r, p);
                     int b = plan.after(r, p);
                     long gain = (long) instance.distance(a, c) + instance.distance(c, b) - instance.distance(a, b);
-                    // Ganancia negada para ordenar de mayor a menor; empate al cliente de menor índice
                     keys[k++] = -gain << 32 | c;
                 }
             }
@@ -286,7 +265,6 @@ public final class AlnsSolver implements Solver {
             return count;
         }
 
-        /** Shaw: un cliente al azar y luego, con sesgo, los más cercanos a alguno ya quitado. */
         private int relatedRemoval(int target) {
             int count = mark(1 + random.nextInt(customers), 0);
             while (count < target) {
@@ -304,11 +282,6 @@ public final class AlnsSolver implements Solver {
             return count;
         }
 
-        /**
-         * Tramos: desde un cliente al azar, recorre sus vecinos y de cada ruta que encuentra quita
-         * un tramo consecutivo que contiene a ese vecino. Deja huecos en rutas cercanas entre sí,
-         * que la inserción puede reorganizar entre ellas.
-         */
         private int stringRemoval(Plan plan, int target) {
             Arrays.fill(touched, 0, plan.routeCount(), false);
             int seed = 1 + random.nextInt(customers);
@@ -339,8 +312,6 @@ public final class AlnsSolver implements Solver {
             }
         }
 
-        // --- Insertar -----------------------------------------------------------------------
-
         private void repair(int operator, Plan plan, int count) {
             switch (operator) {
                 case REPAIR_GREEDY -> greedy(plan, count);
@@ -349,7 +320,6 @@ public final class AlnsSolver implements Solver {
             }
         }
 
-        /** Inserta cada cliente, en orden aleatorio, donde menos cuesta; a veces se salta una posición. */
         private void greedy(Plan plan, int count) {
             shuffle(removedList, count);
             for (int i = 0; i < count; i++) {
@@ -377,10 +347,7 @@ public final class AlnsSolver implements Solver {
             }
         }
 
-        /**
-         * Regret-2: en cada paso inserta al cliente con mayor diferencia entre su mejor ruta y la
-         * segunda mejor, en su mejor posición. Abrir una ruta nueva cuenta como una opción más.
-         */
+        /** Abrir una ruta nueva cuenta como una opción más. */
         private void regret(Plan plan, int count) {
             int pending = count;
             while (pending > 0) {

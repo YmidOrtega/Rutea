@@ -13,9 +13,7 @@ const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 const km = (meters: number) => (meters / 1000).toFixed(1)
 const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 
-/** Indicadores del plan y lista de rutas (ver docs/diseno.md, "Panel izquierdo"). */
 export function PlanPanel({ plan, visible, onToggle }: Props) {
-  // En pantallas estrechas arranca plegado: primero el mapa
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)

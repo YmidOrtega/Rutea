@@ -5,18 +5,14 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Única fuente de verdad del costo y la factibilidad de una solución.
- * Ningún solver calcula el costo final por su cuenta: lo pide aquí.
+ * Única fuente de verdad del costo y la factibilidad: ningún solver calcula el costo final por su
+ * cuenta.
  */
 public final class Evaluator {
 
     private Evaluator() {
     }
 
-    /**
-     * Evalúa la solución completa. Una solución es factible si cada ruta respeta la capacidad,
-     * ninguna ruta está vacía y cada cliente se visita exactamente una vez.
-     */
     public static Evaluation evaluate(Instance instance, Solution solution) {
         Objects.requireNonNull(instance, "instance");
         Objects.requireNonNull(solution, "solution");
@@ -62,12 +58,6 @@ public final class Evaluator {
         return new Evaluation(cost, violations);
     }
 
-    /**
-     * Costo de una sola ruta, con la salida y la vuelta al depósito. La suma sobre todas las rutas
-     * es el costo de {@link #evaluate}.
-     *
-     * @throws IllegalArgumentException si la ruta visita un nodo que no es cliente
-     */
     public static long routeCost(Instance instance, Solution solution, int route) {
         Objects.requireNonNull(instance, "instance");
         Objects.requireNonNull(solution, "solution");

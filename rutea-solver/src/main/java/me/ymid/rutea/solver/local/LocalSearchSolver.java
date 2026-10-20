@@ -10,33 +10,15 @@ import me.ymid.rutea.solver.Solver;
 import me.ymid.rutea.solver.SolverSettings;
 
 /**
- * Clarke-Wright seguido de búsqueda local hasta un óptimo local: aplica cualquier movimiento que
- * baje el costo y se detiene cuando ninguno lo hace o se acaba el tiempo.
- *
- * <p>Movimientos, todos válidos con distancias asimétricas:
- * <ul>
- *   <li><b>relocate</b> y <b>Or-opt</b>: mover un tramo de uno a {@value #MAX_SEGMENT} clientes antes
- *       o después de otro cliente, en la misma ruta o en otra, en su sentido o invertido;</li>
- *   <li><b>swap</b>: intercambiar dos clientes de rutas distintas;</li>
- *   <li><b>2-opt</b>: invertir un tramo de una ruta; el costo del tramo invertido sale de los
- *       acumulados al revés de {@link Routes}, no de suponer que ida y vuelta cuestan igual;</li>
- *   <li><b>2-opt*</b>: cruzar las colas de dos rutas, sin invertir nada; si las dos colas que se
- *       cruzan arrancan en el depósito, une dos rutas en una.</li>
- * </ul>
- *
- * <p>Granular: solo se prueban movimientos que acercan a cada cliente a uno de sus
- * {@value #NEIGHBORS} vecinos más cercanos, porque unir clientes lejanos casi nunca mejora.
- * La semilla fija el orden en que se recorren los clientes; con la misma semilla la solución es la
- * misma, salvo que el límite de tiempo corte la búsqueda antes del óptimo local.
+ * Clarke-Wright con varios λ y búsqueda local granular hasta un óptimo local. Todos los movimientos
+ * son exactos con distancias asimétricas.
  */
 public final class LocalSearchSolver implements Solver {
 
     static final int NEIGHBORS = 30;
 
-    /** Valores de λ de Clarke-Wright desde los que arranca la búsqueda; el primero es el original. */
     static final double[] SHAPES = {1.0, 0.6, 0.8, 1.2, 1.4, 1.6, 1.8, 2.0};
 
-    /** Tramo más largo que mueve Or-opt. */
     static final int MAX_SEGMENT = 3;
 
     @Override
@@ -66,9 +48,8 @@ public final class LocalSearchSolver implements Solver {
     }
 
     /**
-     * Los {@value #NEIGHBORS} clientes más cercanos a cada cliente. Con distancias asimétricas,
-     * cercano es lo más corto entre ir y volver: los movimientos pueden poner el arco en
-     * cualquiera de los dos sentidos.
+     * Con distancias asimétricas, cercano es lo más corto entre ir y volver: un movimiento puede
+     * poner el arco en cualquiera de los dos sentidos.
      */
     static int[][] neighbors(Instance instance) {
         int size = instance.size();
@@ -92,7 +73,6 @@ public final class LocalSearchSolver implements Solver {
         return neighbors;
     }
 
-    /** Una corrida de búsqueda local sobre {@code routes}, que modifica en sitio. */
     static final class Search {
 
         private final Instance instance;
@@ -142,11 +122,6 @@ public final class LocalSearchSolver implements Solver {
             return twoOpt(u, v);
         }
 
-        /**
-         * Mueve el tramo de {@code length} clientes que empieza en {@code u} justo después
-         * ({@code after}) o justo antes de {@code v}, opcionalmente invertido. Con un solo cliente
-         * es el relocate clásico; con dos o tres, Or-opt.
-         */
         private boolean relocate(int u, int v, int length, boolean after, boolean reversed) {
             int ru = routes.routeOf(u);
             int rv = routes.routeOf(v);
@@ -192,7 +167,6 @@ public final class LocalSearchSolver implements Solver {
             return true;
         }
 
-        /** Intercambia {@code u} y {@code v}, que están en rutas distintas. */
         private boolean swap(int u, int v) {
             int ru = routes.routeOf(u);
             int rv = routes.routeOf(v);
@@ -219,10 +193,6 @@ public final class LocalSearchSolver implements Solver {
             return true;
         }
 
-        /**
-         * Cruza colas: la ruta de {@code u} sigue hasta {@code u} y continúa desde {@code v}; la de
-         * {@code v} sigue hasta antes de {@code v} y continúa con lo que venía después de {@code u}.
-         */
         private boolean twoOptStar(int u, int v) {
             int ru = routes.routeOf(u);
             int rv = routes.routeOf(v);
@@ -248,7 +218,6 @@ public final class LocalSearchSolver implements Solver {
             return true;
         }
 
-        /** Invierte el tramo entre {@code u} y {@code v}, que están en la misma ruta. */
         private boolean twoOpt(int u, int v) {
             int r = routes.routeOf(u);
             int i = Math.min(routes.position(u), routes.position(v));
@@ -287,7 +256,6 @@ public final class LocalSearchSolver implements Solver {
             }
         }
 
-        /** Invierte {@code values[lo..hi]}, ambos inclusive. */
         private static void reverse(int[] values, int lo, int hi) {
             for (; lo < hi; lo++, hi--) {
                 int swap = values[lo];
@@ -311,7 +279,6 @@ public final class LocalSearchSolver implements Solver {
             return result;
         }
 
-        /** Los primeros {@code firstEnd} de {@code first} seguidos de {@code second} desde {@code secondFrom}. */
         private static int[] concat(int[] first, int firstEnd, int[] second, int secondFrom) {
             int[] result = new int[firstEnd + second.length - secondFrom];
             System.arraycopy(first, 0, result, 0, firstEnd);

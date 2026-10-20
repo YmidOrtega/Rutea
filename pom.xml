@@ -52,8 +52,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <!-- Solo dependencias de test: los módulos base no tienen dependencias en tiempo de ejecución -->
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

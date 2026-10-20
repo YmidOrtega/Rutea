@@ -80,7 +80,6 @@
     gap: 8px;
   }
 
-  /* La zona ya la dice el mapa; el espacio es para el reloj y el control */
   .topbar .label {
     display: none;
   }

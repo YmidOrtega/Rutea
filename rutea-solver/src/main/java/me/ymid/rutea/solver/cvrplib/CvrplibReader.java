@@ -13,16 +13,8 @@ import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
 
 /**
- * Lee instancias ({@code .vrp}) y soluciones ({@code .sol}) en el formato de CVRPLIB.
- *
- * <p>Soporta lo que usa el set X: {@code TYPE : CVRP}, {@code EDGE_WEIGHT_TYPE : EUC_2D} y un único
- * depósito en el nodo 1 del archivo. Acepta espacios o tabulaciones como separadores y finales de
- * línea {@code \n}, {@code \r\n} o {@code \r}. Ante cualquier otra cosa falla con el archivo y la
- * línea, en vez de adivinar.
- *
- * <p>Índices: el nodo {@code k} del archivo {@code .vrp} es el nodo {@code k - 1} de {@link Instance},
- * así que el depósito queda en {@code 0}. En el {@code .sol} los clientes ya van numerados desde
- * {@code 1} y se usan tal cual.
+ * El nodo k del .vrp es el k - 1 de Instance, para dejar el depósito en 0; los clientes del .sol ya
+ * vienen numerados desde 1.
  */
 public final class CvrplibReader {
 
@@ -98,7 +90,6 @@ public final class CvrplibReader {
 
     private enum Section { HEADER, COORDINATES, DEMANDS, DEPOTS, DONE }
 
-    /** Estado de lectura de un {@code .vrp}; una instancia por archivo. */
     private static final class InstanceParser {
 
         private final Path file;
@@ -232,7 +223,6 @@ public final class CvrplibReader {
             return tokens;
         }
 
-        /** Convierte el número de nodo del archivo (desde 1) al índice interno (desde 0). */
         private int nodeIndex(int line, String token) throws CvrplibFormatException {
             int node = parseInt(file, line, token);
             if (node < 1 || node > dimension) {

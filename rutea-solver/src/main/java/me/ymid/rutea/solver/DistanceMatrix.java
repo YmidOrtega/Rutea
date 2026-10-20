@@ -2,15 +2,6 @@ package me.ymid.rutea.solver;
 
 import java.util.Objects;
 
-/**
- * Matriz de distancias enteras entre todos los nodos, guardada en un arreglo plano para que la
- * consulta sea una sola lectura de memoria.
- *
- * <p>Las distancias euclidianas se redondean con {@code nint} de TSPLIB, la misma convención de
- * CVRPLIB para el set X. Así los costos son exactos y comparables con las BKS publicadas.
- * Las distancias de una red vial llegan ya calculadas por {@link #of(int[][])} y pueden ser
- * asimétricas (sentidos viales).
- */
 public final class DistanceMatrix {
 
     private final int size;
@@ -21,12 +12,6 @@ public final class DistanceMatrix {
         this.distances = distances;
     }
 
-    /**
-     * Construye la matriz a partir de coordenadas planas ({@code EUC_2D} en TSPLIB).
-     *
-     * @param x abscisas, una por nodo; el nodo {@code 0} es el depósito
-     * @param y ordenadas, en el mismo orden que {@code x}
-     */
     public static DistanceMatrix euclidean(double[] x, double[] y) {
         Objects.requireNonNull(x, "x");
         Objects.requireNonNull(y, "y");
@@ -48,12 +33,7 @@ public final class DistanceMatrix {
         return new DistanceMatrix(n, distances);
     }
 
-    /**
-     * Matriz a partir de distancias ya calculadas, por ejemplo sobre una red vial.
-     *
-     * @param distances matriz cuadrada; {@code distances[i][j]} es la distancia de {@code i} a
-     *                  {@code j}, no negativa y cero en la diagonal
-     */
+    /** Puede ser asimétrica: en una red vial los sentidos hacen que ir y volver cuesten distinto. */
     public static DistanceMatrix of(int[][] distances) {
         Objects.requireNonNull(distances, "distances");
         int n = distances.length;
@@ -73,12 +53,11 @@ public final class DistanceMatrix {
         return new DistanceMatrix(n, flat);
     }
 
-    /** Redondeo {@code nint} de TSPLIB: {@code (int) (x + 0.5)}, definido para distancias no negativas. */
+    /** nint de TSPLIB, el redondeo de CVRPLIB: sin él los costos no coinciden con las BKS. */
     static int nint(double value) {
         return (int) (value + 0.5);
     }
 
-    /** Número de nodos, depósito incluido. */
     public int size() {
         return size;
     }
@@ -87,7 +66,6 @@ public final class DistanceMatrix {
         return distances[from * size + to];
     }
 
-    /** Si ir de {@code i} a {@code j} cuesta siempre lo mismo que volver. Recorre la matriz: O(n²). */
     public boolean isSymmetric() {
         for (int i = 0; i < size; i++) {
             for (int j = i + 1; j < size; j++) {

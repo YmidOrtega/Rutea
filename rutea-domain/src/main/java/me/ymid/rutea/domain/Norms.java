@@ -2,7 +2,6 @@ package me.ymid.rutea.domain;
 
 import java.net.URI;
 
-/** Textos compilados oficiales contra los que se verifican las reglas. */
 final class Norms {
 
     static final String DECREE_1077_2015 = "Decreto 1077 de 2015";
