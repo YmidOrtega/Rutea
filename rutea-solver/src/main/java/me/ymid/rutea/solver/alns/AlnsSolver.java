@@ -1,7 +1,13 @@
 package me.ymid.rutea.solver.alns;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
@@ -36,9 +42,26 @@ public final class AlnsSolver implements Solver {
     private static final int REPAIR_GREEDY = 0;
     private static final int REPAIR_REGRET = 1;
 
+    private final int searches;
+
+    public AlnsSolver() {
+        this(1);
+    }
+
+    /**
+     * El número de búsquedas es fijo y no depende de los núcleos de la máquina: si dependiera, el
+     * resultado cambiaría de una máquina a otra.
+     */
+    public AlnsSolver(int searches) {
+        if (searches < 1) {
+            throw new IllegalArgumentException("se necesita al menos una búsqueda, son " + searches);
+        }
+        this.searches = searches;
+    }
+
     @Override
     public String name() {
-        return "alns";
+        return searches == 1 ? "alns" : "alns-x" + searches;
     }
 
     @Override
@@ -49,7 +72,39 @@ public final class AlnsSolver implements Solver {
         if (instance.customerCount() < 2) {
             return initial;
         }
-        return new Search(instance, settings, start, deadline).run(initial);
+        int[][] closest = closest(instance);
+        LocalSearch localSearch = new LocalSearch(instance);
+        if (searches == 1) {
+            return new Search(instance, settings, settings.seed(), start, deadline, closest, localSearch)
+                    .run(initial).solution();
+        }
+        int threads = Math.min(searches, Runtime.getRuntime().availableProcessors());
+        try (ExecutorService pool = Executors.newFixedThreadPool(threads)) {
+            List<Future<Result>> runs = new ArrayList<>();
+            for (int k = 0; k < searches; k++) {
+                // La búsqueda 0 usa la semilla de la corrida: con las mismas iteraciones, nunca queda
+                // peor que el ALNS de una sola búsqueda
+                Search search = new Search(instance, settings, settings.seed() + k, start, deadline, closest,
+                        localSearch);
+                runs.add(pool.submit(() -> search.run(initial)));
+            }
+            Result best = null;
+            for (Future<Result> run : runs) {
+                Result result = run.get();
+                if (best == null || result.cost() < best.cost()) {
+                    best = result;
+                }
+            }
+            return best.solution();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("ALNS interrumpido", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("falló una búsqueda de ALNS", e.getCause());
+        }
+    }
+
+    private record Result(Solution solution, long cost) {
     }
 
     static int[][] closest(Instance instance) {
@@ -100,14 +155,15 @@ public final class AlnsSolver implements Solver {
         private final boolean[] touched;
         private final long[] keys;
 
-        Search(Instance instance, SolverSettings settings, long start, long deadline) {
+        Search(Instance instance, SolverSettings settings, long seed, long start, long deadline, int[][] closest,
+                LocalSearch localSearch) {
             this.instance = instance;
             this.settings = settings;
             this.start = start;
             this.deadline = deadline;
-            this.random = new Random(settings.seed());
-            this.localSearch = new LocalSearch(instance);
-            this.closest = closest(instance);
+            this.random = new Random(seed);
+            this.localSearch = localSearch;
+            this.closest = closest;
             this.customers = instance.customerCount();
             this.minRemoved = Math.min(customers, 4);
             this.maxRemoved = Math.min(customers, Math.max(minRemoved, Math.min(60, customers * 3 / 10)));
@@ -119,7 +175,7 @@ public final class AlnsSolver implements Solver {
             this.keys = new long[customers];
         }
 
-        Solution run(Solution initial) {
+        Result run(Solution initial) {
             Plan current = new Plan(instance, initial);
             Plan candidate = current.copy();
             Solution best = initial;
@@ -167,7 +223,7 @@ public final class AlnsSolver implements Solver {
                     adapt(repairWeights, repairScores, repairUses);
                 }
             }
-            return best;
+            return new Result(best, bestCost);
         }
 
         /**

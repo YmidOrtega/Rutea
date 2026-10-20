@@ -9,7 +9,7 @@ import me.ymid.rutea.solver.local.LocalSearchSolver;
 /** Agregar un solver aquí basta para que el arnés lo mida y SolverContractTest lo pruebe. */
 public final class Solvers {
 
-    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver(), new AlnsSolver());
+    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver(), new AlnsSolver(), new AlnsSolver(4));
 
     private Solvers() {
     }
