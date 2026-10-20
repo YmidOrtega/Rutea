@@ -45,9 +45,17 @@ public enum RoadClass {
 
     /**
      * Clase de la vía, o vacío si no es para vehículos ({@code footway}, {@code cycleway}), no está
-     * construida, o prohíbe el paso a vehículos de carga.
+     * construida, prohíbe el paso a vehículos de carga o es privada.
      */
     public static Optional<RoadClass> of(Map<String, String> tags) {
+        return isPrivate(tags) ? Optional.empty() : ofAnyAccess(tags);
+    }
+
+    /**
+     * Como {@link #of}, pero admite vías privadas: las de un relleno o una base son privadas para el
+     * público, no para los camiones que van allí.
+     */
+    public static Optional<RoadClass> ofAnyAccess(Map<String, String> tags) {
         String highway = tags.get("highway");
         if (highway == null || "yes".equals(tags.get("area"))) {
             return Optional.empty();
@@ -71,10 +79,20 @@ public enum RoadClass {
         return Optional.of(roadClass);
     }
 
+    private static final String[] ACCESS_KEYS = {"access", "vehicle", "motor_vehicle", "hgv"};
+
     private static boolean forbidsTrucks(Map<String, String> tags) {
-        for (String key : new String[] {"access", "vehicle", "motor_vehicle", "hgv"}) {
-            String value = tags.get(key);
-            if ("no".equals(value) || "private".equals(value)) {
+        for (String key : ACCESS_KEYS) {
+            if ("no".equals(tags.get(key))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isPrivate(Map<String, String> tags) {
+        for (String key : ACCESS_KEYS) {
+            if ("private".equals(tags.get(key))) {
                 return true;
             }
         }

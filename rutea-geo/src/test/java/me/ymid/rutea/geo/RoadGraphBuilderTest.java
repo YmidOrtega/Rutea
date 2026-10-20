@@ -1,6 +1,7 @@
 package me.ymid.rutea.geo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,32 +39,34 @@ class RoadGraphBuilderTest {
             vertices.add(graph.osmNodeId(v));
         }
 
-        assertThat(vertices).containsExactly(20L, 21L, 22L, 23L, 29L, 30L, 32L);
+        assertThat(vertices).containsExactly(20L, 21L, 22L, 23L, 24L, 29L, 30L, 32L);
     }
 
     @Test
     void reportsWhatThePruningRemoved() {
         RoadGraphBuilder.Report report = result.report();
 
-        assertThat(report.candidateWays()).as("sin footway ni access=private").isEqualTo(7);
-        assertThat(report.includedWays()).as("sin la residencial fuera de la localidad").isEqualTo(6);
-        assertThat(report.verticesBeforePruning()).isEqualTo(8);
-        assertThat(report.localityVerticesBeforePruning()).isEqualTo(6);
-        assertThat(report.edgesBeforePruning()).isEqualTo(15);
-        assertThat(report.vertices()).isEqualTo(7);
-        assertThat(report.localityVertices()).isEqualTo(5);
-        assertThat(report.edges()).isEqualTo(14);
-        assertThat(report.shapes()).isEqualTo(7);
-        assertThat(result.graph().osmNodeId(report.destinationVertex())).isEqualTo(30);
+        assertThat(report.candidateWays()).as("sin la peatonal; las privadas entran como candidatas").isEqualTo(8);
+        assertThat(report.includedWays())
+                .as("sin la residencial fuera de la localidad ni la privada lejos de un sitio").isEqualTo(6);
+        assertThat(report.verticesBeforePruning()).isEqualTo(9);
+        assertThat(report.localityVerticesBeforePruning()).isEqualTo(7);
+        assertThat(report.edgesBeforePruning()).isEqualTo(17);
+        assertThat(report.vertices()).isEqualTo(8);
+        assertThat(report.localityVertices()).isEqualTo(6);
+        assertThat(report.edges()).isEqualTo(16);
+        assertThat(report.shapes()).isEqualTo(8);
+        assertThat(result.graph().osmNodeId(report.siteVertices().get(AreaSpec.DISPOSAL))).isEqualTo(30);
+        assertThat(result.graph().osmNodeId(report.siteVertices().get(AreaSpec.DEPOT))).isEqualTo(24);
     }
 
     @Test
     void twoWayStreetsShareOneShapeInOppositeDirections() {
         RoadGraph graph = result.graph();
-        int a = vertexOf(20);
-        int b = vertexOf(21);
-        int ab = edge(a, b);
-        int ba = edge(b, a);
+        int c = vertexOf(22);
+        int far = vertexOf(29);
+        int ab = edge(c, far);
+        int ba = edge(far, c);
 
         assertThat(graph.shape(ab)).isNotNegative();
         assertThat(graph.shape(ba)).isEqualTo(~graph.shape(ab));
@@ -72,19 +75,19 @@ class RoadGraphBuilderTest {
         for (int p = graph.firstShapePoint(shape); p < graph.endShapePoint(shape); p++) {
             points.add(pointId(graph.shapeLatE7(p), graph.shapeLonE7(p)));
         }
-        assertThat(points).containsExactly(20L, 24L, 21L);
+        assertThat(points).containsExactly(22L, 28L, 29L);
     }
 
     @Test
     void measuresEdgesAlongTheirGeometryWithClassSpeed() {
         RoadGraph graph = result.graph();
-        int ab = edge(vertexOf(20), vertexOf(21));
-        double meters = haversine(20, 24) + haversine(24, 21);
+        int primary = edge(vertexOf(22), vertexOf(29));
+        double meters = haversine(22, 28) + haversine(28, 29);
 
-        assertThat(graph.meters(ab)).isEqualTo((int) Math.round(meters));
-        assertThat(graph.seconds(ab)).isEqualTo((int) Math.round(graph.meters(ab) * 3.6 / 20));
-        assertThat(graph.roadClass(ab)).isEqualTo(RoadClass.RESIDENTIAL);
-        assertThat(graph.roadClass(edge(vertexOf(22), vertexOf(29)))).isEqualTo(RoadClass.PRIMARY);
+        assertThat(graph.meters(primary)).isEqualTo((int) Math.round(meters));
+        assertThat(graph.seconds(primary)).isEqualTo((int) Math.round(graph.meters(primary) * 3.6 / 40));
+        assertThat(graph.roadClass(primary)).isEqualTo(RoadClass.PRIMARY);
+        assertThat(graph.roadClass(edge(vertexOf(20), vertexOf(24)))).isEqualTo(RoadClass.RESIDENTIAL);
         assertThat(graph.roadClass(edge(vertexOf(29), vertexOf(30)))).isEqualTo(RoadClass.SERVICE);
     }
 
@@ -92,8 +95,36 @@ class RoadGraphBuilderTest {
     void marksWhichShapesLieInsideTheLocality() {
         RoadGraph graph = result.graph();
 
-        assertThat(graph.shapeInLocality(graph.shape(edge(vertexOf(20), vertexOf(21))))).isTrue();
+        assertThat(graph.shapeInLocality(graph.shape(edge(vertexOf(20), vertexOf(24))))).isTrue();
         assertThat(graph.shapeInLocality(graph.shape(edge(vertexOf(29), vertexOf(30))))).isFalse();
+    }
+
+    @Test
+    void splitsAStreetWhereASiteSits() {
+        RoadGraph graph = result.graph();
+
+        assertThat(graph.meters(edge(vertexOf(20), vertexOf(24)))).isEqualTo((int) Math.round(haversine(20, 24)));
+        assertThat(graph.meters(edge(vertexOf(24), vertexOf(21)))).isEqualTo((int) Math.round(haversine(24, 21)));
+        assertThat(graph.vertexOf(24)).hasValue(vertexOf(24));
+        assertThat(graph.vertexOf(28)).isEmpty();
+    }
+
+    @Test
+    void refusesASiteThatIsNotOnAnyIncludedRoad() {
+        // El nodo 26 solo está en una vía peatonal.
+        AreaSpec spec = new AreaSpec(100, 200, List.of(new AreaSpec.Site("peatonal", 26, 0)));
+
+        assertThatThrownBy(() -> RoadGraphBuilder.build(SampleTown.writePbf(dir), spec))
+                .hasMessageContaining("el sitio peatonal (nodo 26) no está sobre ninguna vía del recorte");
+    }
+
+    @Test
+    void refusesASiteYouCanReachButNotLeave() {
+        // El nodo 25 es el final del sentido único sin salida.
+        AreaSpec spec = new AreaSpec(100, 200, List.of(new AreaSpec.Site("trampa", 25, 0)));
+
+        assertThatThrownBy(() -> RoadGraphBuilder.build(SampleTown.writePbf(dir), spec))
+                .hasMessageContaining("el sitio trampa (nodo 25) quedó fuera de la componente fuertemente conexa");
     }
 
     @Test

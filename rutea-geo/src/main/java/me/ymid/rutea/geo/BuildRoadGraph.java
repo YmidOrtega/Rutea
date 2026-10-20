@@ -56,12 +56,18 @@ public final class BuildRoadGraph {
                   antes de podar: %,d vértices (%,d en la localidad), %,d arcos
                   componente fuertemente conexa: %,d vértices (%,d en la localidad), %,d arcos, %,d trazos
                   calles: %.1f km
-                  vértice más cercano al centro del destino: %d (OSM %d), a %,d m
                 """, buildTime, r.candidateWays(), r.includedWays(), r.verticesBeforePruning(),
                 r.localityVerticesBeforePruning(), r.edgesBeforePruning(), r.vertices(), r.localityVertices(),
-                r.edges(), r.shapes(), r.streetMeters() / 1000.0, r.destinationVertex(),
-                graph.osmNodeId(r.destinationVertex()), r.destinationVertexMeters());
-        printTrip(graph, r.localityCenterVertex(), r.destinationVertex());
+                r.edges(), r.shapes(), r.streetMeters() / 1000.0);
+        int center = r.localityCenterVertex();
+        int depot = r.siteVertices().get(AreaSpec.DEPOT);
+        int disposal = r.siteVertices().get(AreaSpec.DISPOSAL);
+        System.out.printf(Locale.ROOT, "  centro de la localidad: vértice %d (%.5f, %.5f)%n", center,
+                graph.latE7(center) / 1e7, graph.lonE7(center) / 1e7);
+        printTrip(graph, "centro de la localidad → relleno", center, disposal);
+        printTrip(graph, "relleno → centro de la localidad", disposal, center);
+        printTrip(graph, "base → centro de la localidad", depot, center);
+        printTrip(graph, "relleno → base", disposal, depot);
 
         long writeStart = System.nanoTime();
         Files.createDirectories(out.toAbsolutePath().getParent());
@@ -69,20 +75,12 @@ public final class BuildRoadGraph {
         System.out.printf(Locale.ROOT, "Guardado %s (%,d bytes) en %s%n", out, Files.size(out), elapsed(writeStart));
     }
 
-    /** Ida y vuelta entre el centro de la localidad y el destino: la prueba de que el corredor conecta. */
-    private static void printTrip(RoadGraph graph, int locality, int destination) {
-        ShortestPaths meters = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
-        ShortestPaths seconds = new ShortestPaths(graph, ShortestPaths.Weight.SECONDS);
-        System.out.printf(Locale.ROOT, "  centro de la localidad: vértice %d (%.5f, %.5f)%n", locality,
-                graph.latE7(locality) / 1e7, graph.lonE7(locality) / 1e7);
-        int[][] legs = {{locality, destination}, {destination, locality}};
-        String[] names = {"ida al destino", "vuelta a la localidad"};
-        for (int i = 0; i < legs.length; i++) {
-            int distance = meters.distances(legs[i][0], new int[] {legs[i][1]})[0];
-            int s = seconds.distances(legs[i][0], new int[] {legs[i][1]})[0];
-            System.out.printf(Locale.ROOT, "  %s: %.1f km, %d min con las velocidades supuestas%n", names[i],
-                    distance / 1000.0, Math.round(s / 60.0));
-        }
+    /** Distancia y tiempo de un viaje por el grafo: la prueba de que el corredor conecta los sitios. */
+    private static void printTrip(RoadGraph graph, String name, int from, int to) {
+        int meters = new ShortestPaths(graph, ShortestPaths.Weight.METERS).distances(from, new int[] {to})[0];
+        int seconds = new ShortestPaths(graph, ShortestPaths.Weight.SECONDS).distances(from, new int[] {to})[0];
+        System.out.printf(Locale.ROOT, "  %s: %.1f km, %d min con las velocidades supuestas%n", name,
+                meters / 1000.0, Math.round(seconds / 60.0));
     }
 
     private static String elapsed(long startNanos) {

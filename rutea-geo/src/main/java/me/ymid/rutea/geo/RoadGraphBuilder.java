@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.LongStream;
 
 import me.ymid.rutea.geo.geometry.BoundingBox;
 import me.ymid.rutea.geo.geometry.Haversine;
@@ -34,13 +35,19 @@ public final class RoadGraphBuilder {
     /** Cifras de la construcción, para reportar y para revisar que el recorte tiene sentido. */
     public record Report(int candidateWays, int includedWays, int verticesBeforePruning, int edgesBeforePruning,
             int localityVerticesBeforePruning, int vertices, int edges, int shapes, long streetMeters,
-            int localityVertices, int localityCenterVertex, int destinationVertex, int destinationVertexMeters) {
+            int localityVertices, int localityCenterVertex, Map<String, Integer> siteVertices) {
+
+        public Report {
+            siteVertices = Map.copyOf(siteVertices);
+        }
     }
 
     public record Result(RoadGraph graph, Report report) {
     }
 
-    private record Candidate(long[] nodeIds, RoadClass roadClass, Direction direction, int kmPerHour) {
+    /** {@code privateAccess}: solo entra si toca la zona de un sitio. */
+    private record Candidate(long[] nodeIds, RoadClass roadClass, Direction direction, int kmPerHour,
+            boolean privateAccess) {
     }
 
     private record Piece(int[] nodes, Candidate way) {
@@ -54,7 +61,6 @@ public final class RoadGraphBuilder {
 
         Set<Long> wantedWays = new HashSet<>();
         boundaryWays.values().forEach(wantedWays::addAll);
-        wantedWays.add(spec.destinationWay());
         Map<Long, long[]> wayNodes = new HashMap<>();
         List<Candidate> candidates = new ArrayList<>();
         PbfReader.read(pbf, EnumSet.of(Element.WAYS), block -> {
@@ -62,27 +68,40 @@ public final class RoadGraphBuilder {
                 if (wantedWays.contains(way.id())) {
                     wayNodes.put(way.id(), way.nodeIds());
                 }
-                Optional<RoadClass> roadClass = RoadClass.of(way.tags());
+                Optional<RoadClass> roadClass = RoadClass.ofAnyAccess(way.tags());
                 Direction direction = Direction.of(way.tags());
                 if (roadClass.isPresent() && direction != Direction.NONE && way.nodeIds().length >= 2) {
                     candidates.add(new Candidate(way.nodeIds(), roadClass.get(), direction,
-                            roadClass.get().kmPerHour(way.tags())));
+                            roadClass.get().kmPerHour(way.tags()), RoadClass.isPrivate(way.tags())));
                 }
             }
         });
         for (long id : wantedWays) {
             if (!wayNodes.containsKey(id)) {
-                throw new IOException(pbf.getFileName() + ": falta la vía " + id + " del límite o del destino");
+                throw new IOException(pbf.getFileName() + ": falta la vía " + id + " de un límite");
             }
         }
 
-        long[] boundaryNodeIds = wayNodes.values().stream().flatMapToLong(Arrays::stream).sorted().distinct().toArray();
+        long[] boundaryNodeIds = LongStream.concat(
+                wayNodes.values().stream().flatMapToLong(Arrays::stream),
+                spec.sites().stream().mapToLong(AreaSpec.Site::osmNode)).sorted().distinct().toArray();
         Nodes boundaryNodes = Nodes.read(pbf, boundaryNodeIds, null);
         Polygon locality = polygon(boundaryWays.get(spec.localityRelation()), wayNodes, boundaryNodes, "localidad");
         Polygon city = polygon(boundaryWays.get(spec.cityRelation()), wayNodes, boundaryNodes, "ciudad");
-        Polygon destination = polygon(List.of(spec.destinationWay()), wayNodes, boundaryNodes, "destino");
-        BoundingBox destinationZone = destination.bounds().expand(spec.destinationMarginMeters());
-        BoundingBox region = city.bounds().union(locality.bounds()).union(destinationZone);
+        List<BoundingBox> siteZones = new ArrayList<>();
+        BoundingBox region = city.bounds().union(locality.bounds());
+        for (AreaSpec.Site site : spec.sites()) {
+            int index = boundaryNodes.indexOf(site.osmNode());
+            if (index < 0) {
+                throw new IOException(pbf.getFileName() + ": no está el nodo " + site.osmNode() + " del sitio "
+                        + site.name());
+            }
+            int lat = boundaryNodes.latE7[index];
+            int lon = boundaryNodes.lonE7[index];
+            BoundingBox zone = new BoundingBox(lat, lon, lat, lon).expand(site.marginMeters());
+            siteZones.add(zone);
+            region = region.union(zone);
+        }
 
         long[] candidateNodeIds = candidates.stream().flatMapToLong(c -> Arrays.stream(c.nodeIds()))
                 .sorted().distinct().toArray();
@@ -91,12 +110,12 @@ public final class RoadGraphBuilder {
         List<Piece> pieces = new ArrayList<>();
         int includedWays = 0;
         for (Candidate candidate : candidates) {
-            if (includes(candidate, nodes, locality, city, destinationZone)) {
+            if (includes(candidate, nodes, locality, city, siteZones)) {
                 includedWays++;
                 splitIntoPieces(candidate, nodes, pieces);
             }
         }
-        return assemble(pieces, nodes, locality, destination, candidates.size(), includedWays);
+        return assemble(pieces, nodes, locality, spec.sites(), candidates.size(), includedWays);
     }
 
     /** Vías exteriores e interiores de cada límite, por id de relación. */
@@ -150,9 +169,9 @@ public final class RoadGraphBuilder {
     }
 
     private static boolean includes(Candidate way, Nodes nodes, Polygon locality, Polygon city,
-            BoundingBox destinationZone) {
-        boolean street = way.roadClass().isPublicStreet();
-        boolean arterial = way.roadClass().isArterial();
+            List<BoundingBox> siteZones) {
+        boolean street = way.roadClass().isPublicStreet() && !way.privateAccess();
+        boolean arterial = way.roadClass().isArterial() && !way.privateAccess();
         for (long id : way.nodeIds()) {
             int index = nodes.indexOf(id);
             if (index < 0) {
@@ -160,10 +179,13 @@ public final class RoadGraphBuilder {
             }
             int lat = nodes.latE7[index];
             int lon = nodes.lonE7[index];
-            if (destinationZone.contains(lat, lon)
-                    || (street && locality.contains(lat, lon))
-                    || (arterial && city.contains(lat, lon))) {
+            if ((street && locality.contains(lat, lon)) || (arterial && city.contains(lat, lon))) {
                 return true;
+            }
+            for (BoundingBox zone : siteZones) {
+                if (zone.contains(lat, lon)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -190,9 +212,9 @@ public final class RoadGraphBuilder {
         }
     }
 
-    private static Result assemble(List<Piece> pieces, Nodes nodes, Polygon locality, Polygon destination,
-            int candidateWays, int includedWays) {
-        // Un nodo es vértice si es extremo de una vía o lo comparten dos tramos.
+    private static Result assemble(List<Piece> pieces, Nodes nodes, Polygon locality, List<AreaSpec.Site> sites,
+            int candidateWays, int includedWays) throws IOException {
+        // Un nodo es vértice si es extremo de una vía, lo comparten dos tramos o es un sitio.
         int[] usage = new int[nodes.size()];
         boolean[] endpoint = new boolean[nodes.size()];
         for (Piece piece : pieces) {
@@ -201,6 +223,15 @@ public final class RoadGraphBuilder {
             }
             endpoint[piece.nodes()[0]] = true;
             endpoint[piece.nodes()[piece.nodes().length - 1]] = true;
+        }
+        int[] siteNodes = new int[sites.size()];
+        for (int i = 0; i < sites.size(); i++) {
+            siteNodes[i] = nodes.indexOf(sites.get(i).osmNode());
+            if (siteNodes[i] < 0 || usage[siteNodes[i]] == 0) {
+                throw new IOException("el sitio " + sites.get(i).name() + " (nodo " + sites.get(i).osmNode()
+                        + ") no está sobre ninguna vía del recorte");
+            }
+            endpoint[siteNodes[i]] = true;
         }
         int[] vertexOf = new int[nodes.size()];
         int vertexCount = 0;
@@ -344,14 +375,19 @@ public final class RoadGraphBuilder {
         RoadGraph graph = new RoadGraph(osmIds, lat, lon, newFirstEdge, edgeTarget, edgeMeters, edgeSeconds,
                 edgeRoadClass, edgeShape, firstShapePoint.toArray(), shapeLat.toArray(), shapeLon.toArray(),
                 toBooleans(shapeInLocality));
-        int[] center = center(destination);
-        int destinationVertex = graph.nearestVertex(center[0], center[1]);
-        int destinationMeters = (int) Math.round(Haversine.meters(center[0], center[1],
-                graph.latE7(destinationVertex), graph.lonE7(destinationVertex)));
+        Map<String, Integer> siteVertices = new HashMap<>();
+        for (int i = 0; i < sites.size(); i++) {
+            int vertex = newVertex[vertexOf[siteNodes[i]]];
+            if (vertex < 0) {
+                throw new IOException("el sitio " + sites.get(i).name() + " (nodo " + sites.get(i).osmNode()
+                        + ") quedó fuera de la componente fuertemente conexa: no se puede ir y volver");
+            }
+            siteVertices.put(sites.get(i).name(), vertex);
+        }
         int[] localityCenter = center(locality);
         Report report = new Report(candidateWays, includedWays, vertexCount, edgesBefore, localityVerticesBefore,
                 kept, edgeCount, graph.shapeCount(), streetMeters, localityVertices,
-                graph.nearestVertex(localityCenter[0], localityCenter[1]), destinationVertex, destinationMeters);
+                graph.nearestVertex(localityCenter[0], localityCenter[1]), siteVertices);
         return new Result(graph, report);
     }
 

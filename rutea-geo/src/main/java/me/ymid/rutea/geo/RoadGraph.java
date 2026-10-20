@@ -1,6 +1,8 @@
 package me.ymid.rutea.geo;
 
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 import me.ymid.rutea.geo.geometry.Haversine;
 
@@ -70,6 +72,12 @@ public final class RoadGraph {
 
     public long osmNodeId(int vertex) {
         return osmNodeIds[vertex];
+    }
+
+    /** Vértice de un nodo de OSM. Los vértices van ordenados por id de OSM, así que se busca por bisección. */
+    public OptionalInt vertexOf(long osmNodeId) {
+        int index = Arrays.binarySearch(osmNodeIds, osmNodeId);
+        return index >= 0 ? OptionalInt.of(index) : OptionalInt.empty();
     }
 
     public int latE7(int vertex) {

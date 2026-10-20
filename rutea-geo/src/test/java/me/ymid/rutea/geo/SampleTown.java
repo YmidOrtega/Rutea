@@ -3,6 +3,7 @@ package me.ymid.rutea.geo;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -16,17 +17,20 @@ import me.ymid.rutea.geo.osm.PbfFixture.Compression;
  * <pre>
  *   localidad (relación 100): cuadrado (0,0)–(10,10), en dos vías para probar el armado del anillo
  *   ciudad (relación 200): (-20,-20)–(30,40)
- *   relleno (vía 3000): (-15,30)–(-10,35)
+ *   relleno (vía 3000): (-15,30)–(-10,35); su portería es el nodo 30, al final de la vía de servicio
+ *   base: nodo 24, a mitad de la calle A-B
  *
  *   A(2,2) ─24─ B(2,8) ─ 32    cuadrado residencial de doble sentido A-B-C-D
  *   │            │             B ─ 32: doble sentido sin salida (se queda)
  *   │            │             D → 25: sentido único sin salida (se poda)
- *   D(8,2) ──── C(8,8) ══ 28 ══ 29 ── 30   primaria C-29 y vía de servicio 29-30 junto al relleno
+ *   D(8,2) ──── C(8,8) ══ 28 ══ 29 ── 30   primaria C-29 y vía de servicio privada 29-30 hasta la portería
  * </pre>
  */
 public final class SampleTown {
 
-    public static final AreaSpec SPEC = new AreaSpec(100, 200, 3000, 500);
+    /** La "base" queda a mitad de una calle (nodo 24) para probar que un sitio se vuelve vértice. */
+    public static final AreaSpec SPEC = new AreaSpec(100, 200, List.of(
+            new AreaSpec.Site(AreaSpec.DEPOT, 24, 0), new AreaSpec.Site(AreaSpec.DISPOSAL, 30, 500)));
 
     private static final Map<Long, int[]> NODES = new TreeMap<>();
 
@@ -90,7 +94,7 @@ public final class SampleTown {
                 .way(5004, new long[] {21, 27}, "highway", "residential", "access", "private")
                 .way(5005, new long[] {21, 32}, "highway", "residential")
                 .way(6000, new long[] {22, 28, 29}, "highway", "primary")
-                .way(6001, new long[] {29, 30}, "highway", "service")
+                .way(6001, new long[] {29, 30}, "highway", "service", "access", "private")
                 .way(6002, new long[] {28, 31}, "highway", "residential");
         Block relations = new Block()
                 .relation(100, new int[] {1, 1}, new long[] {1000, 1001}, new String[] {"outer", "outer"},

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,7 +16,8 @@ class RoadGraphFileTest {
 
     private static final RoadGraph GRAPH = TestGraphs.of(3,
             new int[] {0, 1, 120, 20}, new int[] {1, 2, 80, 15}, new int[] {2, 0, 300, 40});
-    private static final AreaSpec SPEC = new AreaSpec(1, 2, 3, 500);
+    private static final AreaSpec SPEC = new AreaSpec(1, 2, List.of(new AreaSpec.Site("base", 3, 500),
+            new AreaSpec.Site("relleño", 4, 2000)));
     private static final byte[] SHA = sha(7);
 
     @TempDir
@@ -54,7 +56,8 @@ class RoadGraphFileTest {
 
         assertThat(RoadGraphFile.readIfCurrent(file, SHA, SPEC)).isPresent();
         assertThat(RoadGraphFile.readIfCurrent(file, sha(8), SPEC)).isEmpty();
-        assertThat(RoadGraphFile.readIfCurrent(file, SHA, new AreaSpec(1, 2, 3, 600))).isEmpty();
+        assertThat(RoadGraphFile.readIfCurrent(file, SHA, new AreaSpec(1, 2, List.of(new AreaSpec.Site("base", 3, 600)))))
+                .isEmpty();
         assertThat(RoadGraphFile.readIfCurrent(dir.resolve("no-existe.rgraph"), SHA, SPEC)).isEmpty();
     }
 

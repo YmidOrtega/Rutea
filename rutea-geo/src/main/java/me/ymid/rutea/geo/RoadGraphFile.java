@@ -10,8 +10,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.zip.CRC32;
 
@@ -19,7 +21,8 @@ import java.util.zip.CRC32;
  * Formato binario propio del grafo compilado ({@code .rgraph}), little-endian:
  *
  * <pre>
- * "RUTEAGRF" · versión · SHA-256 del PBF de origen · AreaSpec
+ * "RUTEAGRF" · versión · SHA-256 del PBF de origen
+ * AreaSpec: localidad · ciudad · n sitios · (largo del nombre · nombre UTF-8 · nodo · margen) × n
  * vértices · arcos · trazos · puntos de trazo
  * ids OSM · lat · lon · primer arco · destino · metros · segundos · clase · trazo · primer punto · lat · lon
  * · trazo en la localidad (un byte por trazo)
@@ -30,10 +33,11 @@ import java.util.zip.CRC32;
  */
 public final class RoadGraphFile {
 
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
 
     private static final byte[] MAGIC = "RUTEAGRF".getBytes(StandardCharsets.US_ASCII);
-    private static final int HEADER_BYTES = MAGIC.length + 4 + 32 + 8 + 8 + 8 + 4 + 4 * 4;
+    /** Encabezado sin el AreaSpec, que tiene largo variable. */
+    private static final int HEADER_BYTES = MAGIC.length + 4 + 32 + 4 * 4;
 
     /** Grafo leído de disco, con el origen que tenía al guardarse. */
     public record Stored(RoadGraph graph, byte[] sourceSha256, AreaSpec spec) {
@@ -50,15 +54,14 @@ public final class RoadGraphFile {
         int e = graph.edgeCount();
         int s = graph.shapeCount();
         int p = graph.shapeLatE7().length;
-        long size = HEADER_BYTES + 8L * v + 4L * (v + v + v + 1) + 4L * (e + e + e + e) + e + 4L * (s + 1)
+        byte[] specBytes = encode(spec);
+        long size = HEADER_BYTES + specBytes.length + 8L * v + 4L * (v + v + v + 1) + 4L * (e + e + e + e) + e + 4L * (s + 1)
                 + 4L * (p + p) + s + 4;
         if (size > Integer.MAX_VALUE - 8) {
             throw new IOException("grafo de " + size + " bytes: no cabe en un solo archivo de este formato");
         }
         ByteBuffer buffer = ByteBuffer.allocate((int) size).order(ByteOrder.LITTLE_ENDIAN);
-        buffer.put(MAGIC).putInt(VERSION).put(sourceSha256)
-                .putLong(spec.localityRelation()).putLong(spec.cityRelation()).putLong(spec.destinationWay())
-                .putInt(spec.destinationMarginMeters())
+        buffer.put(MAGIC).putInt(VERSION).put(sourceSha256).put(specBytes)
                 .putInt(v).putInt(e).putInt(s).putInt(p);
         putLongs(buffer, graph.osmNodeIds());
         putInts(buffer, graph.latE7());
@@ -105,7 +108,7 @@ public final class RoadGraphFile {
         }
         byte[] sha = new byte[32];
         buffer.get(sha);
-        AreaSpec spec = new AreaSpec(buffer.getLong(), buffer.getLong(), buffer.getLong(), buffer.getInt());
+        AreaSpec spec = decode(buffer, name);
         int v = buffer.getInt();
         int e = buffer.getInt();
         int s = buffer.getInt();
@@ -174,6 +177,43 @@ public final class RoadGraphFile {
 
     public static String hex(byte[] bytes) {
         return HexFormat.of().formatHex(bytes);
+    }
+
+    private static byte[] encode(AreaSpec spec) {
+        List<byte[]> names = new ArrayList<>();
+        int size = 8 + 8 + 4;
+        for (AreaSpec.Site site : spec.sites()) {
+            byte[] name = site.name().getBytes(StandardCharsets.UTF_8);
+            names.add(name);
+            size += 4 + name.length + 8 + 4;
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+        buffer.putLong(spec.localityRelation()).putLong(spec.cityRelation()).putInt(spec.sites().size());
+        for (int i = 0; i < names.size(); i++) {
+            AreaSpec.Site site = spec.sites().get(i);
+            buffer.putInt(names.get(i).length).put(names.get(i)).putLong(site.osmNode()).putInt(site.marginMeters());
+        }
+        return buffer.array();
+    }
+
+    private static AreaSpec decode(ByteBuffer buffer, String name) throws IOException {
+        long locality = buffer.getLong();
+        long city = buffer.getLong();
+        int count = buffer.getInt();
+        if (count < 0 || count > 1000) {
+            throw new IOException(name + ": " + count + " sitios en el encabezado");
+        }
+        List<AreaSpec.Site> sites = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int length = buffer.getInt();
+            if (length < 0 || length > buffer.remaining()) {
+                throw new IOException(name + ": nombre de sitio de " + length + " bytes");
+            }
+            byte[] siteName = new byte[length];
+            buffer.get(siteName);
+            sites.add(new AreaSpec.Site(new String(siteName, StandardCharsets.UTF_8), buffer.getLong(), buffer.getInt()));
+        }
+        return new AreaSpec(locality, city, sites);
     }
 
     private static final class StaleGraphException extends IOException {

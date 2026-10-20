@@ -26,6 +26,16 @@ class RoadClassTest {
     }
 
     @Test
+    void admitsPrivateRoadsOnlyWhenAskedButNeverForbiddenOnes() {
+        Map<String, String> landfillRoad = Map.of("highway", "service", "access", "private");
+
+        assertThat(RoadClass.of(landfillRoad)).isEmpty();
+        assertThat(RoadClass.ofAnyAccess(landfillRoad)).contains(RoadClass.SERVICE);
+        assertThat(RoadClass.isPrivate(landfillRoad)).isTrue();
+        assertThat(RoadClass.ofAnyAccess(Map.of("highway", "service", "access", "no"))).isEmpty();
+    }
+
+    @Test
     void separatesArterialsFromLocalStreets() {
         assertThat(RoadClass.SECONDARY.isArterial()).isTrue();
         assertThat(RoadClass.TERTIARY.isArterial()).isFalse();
