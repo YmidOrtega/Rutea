@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-app/` y `web/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-app/`, `rutea-bench/` y `web/`.
 
 ```
 rutea/
@@ -31,6 +31,7 @@ rutea/
 ├── rutea-geo/                grafo vial desde OpenStreetMap, Dijkstra/A*, matriz de distancias (F3)
 ├── rutea-sim/                reloj de simulación, sensores de llenado, eventos de operación (F5)
 ├── rutea-app/                Spring Boot: API REST, WebSocket, persistencia; une todos los módulos
+├── rutea-bench/              comparación contra Timefold y microbenchmarks JMH; nunca entra al solver
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
 └── docs/                     normativa, arquitectura, roadmap, diseño, ADRs
@@ -44,6 +45,7 @@ rutea-geo      ← no depende de nadie
 rutea-domain   ← no depende de nadie
 rutea-sim      → rutea-domain
 rutea-app      → todos
+rutea-bench    → rutea-solver (Timefold y JMH viven solo aquí)
 ```
 
 La traducción "problema de residuos → instancia CVRP" vive en `rutea-app` (paquete `planning`), nunca dentro del solver.
@@ -57,7 +59,9 @@ Comandos previstos; se activan cuando exista cada módulo. Actualiza esta secci�
 mvn verify                                   # compila y corre todos los tests
 mvn -pl rutea-solver test                    # solo el solver
 mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-solver/target/benchmarks/*.csv
-                                             # opciones: -Dexec.args="<dir> --solver <n> --seed <n> --time-limit <s> --out <dir>"
+                                             # opciones: -Dexec.args="<dir> --solver <n> --seed <n> --time-limit <s> --iterations <n> --out <dir>"
+mvn -pl rutea-bench -am compile exec:java@compare   # el mismo arnés con Timefold disponible (--solver timefold)
+mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de evaluación de movimientos
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
@@ -89,7 +93,8 @@ pnpm demo:data                               # regenera web/public/demo/plan-sub
 ## Benchmarks
 
 - Instancias: set X de Uchoa et al. (2017), CVRPLIB. Métrica principal: **gap** = (costo − BKS) / BKS.
-- El arnés escribe un CSV por corrida: instancia, solver, semilla, límite de tiempo, costo, BKS, gap, tiempo real, vehículos usados.
+- El arnés escribe un CSV por corrida: instancia, solver, semilla, límite de tiempo, límite de iteraciones, costo, BKS, gap, tiempo real, vehículos usados.
+- Con `--iterations` la corrida es reproducible en cualquier máquina; con solo `--time-limit`, el resultado depende de la velocidad de la máquina.
 - Antes de publicar un número en README o en ymid.me, se corre en frío y en caliente y se reportan ambos.
 
 ## Normativa (resumen; el detalle está en docs/normativa.md)

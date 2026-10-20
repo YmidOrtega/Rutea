@@ -46,7 +46,14 @@ Java puro, sin dependencias en tiempo de ejecución.
 - `cvrplib`: lectura de `.vrp` y `.sol` de CVRPLIB.
 - `benchmark`: arnés que corre los solvers sobre un directorio de instancias y escribe CSV.
 - `local`: búsqueda local. `Routes` guarda las rutas con cargas y costos acumulados (también al revés) para evaluar cada movimiento en O(1); `LocalSearchSolver` arranca desde Clarke-Wright con varios λ y aplica relocate, Or-opt, swap, 2-opt y 2-opt* sobre listas de vecinos.
-- Más adelante, un paquete por técnica que necesite varias clases: `alns`.
+- `alns`: ALNS sobre la búsqueda local. `Plan` guarda rutas que se pueden vaciar y rellenar sin reservar memoria; `AlnsSolver` quita clientes (al azar, los más caros, Shaw, tramos) y los reinserta (voraz con parpadeos, regret-2), pule con búsqueda local y acepta con recocido simulado. `alns-x4` corre cuatro búsquedas con semillas fijas en paralelo.
+
+### rutea-bench
+
+Comparación externa y microbenchmarks, fuera del solver para que este siga sin dependencias:
+
+- `timefold`: el mismo CVRP modelado en Timefold (variable de lista, capacidad dura, distancia blanda), corrido con su configuración por defecto desde el mismo arnés.
+- `jmh`: tiempo de una pasada de búsqueda local sobre un óptimo local (evalúa todos los movimientos sin aplicar ninguno).
 
 ### rutea-domain
 
