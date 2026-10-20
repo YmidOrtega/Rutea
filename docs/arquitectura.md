@@ -45,7 +45,8 @@ Java puro, sin dependencias en tiempo de ejecución.
   - Constructivos, de una sola clase cada uno: `NearestNeighborSolver` (referencia) y `ClarkeWrightSolver` (ahorros, válido con distancias asimétricas).
 - `cvrplib`: lectura de `.vrp` y `.sol` de CVRPLIB.
 - `benchmark`: arnés que corre los solvers sobre un directorio de instancias y escribe CSV.
-- Más adelante, un paquete por técnica que necesite varias clases: `local` (búsqueda local), `alns`.
+- `local`: búsqueda local. `Routes` guarda las rutas con cargas y costos acumulados (también al revés) para evaluar cada movimiento en O(1); `LocalSearchSolver` arranca desde Clarke-Wright con varios λ y aplica relocate, Or-opt, swap, 2-opt y 2-opt* sobre listas de vecinos.
+- Más adelante, un paquete por técnica que necesite varias clases: `alns`.
 
 ### rutea-domain
 
