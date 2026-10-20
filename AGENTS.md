@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-app/`, `rutea-bench/` y `web/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-app/`, `rutea-bench/` y `web/`.
 
 ```
 rutea/
@@ -34,6 +34,7 @@ rutea/
 ├── rutea-bench/              comparación contra Timefold y microbenchmarks JMH; nunca entra al solver
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
+├── data/osm/                 extracto de OpenStreetMap fijo, se descarga (ver data/osm/README.md)
 └── docs/                     normativa, arquitectura, roadmap, diseño, ADRs
 ```
 

@@ -28,3 +28,7 @@ Thumbs.db
 
 # Claude Code local
 .claude/settings.local.json
+
+# Extractos OSM (se descargan; ver data/osm/README.md)
+data/osm/*.pbf
+data/osm/*.pbf.md5
