@@ -21,16 +21,11 @@ import me.ymid.rutea.geo.geometry.Haversine;
  * dónde vive la gente más débil que la vivienda. Los edificios de OSM no sirven para esto en Suba, porque
  * están mapeados de forma incompleta y despareja. Cada contenedor se asigna al extremo más cercano de su
  * tramo, que es donde el camión lo visita en el grafo.
+ *
+ * <p>La carga de cada contenedor varía al azar entre la mitad y vez y media de la media. Es un supuesto:
+ * no hay datos de llenado por contenedor. La media sale de {@link SubaFigures}.
  */
 public final class SimulatedContainers {
-
-    /**
-     * Contenedores negros (no aprovechables) en Suba. Es la mitad de los ~1.700 que le tocan a la
-     * localidad al repartir por población los 10.746 de Bogotá: según la UAESP, "la mitad para residuos
-     * no aprovechables y la mitad para promover el reciclaje". La participación de Suba en la población
-     * está {@code PENDIENTE_VERIFICAR} (ver docs/roadmap.md, F3).
-     */
-    public static final int SUBA_NON_RECYCLABLE = 850;
 
     /** Dos contenedores nunca quedan más cerca que esto, para no apilarlos en la misma esquina. */
     public static final int MIN_SPACING_METERS = 50;
@@ -39,13 +34,16 @@ public final class SimulatedContainers {
     static final Set<RoadClass> LOCAL_STREETS =
             EnumSet.of(RoadClass.TERTIARY, RoadClass.UNCLASSIFIED, RoadClass.RESIDENTIAL, RoadClass.LIVING_STREET);
 
-    public record Container(String id, WasteStream stream, int latE7, int lonE7, int vertex, int shape) {
+    public record Container(String id, WasteStream stream, int latE7, int lonE7, int vertex, int shape, int kg) {
     }
 
     private SimulatedContainers() {
     }
 
-    public static List<Container> place(RoadGraph graph, WasteStream stream, int count, long seed) {
+    public static List<Container> place(RoadGraph graph, WasteStream stream, int count, double meanKg, long seed) {
+        if (meanKg <= 0) {
+            throw new IllegalArgumentException("carga media no positiva: " + meanKg);
+        }
         Streets streets = Streets.of(graph);
         if (streets.totalMeters == 0) {
             throw new IllegalArgumentException("el grafo no tiene calles locales dentro de la localidad");
@@ -69,7 +67,8 @@ public final class SimulatedContainers {
             placed.add(point[0], point[1]);
             int vertex = along < streets.lengths[s] / 2 ? streets.startVertex[s] : streets.endVertex[s];
             String id = String.format("%s%04d", prefix(stream), containers.size() + 1);
-            containers.add(new Container(id, stream, point[0], point[1], vertex, shape));
+            int kg = (int) Math.max(1, Math.round(meanKg * (0.5 + random.nextDouble())));
+            containers.add(new Container(id, stream, point[0], point[1], vertex, shape, kg));
         }
         return containers;
     }

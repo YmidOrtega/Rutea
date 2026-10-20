@@ -2,6 +2,7 @@ package me.ymid.rutea.app.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.data.Offset.offset;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,7 +32,7 @@ class SimulatedContainersTest {
 
     @Test
     void placesContainersOnlyOnLocalStreetsInsideTheLocality() {
-        List<Container> containers = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 20, 1);
+        List<Container> containers = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 20, 160, 1);
 
         assertThat(containers).hasSize(20);
         for (Container container : containers) {
@@ -42,7 +43,7 @@ class SimulatedContainersTest {
 
     @Test
     void keepsTheMinimumSpacing() {
-        List<Container> containers = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 30, 5);
+        List<Container> containers = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 30, 160, 5);
 
         for (int i = 0; i < containers.size(); i++) {
             for (int j = i + 1; j < containers.size(); j++) {
@@ -57,7 +58,7 @@ class SimulatedContainersTest {
 
     @Test
     void visitsEachContainerAtAnEndOfItsStreet() {
-        for (Container container : SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 20, 2)) {
+        for (Container container : SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 20, 160, 2)) {
             int first = town.firstShapePoint(container.shape());
             int last = town.endShapePoint(container.shape()) - 1;
             int vertex = container.vertex();
@@ -70,9 +71,9 @@ class SimulatedContainersTest {
 
     @Test
     void theSameSeedGivesTheSameContainers() {
-        List<Container> once = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 9);
-        List<Container> again = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 9);
-        List<Container> other = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 10);
+        List<Container> once = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 160, 9);
+        List<Container> again = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 160, 9);
+        List<Container> other = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 15, 160, 10);
 
         assertThat(again).isEqualTo(once);
         assertThat(other).isNotEqualTo(once);
@@ -80,9 +81,25 @@ class SimulatedContainersTest {
     }
 
     @Test
+    void loadsVaryAroundTheMean() {
+        List<Container> containers = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 30, 160, 3);
+
+        double mean = containers.stream().mapToInt(Container::kg).average().orElseThrow();
+        assertThat(containers).allSatisfy(c -> assertThat(c.kg()).isBetween(80, 240));
+        assertThat(mean).isBetween(140.0, 180.0);
+    }
+
+    @Test
+    void figuresFollowTheirSources() {
+        assertThat(SubaFigures.nonRecyclableContainers()).isEqualTo(806);
+        assertThat(SubaFigures.containerKgPerDay()).isEqualTo(110_760);
+        assertThat(SubaFigures.meanKgPerCollection(806)).isCloseTo(160.3, offset(0.1));
+    }
+
+    @Test
     void refusesMoreContainersThanTheStreetsCanHold() {
         // Unos 2,9 km de calle local a 50 m mínimos: no caben 500.
-        assertThatThrownBy(() -> SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 500, 1))
+        assertThatThrownBy(() -> SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 500, 160, 1))
                 .hasMessageContaining("separados por 50 m");
     }
 
