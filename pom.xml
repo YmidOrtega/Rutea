@@ -15,6 +15,7 @@
   <modules>
     <module>rutea-solver</module>
     <module>rutea-domain</module>
+    <module>rutea-geo</module>
     <module>rutea-app</module>
     <module>rutea-bench</module>
   </modules>
@@ -51,6 +52,11 @@
       <dependency>
         <groupId>me.ymid.rutea</groupId>
         <artifactId>rutea-domain</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>me.ymid.rutea</groupId>
+        <artifactId>rutea-geo</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>
