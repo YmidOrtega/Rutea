@@ -13,6 +13,7 @@ public record BenchmarkResult(
         String solver,
         long seed,
         Duration timeLimit,
+        long iterationLimit,
         long cost,
         long bestKnownCost,
         boolean feasible,
@@ -20,7 +21,7 @@ public record BenchmarkResult(
         int vehicles) {
 
     static final String CSV_HEADER =
-            "instance,customers,solver,seed,time_limit_ms,cost,bks,gap_pct,feasible,wall_ms,vehicles,machine";
+            "instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,machine";
 
     /** Gap frente a la BKS: {@code (costo − BKS) / BKS}. */
     public double gap() {
@@ -34,6 +35,8 @@ public record BenchmarkResult(
                 solver,
                 Long.toString(seed),
                 Long.toString(timeLimit.toMillis()),
+                // Vacío si la corrida se detuvo solo por tiempo
+                iterationLimit == Long.MAX_VALUE ? "" : Long.toString(iterationLimit),
                 Long.toString(cost),
                 Long.toString(bestKnownCost),
                 String.format(Locale.ROOT, "%.3f", gap() * 100),

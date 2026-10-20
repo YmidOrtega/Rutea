@@ -1,6 +1,5 @@
 package me.ymid.rutea.solver.local;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -47,7 +46,7 @@ public final class LocalSearchSolver implements Solver {
 
     @Override
     public Solution solve(Instance instance, SolverSettings settings) {
-        long deadline = deadline(settings.timeLimit());
+        long deadline = settings.deadlineFromNow();
         int[][] neighbors = neighbors(instance);
         Random random = new Random(settings.seed());
         Solution best = null;
@@ -64,15 +63,6 @@ public final class LocalSearchSolver implements Solver {
             }
         }
         return best;
-    }
-
-    private static long deadline(Duration limit) {
-        long now = System.nanoTime();
-        try {
-            return Math.addExact(now, limit.toNanos());
-        } catch (ArithmeticException tooLong) {
-            return Long.MAX_VALUE;
-        }
     }
 
     /**

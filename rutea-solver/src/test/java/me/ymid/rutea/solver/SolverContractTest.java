@@ -23,7 +23,9 @@ import me.ymid.rutea.solver.cvrplib.CvrplibReader;
  */
 class SolverContractTest {
 
-    private static final SolverSettings SETTINGS = new SolverSettings(42, Duration.ofSeconds(5));
+    // Las iteraciones, no el tiempo, detienen a los solvers iterativos: así la reproducibilidad no
+    // depende de la velocidad de la máquina que corre las pruebas
+    private static final SolverSettings SETTINGS = new SolverSettings(42, Duration.ofSeconds(60), 50);
 
     static Stream<Arguments> solversAndInstances() throws IOException {
         List<Path> instances;

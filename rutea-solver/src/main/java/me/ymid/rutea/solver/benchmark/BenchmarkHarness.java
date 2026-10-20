@@ -33,13 +33,13 @@ import me.ymid.rutea.solver.cvrplib.CvrplibReader;
  * Al final imprime una tabla en Markdown con el gap por instancia y el promedio por solver.
  *
  * <pre>
- * BenchmarkHarness &lt;dir-instancias&gt; [--out &lt;dir&gt;] [--solver &lt;nombre&gt;] [--seed &lt;n&gt;] [--time-limit &lt;s&gt;]
+ * BenchmarkHarness &lt;dir-instancias&gt; [--out &lt;dir&gt;] [--solver &lt;nombre&gt;] [--seed &lt;n&gt;] [--time-limit &lt;s&gt;] [--iterations &lt;n&gt;]
  * </pre>
  */
 public final class BenchmarkHarness {
 
     private static final String USAGE = "uso: BenchmarkHarness <dir-instancias> [--out <dir>]"
-            + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>]";
+            + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>] [--iterations <n>]";
     private static final Pattern NODE_COUNT = Pattern.compile("-n(\\d+)");
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
@@ -52,12 +52,14 @@ public final class BenchmarkHarness {
         List<Solver> solvers = Solvers.all();
         long seed = 1;
         Duration timeLimit = Duration.ofSeconds(60);
+        long iterationLimit = Long.MAX_VALUE;
         try {
             for (int i = 0; i < args.length; i++) {
                 switch (args[i]) {
                     case "--out" -> out = Path.of(value(args, ++i));
                     case "--seed" -> seed = Long.parseLong(value(args, ++i));
                     case "--time-limit" -> timeLimit = Duration.ofSeconds(Long.parseLong(value(args, ++i)));
+                    case "--iterations" -> iterationLimit = Long.parseLong(value(args, ++i));
                     case "--solver" -> {
                         String name = value(args, ++i);
                         solvers = List.of(Solvers.byName(name).orElseThrow(() -> new IllegalArgumentException(
@@ -82,7 +84,7 @@ public final class BenchmarkHarness {
             return;
         }
 
-        List<BenchmarkResult> results = run(instances, solvers, new SolverSettings(seed, timeLimit));
+        List<BenchmarkResult> results = run(instances, solvers, new SolverSettings(seed, timeLimit, iterationLimit));
         Path csv = out.resolve("run-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         writeCsv(csv, results, machine());
         printSummary(System.out, results);
@@ -125,7 +127,7 @@ public final class BenchmarkHarness {
                 Duration wallTime = Duration.ofNanos(System.nanoTime() - start);
                 Evaluation evaluation = Evaluator.evaluate(instance, solution);
                 results.add(new BenchmarkResult(instance.name(), instance.customerCount(), solver.name(),
-                        settings.seed(), settings.timeLimit(), evaluation.cost(), bks.cost(),
+                        settings.seed(), settings.timeLimit(), settings.iterationLimit(), evaluation.cost(), bks.cost(),
                         evaluation.feasible(), wallTime, solution.routeCount()));
             }
         }
