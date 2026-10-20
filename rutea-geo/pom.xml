@@ -39,6 +39,17 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>me.ymid.rutea.geo.BuildRoadGraph</mainClass>
+          <arguments>
+            <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+            <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+          </arguments>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

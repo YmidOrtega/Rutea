@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.zip.Deflater;
 
 /** Arma archivos PBF de prueba, bloque por bloque, con la misma estructura que publica Geofabrik. */
-final class PbfFixture {
+public final class PbfFixture {
 
-    enum Compression { RAW, ZLIB }
+    public enum Compression { RAW, ZLIB }
 
     private final ByteArrayOutputStream file = new ByteArrayOutputStream();
 
-    PbfFixture header(String... requiredFeatures) {
+    public PbfFixture header(String... requiredFeatures) {
         ProtoWriter header = new ProtoWriter();
         for (String feature : requiredFeatures) {
             header.string(4, feature);
@@ -24,11 +24,11 @@ final class PbfFixture {
         return blob("OSMHeader", blobMessage(header.toByteArray(), Compression.ZLIB));
     }
 
-    PbfFixture standardHeader() {
+    public PbfFixture standardHeader() {
         return header("OsmSchema-V0.6", "DenseNodes");
     }
 
-    PbfFixture data(Block block, Compression compression) {
+    public PbfFixture data(Block block, Compression compression) {
         return blob("OSMData", blobMessage(block.toByteArray(), compression));
     }
 
@@ -52,7 +52,7 @@ final class PbfFixture {
         return file.toByteArray();
     }
 
-    Path write(Path dir) throws IOException {
+    public Path write(Path dir) throws IOException {
         return Files.write(dir.resolve("fixture.osm.pbf"), toByteArray());
     }
 
@@ -73,7 +73,7 @@ final class PbfFixture {
     }
 
     /** Un PrimitiveBlock; cada llamada agrega un PrimitiveGroup con un solo tipo de elemento. */
-    static final class Block {
+    public static final class Block {
 
         private final List<String> strings = new ArrayList<>(List.of(""));
         private final List<ProtoWriter> groups = new ArrayList<>();
@@ -89,7 +89,7 @@ final class PbfFixture {
         }
 
         /** Coordenadas en nanogrados, ya ajustadas a la granularidad del bloque. */
-        Block denseNodes(long[] ids, long[] latNano, long[] lonNano) {
+        public Block denseNodes(long[] ids, long[] latNano, long[] lonNano) {
             ProtoWriter dense = new ProtoWriter()
                     .packedDeltaSint64(1, ids)
                     .packedDeltaSint64(8, scaled(latNano, latOffset))
@@ -107,7 +107,7 @@ final class PbfFixture {
             return this;
         }
 
-        Block way(long id, long[] refs, String... keysAndValues) {
+        public Block way(long id, long[] refs, String... keysAndValues) {
             ProtoWriter way = new ProtoWriter().varint(1, id);
             tags(way, keysAndValues);
             way.packedDeltaSint64(8, refs);
@@ -115,7 +115,7 @@ final class PbfFixture {
             return this;
         }
 
-        Block relation(long id, int[] types, long[] refs, String[] roles, String... keysAndValues) {
+        public Block relation(long id, int[] types, long[] refs, String[] roles, String... keysAndValues) {
             ProtoWriter relation = new ProtoWriter().varint(1, id);
             tags(relation, keysAndValues);
             long[] roleIds = new long[roles.length];
