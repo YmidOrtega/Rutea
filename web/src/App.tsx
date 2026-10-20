@@ -97,7 +97,7 @@ export default function App() {
           <strong>No se pudo cargar el plan de demo.</strong>
           <span className="num">{error}</span>
           <span>
-            Genéralo con <code className="num">npm run demo:data</code>.
+            Genéralo con <code className="num">pnpm demo:data</code>.
           </span>
         </div>
       )}

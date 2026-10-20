@@ -1,4 +1,4 @@
-/** Plan simulado que genera `npm run demo:data` (DemoPlanExporter en rutea-app). */
+/** Plan simulado que genera `pnpm demo:data` (DemoPlanExporter en rutea-app). */
 
 export type WasteStream = 'RECYCLABLE' | 'ORGANIC' | 'NON_RECYCLABLE'
 
