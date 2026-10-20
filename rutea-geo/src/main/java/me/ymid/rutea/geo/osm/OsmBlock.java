@@ -5,9 +5,10 @@ import java.util.Objects;
 
 /**
  * Contenido de un bloque del PBF. Los nodos van en arreglos paralelos y sin etiquetas: el grafo vial
- * solo necesita su posición. Las coordenadas están en 1e-7 grados, la misma precisión que guarda OSM.
+ * solo necesita su posición. Los que tienen etiquetas van aparte, en {@code taggedNodes}, y solo si se
+ * pidieron. Las coordenadas están en 1e-7 grados, la misma precisión que guarda OSM.
  */
-public record OsmBlock(long[] nodeIds, int[] latE7, int[] lonE7, List<OsmWay> ways,
+public record OsmBlock(long[] nodeIds, int[] latE7, int[] lonE7, List<OsmNode> taggedNodes, List<OsmWay> ways,
         List<OsmRelation> relations) {
 
     public OsmBlock {
@@ -15,6 +16,7 @@ public record OsmBlock(long[] nodeIds, int[] latE7, int[] lonE7, List<OsmWay> wa
         if (latE7.length != nodeIds.length || lonE7.length != nodeIds.length) {
             throw new IllegalArgumentException("los arreglos de nodos no tienen la misma longitud");
         }
+        taggedNodes = List.copyOf(taggedNodes);
         ways = List.copyOf(ways);
         relations = List.copyOf(relations);
     }

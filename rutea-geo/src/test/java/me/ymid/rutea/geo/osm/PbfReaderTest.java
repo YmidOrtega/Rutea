@@ -86,6 +86,41 @@ class PbfReaderTest {
     }
 
     @Test
+    void returnsOnlyTaggedNodesWithTheirTagsWhenAsked() throws IOException {
+        Path file = new PbfFixture().standardHeader()
+                .data(new Block().taggedDenseNodes(new long[] {1, 2, 3},
+                        new long[] {4_741_000_000L, 4_742_000_000L, 4_743_000_000L},
+                        new long[] {-74_084_000_000L, -74_085_000_000L, -74_086_000_000L},
+                        new String[] {}, new String[] {"barrier", "gate", "access", "private"}, new String[] {}),
+                        Compression.ZLIB)
+                .data(new Block().node(9, 4_744_000_000L, -74_087_000_000L, "amenity", "school"), Compression.RAW)
+                .write(dir);
+
+        List<OsmBlock> onlyTagged = readAll(file, EnumSet.of(Element.TAGGED_NODES));
+        List<OsmBlock> onlyPositions = readAll(file, EnumSet.of(Element.NODES));
+
+        assertThat(onlyTagged.get(0).nodeCount()).isZero();
+        assertThat(onlyTagged.get(0).taggedNodes()).containsExactly(
+                new OsmNode(2, 47_420_000, -740_850_000, java.util.Map.of("barrier", "gate", "access", "private")));
+        assertThat(onlyTagged.get(1).taggedNodes()).containsExactly(
+                new OsmNode(9, 47_440_000, -740_870_000, java.util.Map.of("amenity", "school")));
+        assertThat(onlyPositions.get(0).nodeIds()).containsExactly(1, 2, 3);
+        assertThat(onlyPositions.get(0).taggedNodes()).isEmpty();
+    }
+
+    @Test
+    void rejectsDenseTagsThatRunOut() throws IOException {
+        ProtoWriter dense = new ProtoWriter().packedDeltaSint64(1, 1, 2).packedSint64(8, 0, 0).packedSint64(9, 0, 0)
+                .packed(10, 0);
+        Path file = new PbfFixture().standardHeader()
+                .data(new Block().group(new ProtoWriter().message(2, dense)), Compression.RAW)
+                .write(dir);
+
+        assertThatThrownBy(() -> readAll(file, EnumSet.of(Element.TAGGED_NODES)))
+                .hasMessageContaining("faltan etiquetas para el nodo 2");
+    }
+
+    @Test
     void readsWaysWithTagsAndNodeOrder() throws IOException {
         Path file = new PbfFixture().standardHeader()
                 .data(new Block().way(55, new long[] {10, 12, 11, 10},

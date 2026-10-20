@@ -98,10 +98,28 @@ public final class PbfFixture {
             return this;
         }
 
-        Block node(long id, long latNano, long lonNano) {
-            ProtoWriter node = new ProtoWriter()
-                    .sint64(1, id)
-                    .sint64(8, (latNano - latOffset) / granularity)
+        /** Como {@link #denseNodes}, con las etiquetas de cada nodo en {@code keys_vals} (vacío si no tiene). */
+        Block taggedDenseNodes(long[] ids, long[] latNano, long[] lonNano, String[]... tagsPerNode) {
+            LongList keysAndValues = new LongList(16);
+            for (String[] tags : tagsPerNode) {
+                for (String tag : tags) {
+                    keysAndValues.add(index(tag));
+                }
+                keysAndValues.add(0);
+            }
+            ProtoWriter dense = new ProtoWriter()
+                    .packedDeltaSint64(1, ids)
+                    .packedDeltaSint64(8, scaled(latNano, latOffset))
+                    .packedDeltaSint64(9, scaled(lonNano, lonOffset))
+                    .packed(10, keysAndValues.toArray());
+            groups.add(new ProtoWriter().message(2, dense));
+            return this;
+        }
+
+        Block node(long id, long latNano, long lonNano, String... keysAndValues) {
+            ProtoWriter node = new ProtoWriter().sint64(1, id);
+            tags(node, keysAndValues);
+            node.sint64(8, (latNano - latOffset) / granularity)
                     .sint64(9, (lonNano - lonOffset) / granularity);
             groups.add(new ProtoWriter().message(1, node));
             return this;

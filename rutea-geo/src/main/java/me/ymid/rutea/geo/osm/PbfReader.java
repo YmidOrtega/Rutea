@@ -37,7 +37,11 @@ import me.ymid.rutea.geo.osm.OsmRelation.MemberType;
  */
 public final class PbfReader {
 
-    public enum Element { NODES, WAYS, RELATIONS }
+    /**
+     * Qué decodificar. {@code NODES} da la posición de todos los nodos; {@code TAGGED_NODES}, solo los que
+     * tienen etiquetas, con ellas.
+     */
+    public enum Element { NODES, TAGGED_NODES, WAYS, RELATIONS }
 
     /** Límites del formato: un archivo que los pasa está dañado o no es un PBF. */
     private static final int MAX_BLOB_HEADER_SIZE = 64 * 1024;
@@ -284,20 +288,22 @@ public final class PbfReader {
         if (granularity <= 0) {
             throw new PbfFormatException("granularidad inválida: " + granularity);
         }
+        boolean positions = wanted.contains(Element.NODES);
+        boolean tagged = wanted.contains(Element.TAGGED_NODES);
         BlockBuilder block = new BlockBuilder(strings, granularity, latOffset, lonOffset);
         for (ProtoReader group : groups) {
             while (group.next()) {
                 switch (group.field()) {
                     case 1 -> {
-                        if (wanted.contains(Element.NODES)) {
-                            block.node(group.message());
+                        if (positions || tagged) {
+                            block.node(group.message(), positions, tagged);
                         } else {
                             group.skip();
                         }
                     }
                     case 2 -> {
-                        if (wanted.contains(Element.NODES)) {
-                            block.denseNodes(group.message());
+                        if (positions || tagged) {
+                            block.denseNodes(group.message(), positions, tagged);
                         } else {
                             group.skip();
                         }
@@ -344,6 +350,7 @@ public final class PbfReader {
         private final LongList nodeIds = new LongList(8000);
         private final LongList latE7 = new LongList(8000);
         private final LongList lonE7 = new LongList(8000);
+        private final List<OsmNode> taggedNodes = new ArrayList<>();
         private final List<OsmWay> ways = new ArrayList<>();
         private final List<OsmRelation> relations = new ArrayList<>();
 
@@ -354,30 +361,48 @@ public final class PbfReader {
             this.lonOffset = lonOffset;
         }
 
-        void node(ProtoReader node) throws PbfFormatException {
+        void node(ProtoReader node, boolean positions, boolean tagged) throws PbfFormatException {
             long id = 0;
             long lat = 0;
             long lon = 0;
+            LongList keys = new LongList(4);
+            LongList values = new LongList(4);
             while (node.next()) {
                 switch (node.field()) {
                     case 1 -> id = node.sint64();
+                    case 2 -> node.repeatedVarints(keys, false);
+                    case 3 -> node.repeatedVarints(values, false);
                     case 8 -> lat = node.sint64();
                     case 9 -> lon = node.sint64();
                     default -> node.skip();
                 }
             }
-            addNode(id, lat, lon);
+            if (positions) {
+                addNode(id, lat, lon);
+            }
+            if (tagged && keys.size() > 0) {
+                taggedNodes.add(new OsmNode(id, (int) toE7(latOffset + granularity * lat),
+                        (int) toE7(lonOffset + granularity * lon), tags(keys, values, "nodo " + id)));
+            }
         }
 
-        void denseNodes(ProtoReader dense) throws PbfFormatException {
+        void denseNodes(ProtoReader dense, boolean positions, boolean tagged) throws PbfFormatException {
             LongList ids = new LongList(8000);
             LongList lats = new LongList(8000);
             LongList lons = new LongList(8000);
+            LongList keysAndValues = new LongList(tagged ? 8000 : 4);
             while (dense.next()) {
                 switch (dense.field()) {
                     case 1 -> dense.repeatedVarints(ids, true);
                     case 8 -> dense.repeatedVarints(lats, true);
                     case 9 -> dense.repeatedVarints(lons, true);
+                    case 10 -> {
+                        if (tagged) {
+                            dense.repeatedVarints(keysAndValues, false);
+                        } else {
+                            dense.skip();
+                        }
+                    }
                     default -> dense.skip();
                 }
             }
@@ -388,8 +413,40 @@ public final class PbfReader {
             long[] decodedIds = ids.toDeltaDecodedArray();
             long[] decodedLats = lats.toDeltaDecodedArray();
             long[] decodedLons = lons.toDeltaDecodedArray();
-            for (int i = 0; i < decodedIds.length; i++) {
-                addNode(decodedIds[i], decodedLats[i], decodedLons[i]);
+            if (positions) {
+                for (int i = 0; i < decodedIds.length; i++) {
+                    addNode(decodedIds[i], decodedLats[i], decodedLons[i]);
+                }
+            }
+            if (tagged && keysAndValues.size() > 0) {
+                denseTags(decodedIds, decodedLats, decodedLons, keysAndValues);
+            }
+        }
+
+        /** En DenseNodes, las etiquetas de cada nodo son pares clave-valor terminados en 0, en orden de nodo. */
+        private void denseTags(long[] ids, long[] lats, long[] lons, LongList keysAndValues) throws PbfFormatException {
+            int position = 0;
+            for (int i = 0; i < ids.length; i++) {
+                LongList keys = new LongList(2);
+                LongList values = new LongList(2);
+                while (true) {
+                    if (position >= keysAndValues.size()) {
+                        throw new PbfFormatException("DenseNodes: faltan etiquetas para el nodo " + ids[i]);
+                    }
+                    long key = keysAndValues.get(position++);
+                    if (key == 0) {
+                        break;
+                    }
+                    if (position >= keysAndValues.size()) {
+                        throw new PbfFormatException("DenseNodes: clave sin valor en el nodo " + ids[i]);
+                    }
+                    keys.add(key);
+                    values.add(keysAndValues.get(position++));
+                }
+                if (keys.size() > 0) {
+                    taggedNodes.add(new OsmNode(ids[i], (int) toE7(latOffset + granularity * lats[i]),
+                            (int) toE7(lonOffset + granularity * lons[i]), tags(keys, values, "nodo " + ids[i])));
+                }
             }
         }
 
@@ -493,7 +550,7 @@ public final class PbfReader {
                 latInt[i] = (int) lat[i];
                 lonInt[i] = (int) lon[i];
             }
-            return new OsmBlock(nodeIds.toArray(), latInt, lonInt, ways, relations);
+            return new OsmBlock(nodeIds.toArray(), latInt, lonInt, taggedNodes, ways, relations);
         }
     }
 }
