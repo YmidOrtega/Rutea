@@ -1,9 +1,11 @@
 package me.ymid.rutea.solver.benchmark;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.within;
 
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -53,5 +55,14 @@ class BenchmarkHarnessTest {
     @Test
     void machineDescriptionHasNoCommas() {
         assertThat(BenchmarkHarness.machine()).doesNotContain(",").contains("Java");
+    }
+
+    @Test
+    void neverOverwritesAPreviousRun() throws IOException {
+        Path csv = out.resolve("run.csv");
+        BenchmarkHarness.writeCsv(csv, List.of(), "test-machine");
+
+        assertThatExceptionOfType(FileAlreadyExistsException.class)
+                .isThrownBy(() -> BenchmarkHarness.writeCsv(csv, List.of(), "test-machine"));
     }
 }

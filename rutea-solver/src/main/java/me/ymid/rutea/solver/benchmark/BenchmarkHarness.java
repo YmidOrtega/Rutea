@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,7 +41,7 @@ public final class BenchmarkHarness {
     private static final String USAGE = "uso: BenchmarkHarness <dir-instancias> [--out <dir>]"
             + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>]";
     private static final Pattern NODE_COUNT = Pattern.compile("-n(\\d+)");
-    private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
     private BenchmarkHarness() {
     }
@@ -137,9 +138,10 @@ public final class BenchmarkHarness {
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : Integer.MAX_VALUE;
     }
 
+    /** Escribe el CSV de una corrida. Nunca pisa otra: si el archivo ya existe, falla. */
     static void writeCsv(Path csv, List<BenchmarkResult> results, String machine) throws IOException {
         Files.createDirectories(csv.getParent());
-        try (BufferedWriter writer = Files.newBufferedWriter(csv)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(csv, StandardOpenOption.CREATE_NEW)) {
             writer.write(BenchmarkResult.CSV_HEADER);
             writer.newLine();
             for (BenchmarkResult result : results) {
