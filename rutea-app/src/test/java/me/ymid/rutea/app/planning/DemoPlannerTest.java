@@ -61,6 +61,6 @@ class DemoPlannerTest {
     @Test
     void saysItIsSimulated() {
         assertThat(plan.meta().simulated()).isTrue();
-        assertThat(plan.meta().solver()).isEqualTo("nearest-neighbor");
+        assertThat(plan.meta().solver()).isEqualTo("local-search");
     }
 }

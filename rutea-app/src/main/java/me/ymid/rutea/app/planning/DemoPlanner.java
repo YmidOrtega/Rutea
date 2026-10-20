@@ -10,15 +10,15 @@ import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Evaluation;
 import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Instance;
-import me.ymid.rutea.solver.NearestNeighborSolver;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.Solver;
 import me.ymid.rutea.solver.SolverSettings;
+import me.ymid.rutea.solver.local.LocalSearchSolver;
 
 /**
  * Genera el plan de demo: contenedores simulados en las esquinas de una cuadrícula sobre Suba,
  * una instancia CVRP por corriente (las corrientes nunca comparten ruta) y las rutas que
- * devuelve el solver de referencia.
+ * devuelve la búsqueda local.
  *
  * <p>Todo es simulado hasta F3: la cuadrícula reemplaza a las calles, la distancia es Manhattan
  * en metros y los pesos y capacidades son supuestos de orden de magnitud, no datos de operación.
@@ -88,8 +88,10 @@ public final class DemoPlanner {
             kgs[c] = (int) Math.round(fills[c] * profile(streams[c]).fullBinKg());
         }
 
-        Solver solver = new NearestNeighborSolver();
-        SolverSettings settings = new SolverSettings(seed, Duration.ofSeconds(1));
+        Solver solver = new LocalSearchSolver();
+        // Holgado: la búsqueda termina en milisegundos; si el límite la cortara, el plan dejaría de
+        // depender solo de la semilla
+        SolverSettings settings = new SolverSettings(seed, Duration.ofSeconds(30));
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (WasteStream stream : WasteStream.values()) {
             StreamProfile profile = profile(stream);
