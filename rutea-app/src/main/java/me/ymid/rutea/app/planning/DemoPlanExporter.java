@@ -35,8 +35,9 @@ public final class DemoPlanExporter {
 
         long meters = plan.routes().stream().mapToLong(DemoPlan.Route::distanceMeters).sum();
         long points = plan.routes().stream().mapToLong(route -> route.path().size()).sum();
-        System.out.printf("%d contenedores, %d viajes, %.1f km, %d puntos en %.1f s → %s (%d KB)%n",
-                plan.containers().size(), plan.routes().size(), meters / 1000.0, points,
+        int trips = plan.routes().stream().mapToInt(route -> route.tripLoadsKg().length).sum();
+        System.out.printf("%d contenedores, %d camiones, %d viajes, %.1f km, %d puntos en %.1f s → %s (%d KB)%n",
+                plan.containers().size(), plan.routes().size(), trips, meters / 1000.0, points,
                 (System.nanoTime() - start) / 1e9, out.toAbsolutePath(), Files.size(out) / 1024);
     }
 }

@@ -19,10 +19,11 @@ import me.ymid.rutea.solver.Instance;
  * camiones, así que no cambia la optimización: va en {@code returnMeters}.
  *
  * @param points vértice del grafo de cada nodo de la instancia; el del nodo 0 es la base
- * @param returnMeters metros de la portería a la base, por camión
+ * @param travel metros y segundos entre todos los lugares: 0 es la base, {@code i} el nodo {@code i} y
+ *     {@link #gate()} la portería
  */
 public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, List<Container> containers,
-        int[] points, Instance instance, int returnMeters) {
+        int[] points, Instance instance, TravelMatrix travel) {
 
     public SubaScenario {
         containers = List.copyOf(containers);
@@ -59,7 +60,21 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
         // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
         String name = "SubaBase-n" + (count + 1) + "-s" + seed;
         Instance instance = new Instance(name, SubaFigures.COMPACTOR_CAPACITY_KG, demands, DistanceMatrix.of(distances));
-        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix.meters(count + 1, 0));
+        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix);
+    }
+
+    /** Índice de la portería en {@link #travel}; la base es 0 y el contenedor del nodo {@code i}, {@code i}. */
+    public int gate() {
+        return containers.size() + 1;
+    }
+
+    /** Metros de la portería a la base: el regreso de cada camión al final del turno. */
+    public int returnMeters() {
+        return travel.meters(gate(), 0);
+    }
+
+    public int returnSeconds() {
+        return travel.seconds(gate(), 0);
     }
 
     private static long siteNode(String name) {

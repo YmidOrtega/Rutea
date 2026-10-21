@@ -56,6 +56,19 @@ public final class SubaFigures {
      */
     public static final double LITERS_PER_KM = 0.8;
 
+    /**
+     * Duración del turno: el operador declara turnos de 8 h, como el de 18:00 a 02:00 (Superservicios, 2026).
+     */
+    public static final int SHIFT_SECONDS = 8 * 3600;
+
+    /**
+     * {@code PENDIENTE_VERIFICAR}: rango de la descarga en Doña Juana. "En promedio, gastan entre 40 minutos a una
+     * hora y media" (El Tiempo, 3 de junio de 2022). Es prensa, no un dato oficial de la UAESP o el operador.
+     */
+    public static final int UNLOAD_SECONDS_LOW = 40 * 60;
+
+    public static final int UNLOAD_SECONDS_HIGH = 90 * 60;
+
     /** Compactador más común del ASE 5: 17 de 32 yardas, 8 toneladas (Superservicios, 2026). */
     public static final int COMPACTOR_CAPACITY_KG = 8_000;
 

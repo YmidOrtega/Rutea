@@ -23,10 +23,10 @@ class PlanReportTest {
     private static DemoPlan plan(String method, long... metersPerTrip) {
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int i = 0; i < metersPerTrip.length; i++) {
-            routes.add(new DemoPlan.Route("N-" + i, WasteStream.NON_RECYCLABLE, 8_000, 7_500, metersPerTrip[i], 3_600,
-                    List.of(), List.of(), new int[0]));
+            routes.add(new DemoPlan.Route("C-" + i, WasteStream.NON_RECYCLABLE, 8_000, 7_500, metersPerTrip[i], 3_600,
+                    new int[] {7_500}, List.of(), List.of(), new int[0]));
         }
-        DemoPlan.Meta meta = new DemoPlan.Meta("Suba", true, "", method, 1, 0, "18:00", 60, 0.8, 2.6765, "");
+        DemoPlan.Meta meta = new DemoPlan.Meta("Suba", true, "", method, 1, 0, "18:00", 28_800, 60, 2_400, 0.8, 2.6765, "");
         return new DemoPlan(meta, List.of(), List.of(), routes);
     }
 
