@@ -176,7 +176,23 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Replanificación incremental: se congela lo recorrido y ALNS arranca desde el plan vigente con límite de tiempo.
 - Posiciones y eventos por WebSocket (R08).
 
-**Criterio de cierre:** una avería produce un plan nuevo con latencia P99 medida y reportada.
+**Criterio de cierre:** una avería produce un plan nuevo con latencia P99 medida y reportada. **Cumplido** el 2026-10-20: P99 de 144,3 ms.
+
+**Avance** (2026-10-20; i5-14400F, 16 hilos, Java 21.0.12):
+
+- [x] Replanificación ante averías (ADR 0005, R05). Se congela lo recorrido; los contenedores que el camión averiado no alcanzó a recoger los cubren camiones de reserva desde la base. ALNS arranca en caliente desde el plan vigente (`AlnsSolver.solveFrom`; los costos del arnés en el set X son idénticos antes y después) con 300 iteraciones.
+- [x] Latencia medida (`mvn -pl rutea-app exec:java@breakdowns`): 500 averías con camión y hora al azar (semilla 1) sobre el plan de 9 camiones de Suba, más 20 de calentamiento. CSV en `docs/benchmarks/f5-breakdowns/`.
+
+  | Medida | P50 | P95 | P99 | Máx. |
+  |---|---:|---:|---:|---:|
+  | Latencia, arranque en caliente | 43,7 ms | 122,2 ms | **144,3 ms** | 150,4 ms |
+  | Latencia, ALNS desde cero | 48,3 ms | 134,2 ms | 146,7 ms | 153,2 ms |
+  | Contenedores huérfanos | 42 | 96 | 101 | 103 |
+  | Avería → reserva en el primer huérfano | 39,9 min | 53,0 min | 67,3 min | 73,4 min |
+
+  En frío (la primera avería, con la JVM sin calentar): 54,4 ms. R05 se cumple en las 500 averías: la reserva llega en 73 min en el peor caso, con un despacho supuesto de 15 min (`PENDIENTE_VERIFICAR`). Con 300 iteraciones, arrancar en caliente o desde cero da casi lo mismo (+0,05 % de km): en problemas de este tamaño ALNS converge rápido de cualquier forma. Lo que gana el arranque en caliente es que el plan nuevo conserva el orden que ya conocían los conductores.
+- [ ] Reasignar huérfanos a camiones en servicio con margen, frente a la reserva.
+- [ ] Reloj acelerable, eventos (vía cerrada, contenedor desbordado) y WebSocket (R08); sensores de llenado.
 
 ## F6 — Producto y publicación (2–3 semanas)
 
