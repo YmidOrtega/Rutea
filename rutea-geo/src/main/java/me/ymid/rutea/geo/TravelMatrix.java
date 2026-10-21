@@ -13,6 +13,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Distancias y tiempos de viaje por la red vial entre un conjunto de vértices, en arreglos planos fila
  * por fila: {@code meters[i * size + j]} va de {@code i} a {@code j}. No es simétrica: con calles de un
  * solo sentido, ir y volver cuestan distinto.
+ *
+ * <p>Los segundos son los de recorrer el camino más corto en metros, no los del camino más rápido: es el
+ * camino que el solver optimiza y el que se dibuja, así distancia y tiempo hablan del mismo recorrido.
  */
 public final class TravelMatrix {
 
@@ -30,8 +33,9 @@ public final class TravelMatrix {
     }
 
     /**
-     * Un Dijkstra por fila y por peso. Cada hilo toma filas completas con su propio {@link ShortestPaths} y
-     * escribe solo en ellas: el resultado no depende del número de hilos.
+     * Un Dijkstra por fila, por metros, que acumula los segundos del mismo camino. Cada hilo toma filas
+     * completas con su propio {@link ShortestPaths} y escribe solo en ellas: el resultado no depende del
+     * número de hilos.
      */
     public static TravelMatrix compute(RoadGraph graph, int[] vertices, int threads) {
         if (threads < 1) {
@@ -56,13 +60,12 @@ public final class TravelMatrix {
             for (int t = 0; t < threads; t++) {
                 workers.add(pool.submit(() -> {
                     ShortestPaths byMeters = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
-                    ShortestPaths bySeconds = new ShortestPaths(graph, ShortestPaths.Weight.SECONDS);
                     int[] row = new int[n];
+                    int[] rowSeconds = new int[n];
                     for (int i = nextRow.getAndIncrement(); i < n; i = nextRow.getAndIncrement()) {
-                        byMeters.distances(targets[i], targets, row);
+                        byMeters.distances(targets[i], targets, row, rowSeconds);
                         System.arraycopy(row, 0, meters, i * n, n);
-                        bySeconds.distances(targets[i], targets, row);
-                        System.arraycopy(row, 0, seconds, i * n, n);
+                        System.arraycopy(rowSeconds, 0, seconds, i * n, n);
                     }
                 }));
             }

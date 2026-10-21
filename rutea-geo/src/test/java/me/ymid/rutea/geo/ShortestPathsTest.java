@@ -35,6 +35,19 @@ class ShortestPathsTest {
     }
 
     @Test
+    void accumulatesTheOtherWeightAlongTheChosenPath() {
+        ShortestPaths meters = new ShortestPaths(TRIANGLE, Weight.METERS);
+        ShortestPaths seconds = new ShortestPaths(TRIANGLE, Weight.SECONDS);
+
+        meters.run(0);
+        seconds.run(0);
+
+        // Por metros se va por 1 (200 m), que tarda 120 s; por segundos se va directo (30 s), que mide 300 m.
+        assertThat(meters.secondary(2)).isEqualTo(120);
+        assertThat(seconds.secondary(2)).isEqualTo(300);
+    }
+
+    @Test
     void respectsOneWayStreets() {
         ShortestPaths paths = new ShortestPaths(TRIANGLE, Weight.METERS);
 

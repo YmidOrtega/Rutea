@@ -21,13 +21,16 @@ class TravelMatrixTest {
         TravelMatrix matrix = TravelMatrix.compute(CITY, points, 3);
 
         ShortestPaths meters = new ShortestPaths(CITY, Weight.METERS);
-        ShortestPaths seconds = new ShortestPaths(CITY, Weight.SECONDS);
         for (int i = 0; i < points.length; i++) {
             meters.run(points[i]);
-            seconds.run(points[i]);
             for (int j = 0; j < points.length; j++) {
                 assertThat(matrix.meters(i, j)).isEqualTo(meters.distance(points[j]));
-                assertThat(matrix.seconds(i, j)).isEqualTo(seconds.distance(points[j]));
+                // Los segundos son los del mismo camino más corto, sumados arco por arco.
+                int along = 0;
+                for (int e : meters.pathEdges(points[j])) {
+                    along += CITY.seconds(e);
+                }
+                assertThat(matrix.seconds(i, j)).isEqualTo(along);
             }
             assertThat(matrix.meters(i, i)).isZero();
         }
