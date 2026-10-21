@@ -94,7 +94,20 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Matriz de distancias y tiempos en paralelo (`TravelMatrix`): 1.701 × 1.701 sobre el grafo real en 377 ms con 16 hilos y 3,6 s con uno. Sale idéntica en los dos casos; el 97,5 % de las celdas es asimétrico.
 - [x] Contenedores negros simulados (hoy 806, ver `docs/datos.md`) (`SimulatedContainers`, semilla 1) sobre 693,9 km de calle local de Suba (terciaria, sin clasificar, residencial y `living_street`), repartidos según la longitud de calle porque los edificios de OSM en Suba están incompletos. Separación mínima de 50 m; la mediana al vecino más cercano es de 116 m. La matriz con el relleno (851 × 851) sale en 230 ms; la corrida se hizo con 850.
 - [x] Demanda: 160 kg de media por contenedor y recolección (110.760 kg/día en contenedores × 7/6 ÷ 806), con fuentes en `docs/datos.md`.
-- [ ] Viajes de descarga, escala del solver y frontend sobre las geometrías reales.
+- [x] Escala del solver: con 807 nodos no hace falta ajustar nada (la búsqueda local termina en 0,7 s; ningún solver pasa de ~300 MB). El ajuste previsto era para ~1.700 nodos.
+- [x] Benchmark de Suba (`data/suba/Suba-n807-s1.vrp`, sin BKS): 806 contenedores, 128.454 kg y compactadores de 8 t, con la portería de Doña Juana como depósito. 60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.12; hasta 7 procesos a la vez. CSV en `docs/benchmarks/f3-suba-60s/`.
+
+  | Solver | En frío (prom.; mín.–máx.) | En caliente (prom.; mín.–máx.) | Viajes |
+  |---|---:|---:|---:|
+  | `nearest-neighbor` | 1.400,1 km | 1.400,1 km | 17 |
+  | `clarke-wright` | 1.295,2 km | 1.295,2 km | 17 |
+  | `local-search` | 1.259,5 km; 1.258,7–1.260,4 | igual | 17 |
+  | `alns` | 1.242,7 km; 1.237,0–1.247,7 | 1.240,5 km; 1.239,6–1.241,0 | 17 |
+  | `alns-x4` | **1.237,5 km**; 1.234,0–1.243,7 | **1.237,8 km**; 1.233,2–1.241,8 | 17 |
+  | `timefold` 2.7.1, configuración por defecto | 1.675,0 km; 1.644,3–1.693,6 | 1.605,2 km; 1.596,9–1.614,8 | 17 |
+
+  Las 36 soluciones son factibles según el `Evaluator`, y todas usan el mínimo de 17 viajes. Al menos 788,5 km son inevitables: 17 viajes × (24,1 + 22,3) km hasta el contenedor más cercano al relleno, ida y vuelta. Con límite de tiempo, el resultado depende de la carga de la máquina: `alns` con semilla 1, solo en la máquina, dio 1.231,8 km; aquí, con 7 procesos a la vez, 1.247,7 km.
+- [ ] Viajes de descarga desde la base, y frontend sobre las geometrías reales.
 
 ## F4 — Restricciones del dominio (3 semanas)
 

@@ -35,6 +35,7 @@ rutea/
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
 ├── data/osm/                 extracto de OpenStreetMap fijo, se descarga (ver data/osm/README.md)
+├── data/suba/                instancias CVRP reales de Suba, se generan (ver data/suba/README.md)
 └── docs/                     normativa, arquitectura, roadmap, diseño, ADRs
 ```
 
@@ -60,10 +61,11 @@ Comandos previstos; se activan cuando exista cada módulo. Actualiza esta secci�
 mvn verify                                   # compila y corre todos los tests
 mvn -pl rutea-solver test                    # solo el solver
 mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-solver/target/benchmarks/*.csv
-                                             # opciones: -Dexec.args="<dir> --solver <n> --seed <n> --time-limit <s> --iterations <n> --out <dir>"
+                                             # opciones: -Dexec.args="<dir> --solver <n> --seed <n>[,<n>...] --time-limit <s> --iterations <n> --warmup --out <dir>"
 mvn -pl rutea-bench -am compile exec:java@compare   # el mismo arnés con Timefold disponible (--solver timefold)
 mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de evaluación de movimientos
 mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
+mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/Suba-n807-s1.vrp (ver data/suba/README.md)
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
@@ -95,7 +97,8 @@ pnpm demo:data                               # regenera web/public/demo/plan-sub
 ## Benchmarks
 
 - Instancias: set X de Uchoa et al. (2017), CVRPLIB. Métrica principal: **gap** = (costo − BKS) / BKS.
-- El arnés escribe un CSV por corrida: instancia, solver, semilla, límite de tiempo, límite de iteraciones, costo, BKS, gap, tiempo real, vehículos usados.
+- Instancias de Suba (`data/suba`): reales y sin BKS publicada. El arnés deja la BKS y el gap vacíos y compara los costos entre solvers; nunca se inventa una BKS.
+- El arnés escribe un CSV por corrida: instancia, solver, semilla, límite de tiempo, límite de iteraciones, costo, BKS, gap, tiempo real, vehículos usados y si fue en caliente (`--warmup`).
 - Con `--iterations` la corrida es reproducible en cualquier máquina; con solo `--time-limit`, el resultado depende de la velocidad de la máquina.
 - Antes de publicar un número en README o en ymid.me, se corre en frío y en caliente y se reportan ambos.
 
