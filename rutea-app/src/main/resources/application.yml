@@ -4,3 +4,10 @@ spring:
 
 server:
   port: 8080
+
+rutea:
+  # Relativo al directorio desde el que se lanza la app (mvn -pl rutea-app spring-boot:run corre en rutea-app/).
+  graph: ../data/osm/suba.rgraph
+  sites: ../data/osm/suba-sitios-sensibles.csv
+  # Arma el plan apenas arranca (unos 25 s en otro hilo). Los tests lo apagan.
+  warm-up: true

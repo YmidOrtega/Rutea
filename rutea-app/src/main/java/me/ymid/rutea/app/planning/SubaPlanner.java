@@ -80,11 +80,36 @@ public final class SubaPlanner {
      */
     public static DemoPlan plan(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             String method, long seed, long iterations) {
-        Instance instance = scenario.instance();
-        Evaluation evaluation = Evaluator.evaluate(instance, solution);
+        Evaluation evaluation = Evaluator.evaluate(scenario.instance(), solution);
         if (!evaluation.feasible()) {
-            throw new IllegalStateException(instance.name() + " infactible: " + evaluation.violations());
+            throw new IllegalStateException(scenario.instance().name() + " infactible: " + evaluation.violations());
         }
+        return draw(scenario, solution, schedule, method, seed, iterations,
+                scenario.stream() == WasteStream.NON_RECYCLABLE ? "C" : "A");
+    }
+
+    /**
+     * Los camiones de reserva tras una avería: sus viajes cubren solo los contenedores huérfanos, así que no se
+     * exige cobertura total, pero sí la capacidad de cada viaje. Sus rutas se llaman R-01, R-02…
+     */
+    public static DemoPlan planReserve(SubaScenario scenario, Solution trips, ShiftScheduler.Schedule schedule,
+            long seed, long iterations) {
+        for (int k = 0; k < trips.routeCount(); k++) {
+            int load = 0;
+            for (int p = 0; p < trips.routeLength(k); p++) {
+                load += scenario.instance().demand(trips.customer(k, p));
+            }
+            if (load > scenario.instance().capacity()) {
+                throw new IllegalStateException("viaje de reserva " + (k + 1) + " con " + load + " kg, más que "
+                        + scenario.instance().capacity());
+            }
+        }
+        return draw(scenario, trips, schedule, "alns-reserva", seed, iterations, "R");
+    }
+
+    private static DemoPlan draw(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+            String method, long seed, long iterations, String idPrefix) {
+        Instance instance = scenario.instance();
 
         RoadGraph graph = scenario.graph();
         ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
@@ -94,7 +119,7 @@ public final class SubaPlanner {
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int t = 0; t < schedule.trucks().size(); t++) {
             ShiftScheduler.Truck truck = schedule.trucks().get(t);
-            String id = String.format("%s-%02d", scenario.stream() == WasteStream.NON_RECYCLABLE ? "C" : "A", t + 1);
+            String id = String.format("%s-%02d", idPrefix, t + 1);
             List<String> stops = new ArrayList<>();
             int[] tripLoads = new int[truck.trips().length];
             Geometry geometry = new Geometry(graph);
@@ -164,16 +189,23 @@ public final class SubaPlanner {
      * de una organización de recicladores hacia la ECA (R06, R10), cada flota con el menor número de vehículos.
      */
     public static DemoPlan planBoth(SubaScenario waste, SubaScenario recyclables, long seed) {
-        DemoPlan nonRecyclable = plan(waste, seed);
-        Solution solution = new AlnsSolver().solve(recyclables.instance(),
-                new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
-        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(recyclables, solution,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, SubaFigures.ECA_UNLOAD_SECONDS, SubaFigures.SHIFT_SECONDS, 3);
-        DemoPlan recyclable = plan(recyclables, solution, schedule, "alns", seed, ITERATIONS);
-        return merge(nonRecyclable, recyclable);
+        return merge(fleet(waste, SubaFigures.UNLOAD_SECONDS_LOW, seed).plan(),
+                fleet(recyclables, SubaFigures.ECA_UNLOAD_SECONDS, seed).plan());
     }
 
-    static DemoPlan merge(DemoPlan waste, DemoPlan recyclables) {
+    /** Una flota planificada, con lo que hace falta para replanificarla: su solución y su asignación de turnos. */
+    public record Fleet(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, DemoPlan plan) {
+    }
+
+    public static Fleet fleet(SubaScenario scenario, int unloadSeconds, long seed) {
+        Solution solution = new AlnsSolver().solve(scenario.instance(),
+                new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution,
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, SubaFigures.SHIFT_SECONDS, 3);
+        return new Fleet(scenario, solution, schedule, plan(scenario, solution, schedule, "alns", seed, ITERATIONS));
+    }
+
+    public static DemoPlan merge(DemoPlan waste, DemoPlan recyclables) {
         List<DemoPlan.Site> sites = new ArrayList<>(waste.sites());
         sites.addAll(recyclables.sites());
         List<DemoPlan.Container> containers = new ArrayList<>(waste.containers());
