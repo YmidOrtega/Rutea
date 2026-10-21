@@ -9,13 +9,13 @@ import me.ymid.rutea.app.planning.DemoPlan;
  * el inicio del turno; los tiempos de las rutas de reserva ya vienen corridos a la hora de despacho.
  *
  * @param orphans ids de los contenedores que el camión averiado no alcanzó a recoger
- * @param reserve rutas de los camiones de reserva (R-01, R-02…)
+ * @param reserve rutas de los camiones de reserva: R-03-1, R-03-2… para la avería de C-03
  * @param latencyMs tiempo real de replanificar
  * @param meetsRecoveryRule si el primer huérfano se recoge en máximo tres horas (R05)
  */
-public record BreakdownEvent(String truck, long atSeconds, long dispatchSeconds, double latencyMs,
+public record BreakdownEvent(int seq, String truck, long atSeconds, long dispatchSeconds, double latencyMs,
         List<String> orphans, List<DemoPlan.Route> reserve, long firstPickupSeconds, long lastPickupSeconds,
-        boolean meetsRecoveryRule, String citation) {
+        boolean meetsRecoveryRule, String citation) implements OperationEvent {
 
     public BreakdownEvent {
         orphans = List.copyOf(orphans);

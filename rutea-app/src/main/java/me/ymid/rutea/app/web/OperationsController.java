@@ -22,6 +22,10 @@ public class OperationsController {
     public record BreakdownRequest(String truck, long atSeconds) {
     }
 
+    /** Un contenedor reportado como desbordado desde el mapa, a la hora del reloj. */
+    public record OverflowRequest(String container, long atSeconds) {
+    }
+
     private final OperationsService operations;
     private final EventsHub hub;
 
@@ -36,14 +40,24 @@ public class OperationsController {
     }
 
     @GetMapping("/events")
-    public List<BreakdownEvent> events() {
+    public List<OperationEvent> events() {
         return operations.events();
     }
 
-    /** Replanifica y difunde el evento a todos los clientes; quien la pidió también lo recibe en la respuesta. */
+    /**
+     * Replanifica y difunde a todos los clientes la avería y los desbordes que hubo que volver a despachar; quien
+     * la pidió también los recibe en la respuesta.
+     */
     @PostMapping("/breakdowns")
-    public BreakdownEvent breakdown(@RequestBody BreakdownRequest request) {
-        BreakdownEvent event = operations.breakdown(request.truck(), request.atSeconds());
+    public List<OperationEvent> breakdown(@RequestBody BreakdownRequest request) {
+        List<OperationEvent> events = operations.breakdown(request.truck(), request.atSeconds());
+        events.forEach(hub::broadcast);
+        return events;
+    }
+
+    @PostMapping("/overflows")
+    public OverflowEvent overflow(@RequestBody OverflowRequest request) {
+        OverflowEvent event = operations.overflow(request.container(), request.atSeconds());
         hub.broadcast(event);
         return event;
     }
