@@ -10,9 +10,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = BreakdownEvent.class, name = "breakdown"),
-    @JsonSubTypes.Type(value = OverflowEvent.class, name = "overflow")
+    @JsonSubTypes.Type(value = OverflowEvent.class, name = "overflow"),
+    @JsonSubTypes.Type(value = ClosureEvent.class, name = "closure")
 })
-public sealed interface OperationEvent permits BreakdownEvent, OverflowEvent {
+public sealed interface OperationEvent permits BreakdownEvent, OverflowEvent, ClosureEvent {
 
     int seq();
 

@@ -28,7 +28,9 @@ import me.ymid.rutea.app.scenario.SimulatedContainers;
 import me.ymid.rutea.app.scenario.SubaFigures;
 import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.domain.CollectionRules;
+import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
+import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 
 /**
@@ -112,12 +114,14 @@ public class OperationsService {
             throw new IllegalArgumentException(truckId + " trabaja de 0 a " + end + " s; la avería a " + atSeconds
                     + " s queda fuera de su turno");
         }
-        BreakdownReplanner.Replan replan = BreakdownReplanner.afterBreakdown(waste.scenario(), waste.solution(),
-                waste.schedule(), truck, atSeconds, ITERATIONS, SubaPlanner.DEFAULT_SEED);
+        SubaScenario scenario = operation.scenarioAt(atSeconds);
+        BreakdownReplanner.Replan replan = BreakdownReplanner.afterBreakdown(scenario, truck, atSeconds,
+                operation.pendingPlanned(truck, atSeconds), waste.schedule().unloadSeconds(), ITERATIONS,
+                SubaPlanner.DEFAULT_SEED);
         long dispatch = atSeconds + SubaFigures.RESERVE_DISPATCH_SECONDS;
         List<DemoPlan.Route> reserve = new ArrayList<>();
         if (replan.orphans().length > 0) {
-            DemoPlan drawn = SubaPlanner.planReserve(waste.scenario(), replan.trips(), replan.reserve(),
+            DemoPlan drawn = SubaPlanner.planReserve(scenario, replan.trips(), replan.reserve(),
                     SubaPlanner.DEFAULT_SEED, ITERATIONS);
             for (int k = 0; k < drawn.routes().size(); k++) {
                 reserve.add(shifted(drawn.routes().get(k), "R-" + truckId.substring(2) + "-" + (k + 1), dispatch));
@@ -163,6 +167,47 @@ public class OperationsService {
         return record(operation.overflow(node, atSeconds), "reporte");
     }
 
+    /**
+     * Cierra la calle más cercana a ({@code lon}, {@code lat}) desde {@code atSeconds}.
+     *
+     * @throws IllegalArgumentException si la calle ya está cerrada, el cierre aísla la base o la portería, o es
+     *     anterior al último cierre
+     */
+    public synchronized ClosureEvent closure(double lon, double lat, long atSeconds) {
+        plan();
+        if (atSeconds < 0 || atSeconds >= operation.shiftSeconds()) {
+            throw new IllegalArgumentException("el turno va de 0 a " + operation.shiftSeconds() + " s; el cierre a "
+                    + atSeconds + " s queda fuera");
+        }
+        SubaScenario scenario = waste.scenario();
+        RoadGraph graph = scenario.graph();
+        int shape = graph.nearestShape((int) Math.round(lat * 1e7), (int) Math.round(lon * 1e7));
+        LiveOperation.Closure closure = operation.close(shape, atSeconds);
+        List<double[]> path = new ArrayList<>();
+        for (int p = graph.firstShapePoint(shape); p < graph.endShapePoint(shape); p++) {
+            path.add(new double[] {graph.shapeLonE7(p) / 1e7, graph.shapeLatE7(p) / 1e7});
+        }
+        List<ClosureEvent.Change> changes = new ArrayList<>();
+        List<DemoPlan.Route> routes = new ArrayList<>();
+        Map<String, Long> visits = new LinkedHashMap<>();
+        for (LiveOperation.TruckChange change : closure.changes()) {
+            String truck = String.format("C-%02d", change.truck() + 1);
+            changes.add(new ClosureEvent.Change(truck, change.extraMeters(), change.extraSeconds(), change.rerouted(),
+                    change.late()));
+            routes.add(operation.route(change.truck(), truck));
+            operation.plannedArrivals(change.truck()).forEach((node, seconds) ->
+                    visits.put(scenario.containers().get(node - 1).id(), seconds));
+        }
+        TravelMatrix.Repair repair = closure.repair();
+        ClosureEvent event = new ClosureEvent(events.size() + 1, atSeconds,
+                graph.roadClass(graph.edgesOn(shape)[0]).name(), path, closure.latencyNanos() / 1e6,
+                repair.rows() + repair.columns(), repair.matrix().size(), repair.changedPairs(),
+                ids(closure.isolated()), ids(closure.dropped()), changes, routes, visits,
+                CollectionRules.ROUTE_CHANGE_NOTICE.citation());
+        events.add(event);
+        return event;
+    }
+
     /** Lo que pasó en esta sesión, en orden: un cliente que llega tarde ve el mismo estado que los demás. */
     public synchronized List<OperationEvent> events() {
         return List.copyOf(events);
@@ -180,8 +225,7 @@ public class OperationsService {
             }
             case IN_SERVICE -> {
                 int t = dispatch.truck();
-                routes.add(SubaPlanner.redraw(scenario, operation.trips(t), operation.meters(t),
-                        operation.endSeconds(t), operation.unloadSeconds(), truck));
+                routes.add(operation.route(t, truck));
                 operation.plannedArrivals(t).forEach((node, seconds) ->
                         visits.put(scenario.containers().get(node - 1).id(), seconds));
             }
@@ -190,7 +234,9 @@ public class OperationsService {
                 ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, trip,
                         SubaFigures.SERVICE_SECONDS_PER_CONTAINER, operation.unloadSeconds(), SubaFigures.SHIFT_SECONDS,
                         1);
-                DemoPlan.Route drawn = SubaPlanner.planReserve(scenario, trip, schedule, SubaPlanner.DEFAULT_SEED, 0)
+                DemoPlan.Route drawn = SubaPlanner.planReserve(
+                        operation.scenarioAt(dispatch.atSeconds() + SubaFigures.RESERVE_DISPATCH_SECONDS), trip,
+                        schedule, SubaPlanner.DEFAULT_SEED, 0)
                         .routes().getFirst();
                 routes.add(shifted(drawn, truck, dispatch.atSeconds() + SubaFigures.RESERVE_DISPATCH_SECONDS));
             }
@@ -200,6 +246,10 @@ public class OperationsService {
                 dispatch.latencyNanos() / 1e6, routes, visits);
         events.add(event);
         return event;
+    }
+
+    private List<String> ids(List<Integer> nodes) {
+        return nodes.stream().map(node -> waste.scenario().containers().get(node - 1).id()).toList();
     }
 
     private int containerNode(String containerId) {

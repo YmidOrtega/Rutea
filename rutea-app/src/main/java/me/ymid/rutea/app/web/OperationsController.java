@@ -26,6 +26,10 @@ public class OperationsController {
     public record OverflowRequest(String container, long atSeconds) {
     }
 
+    /** La calle más cercana al punto donde se hizo clic se cierra en los dos sentidos. */
+    public record ClosureRequest(double lon, double lat, long atSeconds) {
+    }
+
     private final OperationsService operations;
     private final EventsHub hub;
 
@@ -58,6 +62,13 @@ public class OperationsController {
     @PostMapping("/overflows")
     public OverflowEvent overflow(@RequestBody OverflowRequest request) {
         OverflowEvent event = operations.overflow(request.container(), request.atSeconds());
+        hub.broadcast(event);
+        return event;
+    }
+
+    @PostMapping("/closures")
+    public ClosureEvent closure(@RequestBody ClosureRequest request) {
+        ClosureEvent event = operations.closure(request.lon(), request.lat(), request.atSeconds());
         hub.broadcast(event);
         return event;
     }
