@@ -138,10 +138,10 @@ function containerHtml(container: Container): string {
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
-    <span class="num">Viaje ${container.route}</span>`
+    <span class="num">Camión ${container.route}</span>`
 }
 
 function siteHtml(site: Site): string {
   return `<strong>${site.label}</strong>
-    <span>${site.id === 'relleno' ? 'Cada compactador descarga aquí' : 'Los compactadores salen y vuelven aquí'}</span>`
+    <span>${site.id === 'relleno' ? 'Cada viaje termina aquí a descargar' : 'Los compactadores salen y vuelven aquí'}</span>`
 }

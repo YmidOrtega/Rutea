@@ -14,8 +14,9 @@ export interface Container {
 }
 
 /**
- * El turno de un compactador: base → contenedores → relleno → base. `times[i]`: segundos desde la salida hasta
- * `path[i]`; en cada contenedor el punto se repite con la hora en que el camión vuelve a arrancar.
+ * El turno de un compactador: base → viaje → descarga en el relleno → … → base. `tripLoadsKg[i]` es la carga
+ * del viaje `i`. `times[i]`: segundos desde la salida hasta `path[i]`; en cada parada (contenedor o descarga)
+ * el punto se repite con la hora en que el camión vuelve a arrancar.
  */
 export interface Route {
   id: string
@@ -24,6 +25,7 @@ export interface Route {
   loadKg: number
   distanceMeters: number
   durationSeconds: number
+  tripLoadsKg: number[]
   stops: string[]
   path: LonLat[]
   times: number[]
@@ -44,7 +46,9 @@ export interface DemoPlan {
     seed: number
     iterations: number
     shiftStart: string
+    shiftSeconds: number
     serviceSeconds: number
+    unloadSeconds: number
     /** Consumo supuesto: el CO₂ es estimado, no medido. */
     litersPerKm: number
     /** Factor del IPCC 2006 para el diésel. */
