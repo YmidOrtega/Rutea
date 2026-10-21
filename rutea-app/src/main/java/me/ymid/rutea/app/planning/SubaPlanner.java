@@ -3,6 +3,7 @@ package me.ymid.rutea.app.planning;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
@@ -93,7 +94,7 @@ public final class SubaPlanner {
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int t = 0; t < schedule.trucks().size(); t++) {
             ShiftScheduler.Truck truck = schedule.trucks().get(t);
-            String id = String.format("C-%02d", t + 1);
+            String id = String.format("%s-%02d", scenario.stream() == WasteStream.NON_RECYCLABLE ? "C" : "A", t + 1);
             List<String> stops = new ArrayList<>();
             int[] tripLoads = new int[truck.trips().length];
             Geometry geometry = new Geometry(graph);
@@ -120,7 +121,7 @@ public final class SubaPlanner {
                 throw new IllegalStateException(id + ": el turno dibujado mide " + meters + " m y " + geometry.seconds()
                         + " s; la asignación dice " + truck.meters() + " m y " + truck.seconds() + " s");
             }
-            routes.add(new DemoPlan.Route(id, WasteStream.NON_RECYCLABLE, instance.capacity(),
+            routes.add(new DemoPlan.Route(id, scenario.stream(), instance.capacity(),
                     Arrays.stream(tripLoads).sum(), meters, geometry.seconds(), tripLoads, stops, geometry.path,
                     geometry.times.stream().mapToInt(Integer::intValue).toArray()));
         }
@@ -133,17 +134,70 @@ public final class SubaPlanner {
             planContainers.add(new DemoPlan.Container(c.id(), c.stream(), lonLat(c.latE7(), c.lonE7()), c.kg(),
                     routeOf[i], visitSeconds[i], stop.noCompaction(), stop.nightNoise(), stop.reasons()));
         }
-        List<DemoPlan.Site> sites = List.of(
-                new DemoPlan.Site("relleno", "Relleno Doña Juana · portería",
-                        lonLat(graph.latE7(scenario.gateVertex()), graph.lonE7(scenario.gateVertex()))),
-                new DemoPlan.Site("base", "Base de Área Limpia · Fontibón",
+        List<DemoPlan.Site> sites = scenario.stream() == WasteStream.NON_RECYCLABLE
+                ? List.of(
+                        new DemoPlan.Site("relleno", "Relleno Doña Juana · portería",
+                                lonLat(graph.latE7(scenario.gateVertex()), graph.lonE7(scenario.gateVertex()))),
+                        new DemoPlan.Site("base", "Base de Área Limpia · Fontibón",
+                                lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))))
+                : List.of(new DemoPlan.Site("eca", "ECA supuesta · centro de Suba",
                         lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))));
         DemoPlan.Meta meta = new DemoPlan.Meta("Suba", true, "Calles reales de OpenStreetMap; contenedores y cargas simulados",
                 method, seed, iterations, SubaFigures.SHIFT_START, schedule.shiftSeconds(),
                 SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
                 SubaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
-                "© colaboradores de OpenStreetMap (ODbL 1.0)");
+                "© colaboradores de OpenStreetMap (ODbL 1.0)", ASSUMPTIONS);
         return new DemoPlan(meta, sites, planContainers, routes, compliance.checks());
+    }
+
+    /** Lo que el plan supone sin dato publicado: el panel lo muestra tal cual. Fuentes en docs/datos.md. */
+    static final List<String> ASSUMPTIONS = List.of(
+            "Contenedores y cargas simulados con cifras oficiales; su ubicación sigue la longitud de calle local",
+            "Velocidades por tipo de vía y parada de " + SubaFigures.SERVICE_SECONDS_PER_CONTAINER + " s por contenedor",
+            "Consumo de " + SubaFigures.LITERS_PER_KM + " L/km para el CO₂",
+            "Aprovechables: " + Math.round(SubaFigures.RECOVERED_SHARE * 100) + " % de aprovechamiento (prensa),"
+                    + " ECA en el centro de Suba, vehículos de " + SubaFigures.RECYCLABLE_VEHICLE_KG + " kg y "
+                    + SubaFigures.ECA_UNLOAD_SECONDS / 60 + " min de descarga: sin datos públicos");
+
+    /**
+     * Las dos corrientes en un solo plan: compactadores del operador hacia Doña Juana y vehículos sin compactación
+     * de una organización de recicladores hacia la ECA (R06, R10), cada flota con el menor número de vehículos.
+     */
+    public static DemoPlan planBoth(SubaScenario waste, SubaScenario recyclables, long seed) {
+        DemoPlan nonRecyclable = plan(waste, seed);
+        Solution solution = new AlnsSolver().solve(recyclables.instance(),
+                new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(recyclables, solution,
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, SubaFigures.ECA_UNLOAD_SECONDS, SubaFigures.SHIFT_SECONDS, 3);
+        DemoPlan recyclable = plan(recyclables, solution, schedule, "alns", seed, ITERATIONS);
+        return merge(nonRecyclable, recyclable);
+    }
+
+    static DemoPlan merge(DemoPlan waste, DemoPlan recyclables) {
+        List<DemoPlan.Site> sites = new ArrayList<>(waste.sites());
+        sites.addAll(recyclables.sites());
+        List<DemoPlan.Container> containers = new ArrayList<>(waste.containers());
+        containers.addAll(recyclables.containers());
+        List<DemoPlan.Route> routes = new ArrayList<>(waste.routes());
+        routes.addAll(recyclables.routes());
+        int nightNoise = 0;
+        List<Compliance.Check> checks = new ArrayList<>();
+        for (Compliance.Check check : waste.compliance()) {
+            if (check.id().equals("R02")) {
+                nightNoise = check.count();
+            } else {
+                checks.add(check);
+            }
+        }
+        for (Compliance.Check check : recyclables.compliance()) {
+            if (check.id().equals("R02")) {
+                nightNoise += check.count();
+            }
+        }
+        checks.add(Compliance.nightNoiseCheck(nightNoise));
+        checks.addAll(Compliance.fleetChecks(waste.routes().size(), recyclables.routes().size()));
+        checks.sort(Comparator.comparing(Compliance.Check::id));
+        return new DemoPlan(waste.meta(), sites, containers, routes, checks);
     }
 
     /**

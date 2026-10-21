@@ -20,10 +20,11 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
      * @param litersPerKm consumo supuesto de diésel (ver SubaFigures)
      * @param kgCo2PerLiter factor del IPCC 2006 para el diésel (ver DieselEmissions)
      * @param attribution atribución obligatoria de los datos de OSM (ODbL)
+     * @param assumptions lo que el plan supone sin dato publicado, en texto para mostrarlo tal cual
      */
     public record Meta(String zone, boolean simulated, String network, String solver, long seed, long iterations,
             String shiftStart, int shiftSeconds, int serviceSeconds, int unloadSeconds, double litersPerKm,
-            double kgCo2PerLiter, String attribution) {
+            double kgCo2PerLiter, String attribution, List<String> assumptions) {
     }
 
     /** Lugar fijo de la operación: la base de los camiones o el sitio de disposición. */

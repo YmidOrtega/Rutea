@@ -28,8 +28,18 @@ public final class Compliance {
         }
     }
 
-    /** Una regla y cuántas paradas toca en el plan. */
-    public record Check(String id, String citation, int count, String summary) {
+    /** Qué significa una revisión para la operación. */
+    public enum Status {
+        /** La norma se cumple sin hacer nada distinto. */
+        OK,
+        /** Se cumple si el conductor hace algo en esas paradas (no compactar, mitigar el ruido). */
+        ACTION,
+        /** El plan no cumple. */
+        FAIL
+    }
+
+    /** Una regla, cuántas paradas toca en el plan y qué significa eso. */
+    public record Check(String id, String citation, int count, String summary, Status status) {
     }
 
     public record Result(List<Stop> stops, List<Check> checks) {
@@ -54,13 +64,15 @@ public final class Compliance {
             shapeClass[shape] = graph.roadClass(e);
         }
         LocalTime start = LocalTime.parse(shiftStart);
+        // Un vehículo sin compactación (aprovechables, R06) no tiene nada que dejar de compactar.
+        boolean compacts = scenario.stream() == WasteStream.NON_RECYCLABLE;
         List<Stop> stops = new ArrayList<>();
         int noCompaction = 0;
         int nightNoise = 0;
         for (int i = 0; i < scenario.containers().size(); i++) {
             Container container = scenario.containers().get(i);
             List<String> reasons = new ArrayList<>();
-            SensitiveSites.Site front = nearest(scenario.sites(), container, true);
+            SensitiveSites.Site front = compacts ? nearest(scenario.sites(), container, true) : null;
             boolean r07 = front != null;
             if (r07) {
                 reasons.add(String.format(Locale.ROOT, "R07 · sin compactación: frente a %s (%s, %.0f m)", front.label(),
@@ -83,20 +95,45 @@ public final class Compliance {
             stops.add(new Stop(r07, r02, reasons));
         }
 
+        Check r02 = nightNoiseCheck(nightNoise);
+        if (!compacts) {
+            // La norma no fija frecuencia mínima para aprovechables (R03) y sin compactación no aplica R07.
+            return new Result(stops, List.of(r02));
+        }
         int frequency = SubaFigures.COLLECTIONS_PER_WEEK;
         int minimum = CollectionRules.minimumWeeklyFrequency(WasteStream.NON_RECYCLABLE).orElseThrow();
         List<Check> checks = List.of(
-                new Check("R02", CollectionRules.NIGHT_NOISE.citation(), nightNoise,
-                        nightNoise + " paradas entre las 21:00 y las 06:00 en calle residencial o frente a hotel,"
-                                + " hospital, clínica o centro asistencial: requieren medidas contra el ruido"),
+                r02,
                 new Check("R03", CollectionRules.MINIMUM_FREQUENCY.citation(), frequency >= minimum ? 0 : 1,
                         frequency >= minimum
                                 ? "Se recoge " + frequency + " veces por semana; el mínimo es " + minimum
-                                : "Se recoge " + frequency + " veces por semana, menos que el mínimo de " + minimum),
+                                : "Se recoge " + frequency + " veces por semana, menos que el mínimo de " + minimum,
+                        frequency >= minimum ? Status.OK : Status.FAIL),
                 new Check("R07", CollectionRules.NO_COMPACTION.citation(), noCompaction,
                         noCompaction + " contenedores a " + SensitiveSites.FRONT_METERS + " m o menos de un centro"
-                                + " educativo, hospital, clínica o centro asistencial: ahí no se compacta"));
+                                + " educativo, hospital, clínica o centro asistencial: ahí no se compacta",
+                        noCompaction > 0 ? Status.ACTION : Status.OK));
         return new Result(stops, checks);
+    }
+
+    /**
+     * R06 y R10 se cumplen por construcción del plan: compactadores solo para no aprovechables, vehículos sin
+     * compactación de una organización de recicladores para aprovechables, y estos terminan en la ECA.
+     */
+    public static List<Check> fleetChecks(int compactors, int recyclableVehicles) {
+        return List.of(
+                new Check("R06", CollectionRules.COMPACTION_EQUIPMENT.citation(), 0, compactors
+                        + " compactadores para no aprovechables y " + recyclableVehicles
+                        + " vehículos sin compactación para aprovechables", Status.OK),
+                new Check("R10", CollectionRules.SELECTIVE_TO_ECA.citation(), 0, "Los aprovechables los recoge una"
+                        + " organización de recicladores en ruta selectiva hasta la ECA, no el operador del relleno",
+                        Status.OK));
+    }
+
+    static Check nightNoiseCheck(int stops) {
+        return new Check("R02", CollectionRules.NIGHT_NOISE.citation(), stops, stops + " paradas entre las 21:00 y"
+                + " las 06:00 en calle residencial o frente a hotel, hospital, clínica o centro asistencial: requieren"
+                + " medidas contra el ruido", stops > 0 ? Status.ACTION : Status.OK);
     }
 
     private static SensitiveSites.Site nearest(List<SensitiveSites.Site> sites, Container container,

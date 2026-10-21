@@ -1,5 +1,7 @@
 package me.ymid.rutea.app.scenario;
 
+import me.ymid.rutea.geo.RoadGraph;
+
 /**
  * Cifras de la operación en Suba (ASE 5) con su fuente. Cada una está en {@code docs/datos.md}; si cambia
  * una, se actualizan las dos en el mismo cambio.
@@ -72,7 +74,60 @@ public final class SubaFigures {
     /** Compactador más común del ASE 5: 17 de 32 yardas, 8 toneladas (Superservicios, 2026). */
     public static final int COMPACTOR_CAPACITY_KG = 8_000;
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: parte de lo recogido que se aprovecha. "De los residuos recogidos cada día, se
+     * logran aprovechar solo el 16%" (El Espectador, 18 de septiembre de 2025; en la bajada, sin fuente explícita).
+     */
+    public static final double RECOVERED_SHARE = 0.16;
+
+    /** Supuesto: vehículo sin compactación de una organización de recicladores (R06, R10), en kg. */
+    public static final int RECYCLABLE_VEHICLE_KG = 1_500;
+
+    /** Supuesto: minutos de descarga y pesaje en la ECA (R10). */
+    public static final int ECA_UNLOAD_SECONDS = 20 * 60;
+
     private SubaFigures() {
+    }
+
+    /** Contenedores blancos: la otra mitad de los de Suba, "la mitad para promover el reciclaje" (UAESP, 2025). */
+    public static int recyclableContainers() {
+        return (int) Math.round(BOGOTA_CONTAINERS * ASE5_SHARE * (1 - NON_RECYCLABLE_CONTAINER_SHARE));
+    }
+
+    /**
+     * Supuesto: kilos de aprovechables por día en los contenedores blancos, con la misma proporción que en la
+     * ciudad: lo aprovechado (16 %) frente a lo dispuesto (84 %), sobre lo que pasa por los negros.
+     */
+    public static long recyclableKgPerDay() {
+        return Math.round(containerKgPerDay() * RECOVERED_SHARE / (1 - RECOVERED_SHARE));
+    }
+
+    public static double meanRecyclableKgPerCollection(int containers) {
+        return recyclableKgPerDay() * 7.0 / COLLECTIONS_PER_WEEK / containers;
+    }
+
+    /**
+     * Supuesto: la ECA de Suba. No hay inventario público de ECA con coordenadas (está en las Resoluciones UAESP
+     * 137 y 698 de 2023, no publicadas) ni ECA identificadas en OSM, así que se toma el vértice de calle local más
+     * cercano al centro del rectángulo de la localidad.
+     */
+    public static int ecaVertex(RoadGraph graph) {
+        int minLat = Integer.MAX_VALUE;
+        int maxLat = Integer.MIN_VALUE;
+        int minLon = Integer.MAX_VALUE;
+        int maxLon = Integer.MIN_VALUE;
+        for (int s = 0; s < graph.shapeCount(); s++) {
+            if (!graph.shapeInLocality(s)) {
+                continue;
+            }
+            for (int p = graph.firstShapePoint(s); p < graph.endShapePoint(s); p++) {
+                minLat = Math.min(minLat, graph.shapeLatE7(p));
+                maxLat = Math.max(maxLat, graph.shapeLatE7(p));
+                minLon = Math.min(minLon, graph.shapeLonE7(p));
+                maxLon = Math.max(maxLon, graph.shapeLonE7(p));
+            }
+        }
+        return graph.nearestVertex((int) (((long) minLat + maxLat) / 2), (int) (((long) minLon + maxLon) / 2));
     }
 
     /**

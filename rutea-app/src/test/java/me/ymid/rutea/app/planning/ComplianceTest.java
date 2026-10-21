@@ -48,6 +48,7 @@ class ComplianceTest {
         assertThat(result.stops().get(0).reasons().getFirst()).startsWith("R07 · sin compactación: frente a Colegio");
         assertThat(result.stops().get(1).noCompaction()).as("un hotel no impide compactar").isFalse();
         assertThat(check(result, "R07").count()).isEqualTo(1);
+        assertThat(check(result, "R07").status()).isEqualTo(Compliance.Status.ACTION);
     }
 
     @Test
@@ -73,6 +74,7 @@ class ComplianceTest {
         Compliance.Check r03 = check(Compliance.evaluate(town, new int[10], "18:00"), "R03");
 
         assertThat(r03.count()).isZero();
+        assertThat(r03.status()).isEqualTo(Compliance.Status.OK);
         assertThat(r03.summary()).isEqualTo("Se recoge 6 veces por semana; el mínimo es 2");
     }
 

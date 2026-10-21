@@ -37,14 +37,15 @@ public final class DemoPlanExporter {
         long start = System.nanoTime();
         SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(graphFile).graph(), seed)
                 .withSites(SensitiveSites.read(sitesFile));
-        DemoPlan plan = SubaPlanner.plan(scenario, seed);
+        DemoPlan plan = SubaPlanner.planBoth(scenario,
+                SubaScenario.buildRecyclable(scenario.graph(), seed).withSites(scenario.sites()), seed);
         Files.createDirectories(out.toAbsolutePath().getParent());
         JsonMapper.builder().build().writeValue(out.toFile(), plan);
 
         long meters = plan.routes().stream().mapToLong(DemoPlan.Route::distanceMeters).sum();
         long points = plan.routes().stream().mapToLong(route -> route.path().size()).sum();
         int trips = plan.routes().stream().mapToInt(route -> route.tripLoadsKg().length).sum();
-        System.out.printf("%d contenedores, %d camiones, %d viajes, %.1f km, %d puntos en %.1f s → %s (%d KB)%n",
+        System.out.printf("%d contenedores, %d vehículos, %d viajes, %.1f km, %d puntos en %.1f s → %s (%d KB)%n",
                 plan.containers().size(), plan.routes().size(), trips, meters / 1000.0, points,
                 (System.nanoTime() - start) / 1e9, out.toAbsolutePath(), Files.size(out) / 1024);
     }
