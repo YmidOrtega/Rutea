@@ -8,7 +8,7 @@ Rutea se ve como una **consola de operación nocturna**: el mapa ocupa toda la p
 2. **El color significa algo.** El acento se usa solo para lo que está pasando ahora (hora actual, camión seleccionado, alerta). Las corrientes de residuo usan el código de colores oficial.
 3. **Las cifras se leen de un vistazo.** Números en mono con `tabular-nums`, unidades en texto secundario, siempre con su unidad real (km, t, kg CO₂, m³).
 4. **Movimiento con propósito.** La animación de los camiones cuenta el plan. No hay animaciones decorativas, y con `prefers-reduced-motion` el mapa arranca en pausa.
-5. **Honestidad en los datos.** Todo dato simulado lleva la etiqueta "simulado". Hasta F3, la UI dice que las rutas van sobre una cuadrícula y no sobre calles reales.
+5. **Honestidad en los datos.** Todo dato simulado lleva la etiqueta "simulado". Las calles son reales (OpenStreetMap); los contenedores y sus cargas son simulados, y la UI lo dice. Lo que no tiene dato, como el estado de llenado antes de los sensores (F5), no se muestra con un valor inventado.
 
 ## Tokens
 
@@ -46,8 +46,9 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 - Capas:
   - `PathLayer`: rutas completas, atenuadas (opacidad 0.35), con el color de su corriente.
   - `TripsLayer`: el recorrido ya hecho por cada camión, con estela.
-  - `ScatterplotLayer`: contenedores. Relleno por corriente; borde por estado de llenado.
-  - `IconLayer` o `ScatterplotLayer`: base de operaciones, ECA y punto de descarga.
+  - `ScatterplotLayer`: contenedores. Relleno por corriente. El borde por estado de llenado llega con los sensores (F5); hasta entonces el borde es el de la corriente.
+  - `ScatterplotLayer`: sitios. El relleno (punto de descarga) va como punto lleno y la base de operaciones como anillo.
+  - Las capas de rutas y viajes no usan prueba de profundidad: muchas comparten el corredor al relleno y, con el mapa inclinado, pelearían pixel a pixel (z-fighting).
 - Vista inicial: Suba, inclinación 45°, rumbo −15°.
 
 ## Componentes
@@ -55,7 +56,7 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 - **Barra superior**: nombre, zona, turno y reloj de simulación.
 - **Panel izquierdo**: indicadores del plan (km, toneladas, contenedores, CO₂) y la lista de rutas (activar/desactivar, color de corriente, carga usada / capacidad).
 - **Línea de tiempo inferior**: reproducir/pausar, velocidad (×60, ×300, ×900) y deslizador de hora. La franja de 21:00 a 06:00 se marca con la nota de la regla R02.
-- **Tooltip**: al pasar sobre un contenedor muestra ID, corriente, llenado y ruta asignada.
+- **Tooltip**: al pasar sobre un contenedor muestra ID, corriente, carga simulada en kg y viaje asignado; sobre un sitio, su nombre.
 
 ## Accesibilidad
 

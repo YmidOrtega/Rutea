@@ -123,7 +123,7 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 - Diseño oscuro primero, con tokens en `web/src/styles/tokens.css`. No se escriben colores literales en componentes.
 - Los colores de las corrientes de residuo siguen la Resolución 2184 de 2019 (adaptados para verse sobre un mapa oscuro; ver `docs/diseno.md`).
 - Cifras con `font-variant-numeric: tabular-nums`. Respeta `prefers-reduced-motion` (sin animación de camiones por defecto en ese caso).
-- Mientras no exista el grafo vial real (F3), los datos de demo se trazan sobre una cuadrícula simulada. La UI lo dice explícitamente; nunca se presentan como calles reales.
+- El plan de demo (`pnpm demo:data`, requiere `data/osm/suba.rgraph`) va sobre las calles reales de OSM. Los contenedores y sus cargas son simulados, y la UI lo dice explícitamente; nunca se presentan como datos de operación.
 
 ## Flujo de trabajo
 

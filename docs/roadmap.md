@@ -107,7 +107,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
   | `timefold` 2.7.1, configuración por defecto | 1.675,0 km; 1.644,3–1.693,6 | 1.605,2 km; 1.596,9–1.614,8 | 17 |
 
   Las 36 soluciones son factibles según el `Evaluator`, y todas usan el mínimo de 17 viajes. Al menos 788,5 km son inevitables: 17 viajes × (24,1 + 22,3) km hasta el contenedor más cercano al relleno, ida y vuelta. Con límite de tiempo, el resultado depende de la carga de la máquina: `alns` con semilla 1, solo en la máquina, dio 1.231,8 km; aquí, con 7 procesos a la vez, 1.247,7 km.
-- [ ] Viajes de descarga desde la base, y frontend sobre las geometrías reales.
+- [x] Frontend sobre las geometrías reales: `pnpm demo:data` resuelve Suba con ALNS (semilla 7, 2.000 iteraciones, ~16 s) y dibuja los 17 viajes calle por calle (37.374 puntos, 1.224,1 km). Las horas de paso salen de las velocidades del grafo. El planificador verifica que cada tramo dibujado mida lo mismo que la matriz que optimizó el solver.
+- [ ] Tramo desde y hacia la base de Fontibón, y tiempo de servicio por contenedor.
 
 ## F4 — Restricciones del dominio (3 semanas)
 
