@@ -7,6 +7,7 @@ import java.util.List;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.app.scenario.SubaFigures;
 import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.domain.DieselEmissions;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.ShortestPaths;
@@ -43,8 +44,16 @@ public final class SubaPlanner {
     }
 
     static DemoPlan plan(SubaScenario scenario, Solver solver, SolverSettings settings) {
+        Solution solution = solver.solve(scenario.instance(), settings);
+        return plan(scenario, solution, solver.name(), settings.seed(), settings.iterationLimit());
+    }
+
+    /**
+     * Cualquier solución del escenario, venga de un solver o de una heurística fija como el barrido por
+     * cuadrantes, se dibuja con la misma geometría, los mismos tiempos y las mismas comprobaciones.
+     */
+    public static DemoPlan plan(SubaScenario scenario, Solution solution, String method, long seed, long iterations) {
         Instance instance = scenario.instance();
-        Solution solution = solver.solve(instance, settings);
         Evaluation evaluation = Evaluator.evaluate(instance, solution);
         if (!evaluation.feasible()) {
             throw new IllegalStateException(instance.name() + " infactible: " + evaluation.violations());
@@ -104,8 +113,10 @@ public final class SubaPlanner {
                 new DemoPlan.Site("base", "Base de Área Limpia · Fontibón",
                         lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))));
         DemoPlan.Meta meta = new DemoPlan.Meta("Suba", true, "Calles reales de OpenStreetMap; contenedores y cargas simulados",
-                solver.name(), settings.seed(), settings.iterationLimit(), SubaFigures.SHIFT_START,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, "© colaboradores de OpenStreetMap (ODbL 1.0)");
+                method, seed, iterations, SubaFigures.SHIFT_START,
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER,
+                SubaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
+                "© colaboradores de OpenStreetMap (ODbL 1.0)");
         return new DemoPlan(meta, sites, planContainers, routes);
     }
 

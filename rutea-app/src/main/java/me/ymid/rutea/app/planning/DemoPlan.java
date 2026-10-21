@@ -14,10 +14,12 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
      * @param network de dónde salen las calles
      * @param shiftStart hora a la que los camiones salen de la base, "HH:mm"
      * @param serviceSeconds segundos detenido en cada contenedor (supuesto, ver SubaFigures)
+     * @param litersPerKm consumo supuesto de diésel (ver SubaFigures)
+     * @param kgCo2PerLiter factor del IPCC 2006 para el diésel (ver DieselEmissions)
      * @param attribution atribución obligatoria de los datos de OSM (ODbL)
      */
     public record Meta(String zone, boolean simulated, String network, String solver, long seed, long iterations,
-            String shiftStart, int serviceSeconds, String attribution) {
+            String shiftStart, int serviceSeconds, double litersPerKm, double kgCo2PerLiter, String attribution) {
     }
 
     /** Lugar fijo de la operación: la base de los camiones o el sitio de disposición. */

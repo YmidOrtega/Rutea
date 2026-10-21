@@ -49,6 +49,13 @@ public final class SubaFigures {
      */
     public static final int SERVICE_SECONDS_PER_CONTAINER = 60;
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: litros de diésel por km de un compactador en recolección. No hay cifra
+     * publicada para Bogotá; se reemplaza con datos del operador. Como el CO₂ sale proporcional a los km, el
+     * porcentaje de ahorro entre dos planes no depende de este valor; las toneladas absolutas sí.
+     */
+    public static final double LITERS_PER_KM = 0.8;
+
     /** Compactador más común del ASE 5: 17 de 32 yardas, 8 toneladas (Superservicios, 2026). */
     public static final int COMPACTOR_CAPACITY_KG = 8_000;
 
