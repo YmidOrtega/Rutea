@@ -72,17 +72,35 @@ public final class BreakdownBenchmark {
         long warmMeters = 0;
         long scratchMeters = 0;
         long coldNanos = 0;
+        long[] reassignLatency = new long[events];
+        long[] reassignRecovery = new long[events];
+        long[] absorbed = new long[events];
+        long reserveOnlyTrucks = 0;
+        long reassignTrucks = 0;
+        long reserveOnlyExtra = 0;
+        long reassignExtra = 0;
+        int reassignRecovered = 0;
+        long avoidTrucks = 0;
+        long avoidExtra = 0;
+        int avoidRecovered = 0;
+        int avoided = 0;
+        long[] avoidRecovery = new long[events];
         Path csv = outDir.resolve("breakdowns-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         Files.createDirectories(outDir);
         try (BufferedWriter out = Files.newBufferedWriter(csv, StandardOpenOption.CREATE_NEW)) {
             out.write("event,truck,breakdown_s,orphans,reserve_trucks,latency_ms,scratch_latency_ms,reserve_km,"
-                    + "scratch_reserve_km,first_pickup_delay_min,r05_ok,warmup\n");
+                    + "scratch_reserve_km,first_pickup_delay_min,r05_ok,reassigned,reassign_reserve_trucks,"
+                    + "reassign_latency_ms,reassign_extra_km,reassign_first_pickup_delay_min,warmup\n");
             for (int e = 0; e < total; e++) {
                 int truck = random.nextInt(schedule.trucks().size());
                 long at = random.nextLong(schedule.trucks().get(truck).seconds());
                 BreakdownReplanner.Replan replan = BreakdownReplanner.afterBreakdown(scenario, solution, schedule,
                         truck, at, REPLAN_ITERATIONS, seed + e);
                 long[] scratch = fromScratch(scenario, replan, schedule, seed + e);
+                BreakdownReplanner.Replan reassign = BreakdownReplanner.afterBreakdown(scenario, solution, schedule,
+                        truck, at, REPLAN_ITERATIONS, seed + e, BreakdownReplanner.Strategy.REASSIGN_FIRST);
+                BreakdownReplanner.Replan avoid = BreakdownReplanner.afterBreakdown(scenario, solution, schedule,
+                        truck, at, REPLAN_ITERATIONS, seed + e, BreakdownReplanner.Strategy.REASSIGN_IF_NO_RESERVE);
                 boolean warmup = e < WARMUP;
                 if (e == 0) {
                     coldNanos = replan.latencyNanos();
@@ -96,11 +114,26 @@ public final class BreakdownBenchmark {
                     recovered += replan.meetsRecoveryRule() ? 1 : 0;
                     warmMeters += replan.reserveMeters();
                     scratchMeters += scratch[1];
+                    reassignLatency[i] = reassign.latencyNanos();
+                    reassignRecovery[i] = reassign.firstPickupSeconds() - at;
+                    absorbed[i] = reassign.reassigned().size();
+                    reserveOnlyTrucks += replan.reserve().trucks().size();
+                    reassignTrucks += reassign.reserve().trucks().size();
+                    reserveOnlyExtra += replan.extraMeters();
+                    reassignExtra += reassign.extraMeters();
+                    reassignRecovered += reassign.meetsRecoveryRule() ? 1 : 0;
+                    avoidTrucks += avoid.reserve().trucks().size();
+                    avoidExtra += avoid.extraMeters();
+                    avoidRecovered += avoid.meetsRecoveryRule() ? 1 : 0;
+                    avoided += avoid.orphans().length > 0 && avoid.reserve().trucks().isEmpty() ? 1 : 0;
+                    avoidRecovery[i] = avoid.firstPickupSeconds() - at;
                 }
-                out.write(String.format(Locale.ROOT, "%d,%d,%d,%d,%d,%.3f,%.3f,%.3f,%.3f,%.1f,%b,%b%n", e, truck, at,
-                        replan.orphans().length, replan.reserve().trucks().size(), replan.latencyNanos() / 1e6,
-                        scratch[0] / 1e6, replan.reserveMeters() / 1000.0, scratch[1] / 1000.0,
-                        (replan.firstPickupSeconds() - at) / 60.0, replan.meetsRecoveryRule(), warmup));
+                out.write(String.format(Locale.ROOT, "%d,%d,%d,%d,%d,%.3f,%.3f,%.3f,%.3f,%.1f,%b,%d,%d,%.3f,%.3f,%.1f,%b%n",
+                        e, truck, at, replan.orphans().length, replan.reserve().trucks().size(),
+                        replan.latencyNanos() / 1e6, scratch[0] / 1e6, replan.reserveMeters() / 1000.0,
+                        scratch[1] / 1000.0, (replan.firstPickupSeconds() - at) / 60.0, replan.meetsRecoveryRule(),
+                        reassign.reassigned().size(), reassign.reserve().trucks().size(), reassign.latencyNanos() / 1e6,
+                        reassign.extraMeters() / 1000.0, (reassign.firstPickupSeconds() - at) / 60.0, warmup));
             }
         }
 
@@ -118,6 +151,22 @@ public final class BreakdownBenchmark {
                 events, 100.0 * recovered / events);
         System.out.printf(Locale.ROOT, "km de la reserva: %.1f con arranque en caliente, %.1f desde cero (%+.2f %%)%n",
                 warmMeters / 1000.0, scratchMeters / 1000.0, 100.0 * (warmMeters - scratchMeters) / scratchMeters);
+        System.out.printf(Locale.ROOT, "%nReasignar primero a camiones en servicio y lo que no quepa a la reserva:%n%n");
+        System.out.println("| Medida | P50 | P95 | P99 | Máx. |");
+        System.out.println("|---|---:|---:|---:|---:|");
+        row("Latencia, reasignar + reserva (ms)", reassignLatency, 1e6);
+        row("Huérfanos absorbidos por camiones en servicio", absorbed, 1);
+        row("Avería → primer huérfano recogido (min)", reassignRecovery, 60);
+        System.out.printf(Locale.ROOT, "%n| Estrategia | Camiones de reserva (total) | km agregados (total) | R05 |%n");
+        System.out.println("|---|---:|---:|---:|");
+        System.out.printf(Locale.ROOT, "| Solo reserva | %d | %.1f | %d/%d |%n", reserveOnlyTrucks,
+                reserveOnlyExtra / 1000.0, recovered, events);
+        System.out.printf(Locale.ROOT, "| Reasignar + reserva | %d | %.1f | %d/%d |%n", reassignTrucks,
+                reassignExtra / 1000.0, reassignRecovered, events);
+        System.out.printf(Locale.ROOT, "| Reasignar solo si evita la reserva | %d | %.1f | %d/%d |%n", avoidTrucks,
+                avoidExtra / 1000.0, avoidRecovered, events);
+        System.out.printf(Locale.ROOT, "%nReasignar evitó la reserva en %d de %d averías.%n", avoided, events);
+        row("Avería → primer huérfano, reasignar solo si evita la reserva (min)", avoidRecovery, 60);
         System.out.println("CSV: " + csv.toAbsolutePath());
     }
 
