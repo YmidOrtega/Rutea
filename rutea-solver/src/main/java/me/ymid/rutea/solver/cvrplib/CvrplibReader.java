@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -80,6 +81,14 @@ public final class CvrplibReader {
         }
     }
 
+    private static int[][] rows(int[] flat, int n) {
+        int[][] rows = new int[n][];
+        for (int i = 0; i < n; i++) {
+            rows[i] = Arrays.copyOfRange(flat, i * n, (i + 1) * n);
+        }
+        return rows;
+    }
+
     private static double parseDouble(Path file, int line, String token) throws CvrplibFormatException {
         try {
             return Double.parseDouble(token);
@@ -88,7 +97,7 @@ public final class CvrplibReader {
         }
     }
 
-    private enum Section { HEADER, COORDINATES, DEMANDS, DEPOTS, DONE }
+    private enum Section { HEADER, COORDINATES, WEIGHTS, DEMANDS, DEPOTS, DONE }
 
     private static final class InstanceParser {
 
@@ -97,6 +106,9 @@ public final class CvrplibReader {
         private int dimension = -1;
         private int capacity = -1;
         private String edgeWeightType;
+        private String edgeWeightFormat;
+        private int[] weights;
+        private int weightCount;
         private double[] x;
         private double[] y;
         private int[] demands;
@@ -119,6 +131,7 @@ public final class CvrplibReader {
                 }
                 switch (line) {
                     case "NODE_COORD_SECTION" -> section = startSection(lineNumber, Section.COORDINATES);
+                    case "EDGE_WEIGHT_SECTION" -> section = startSection(lineNumber, Section.WEIGHTS);
                     case "DEMAND_SECTION" -> section = startSection(lineNumber, Section.DEMANDS);
                     case "DEPOT_SECTION" -> section = startSection(lineNumber, Section.DEPOTS);
                     case "EOF" -> section = Section.DONE;
@@ -139,6 +152,12 @@ public final class CvrplibReader {
                 hasCoordinates = new boolean[dimension];
                 hasDemand = new boolean[dimension];
             }
+            if (section == Section.WEIGHTS && weights == null) {
+                if ((long) dimension * dimension > Integer.MAX_VALUE - 8) {
+                    throw new CvrplibFormatException(file, line, "matriz de " + dimension + "² no cabe en memoria");
+                }
+                weights = new int[dimension * dimension];
+            }
             return section;
         }
 
@@ -154,6 +173,15 @@ public final class CvrplibReader {
                     x[node] = parseDouble(file, line, tokens[1]);
                     y[node] = parseDouble(file, line, tokens[2]);
                     hasCoordinates[node] = true;
+                }
+                case WEIGHTS -> {
+                    for (String token : WHITESPACE.split(text)) {
+                        if (weightCount == weights.length) {
+                            throw new CvrplibFormatException(file, line,
+                                    "EDGE_WEIGHT_SECTION tiene más de " + dimension + "² valores");
+                        }
+                        weights[weightCount++] = parseInt(file, line, token);
+                    }
                 }
                 case DEMANDS -> {
                     String[] tokens = expectTokens(line, text, 2);
@@ -192,8 +220,16 @@ public final class CvrplibReader {
                 case "COMMENT" -> { }
                 case "TYPE" -> requireValue(line, key, value, "CVRP");
                 case "EDGE_WEIGHT_TYPE" -> {
-                    requireValue(line, key, value, "EUC_2D");
+                    if (!value.equals("EUC_2D") && !value.equals("EXPLICIT")) {
+                        throw new CvrplibFormatException(file, line,
+                                key + " '" + value + "' no soportado; solo EUC_2D o EXPLICIT");
+                    }
                     edgeWeightType = value;
+                }
+                case "EDGE_WEIGHT_FORMAT" -> {
+                    // FULL_MATRIX es el único formato que admite una matriz asimétrica completa.
+                    requireValue(line, key, value, "FULL_MATRIX");
+                    edgeWeightFormat = value;
                 }
                 case "DIMENSION" -> {
                     dimension = parseInt(file, line, value);
@@ -242,17 +278,31 @@ public final class CvrplibReader {
             if (edgeWeightType == null) {
                 throw new CvrplibFormatException(file, "falta EDGE_WEIGHT_TYPE");
             }
+            boolean explicit = edgeWeightType.equals("EXPLICIT");
             if (x == null) {
-                throw new CvrplibFormatException(file, "faltan NODE_COORD_SECTION y DEMAND_SECTION");
+                throw new CvrplibFormatException(file, explicit ? "faltan EDGE_WEIGHT_SECTION y DEMAND_SECTION"
+                        : "faltan NODE_COORD_SECTION y DEMAND_SECTION");
             }
-            requireAll(hasCoordinates, "coordenadas");
+            if (explicit) {
+                if (edgeWeightFormat == null) {
+                    throw new CvrplibFormatException(file, "EXPLICIT necesita EDGE_WEIGHT_FORMAT : FULL_MATRIX");
+                }
+                if (weights == null || weightCount != weights.length) {
+                    throw new CvrplibFormatException(file, "EDGE_WEIGHT_SECTION tiene " + weightCount + " de "
+                            + dimension + "² valores");
+                }
+            } else {
+                requireAll(hasCoordinates, "coordenadas");
+            }
             requireAll(hasDemand, "demanda");
             if (depotCount != 1) {
                 throw new CvrplibFormatException(file,
                         "se esperaba exactamente un depósito en DEPOT_SECTION, hay " + depotCount);
             }
             try {
-                return new Instance(name, capacity, demands, DistanceMatrix.euclidean(x, y));
+                DistanceMatrix distances = explicit ? DistanceMatrix.of(rows(weights, dimension))
+                        : DistanceMatrix.euclidean(x, y);
+                return new Instance(name, capacity, demands, distances);
             } catch (IllegalArgumentException e) {
                 throw new CvrplibFormatException(file, e.getMessage());
             }

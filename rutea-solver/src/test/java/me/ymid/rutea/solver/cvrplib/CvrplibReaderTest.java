@@ -84,7 +84,76 @@ class CvrplibReaderTest {
 
         assertThatThrownBy(() -> CvrplibReader.readInstance(file))
                 .isInstanceOf(CvrplibFormatException.class)
-                .hasMessage("tiny.vrp:4: EDGE_WEIGHT_TYPE 'GEO' no soportado; solo EUC_2D");
+                .hasMessage("tiny.vrp:4: EDGE_WEIGHT_TYPE 'GEO' no soportado; solo EUC_2D o EXPLICIT");
+    }
+
+    /** Matriz asimétrica de 3 nodos: ir de 1 a 2 cuesta 5 y volver, 7. */
+    private static final String EXPLICIT = """
+            NAME : asym
+            TYPE : CVRP
+            DIMENSION : 3
+            EDGE_WEIGHT_TYPE : EXPLICIT
+            EDGE_WEIGHT_FORMAT : FULL_MATRIX
+            CAPACITY : 10
+            EDGE_WEIGHT_SECTION
+            0 4 6
+            3 0 5
+            9 7
+            0
+            DEMAND_SECTION
+            1 0
+            2 4
+            3 6
+            DEPOT_SECTION
+             1
+             -1
+            EOF
+            """;
+
+    @Test
+    void readsAnAsymmetricFullMatrixSplitAcrossLines() throws IOException {
+        Instance instance = CvrplibReader.readInstance(write("asym.vrp", EXPLICIT));
+
+        assertThat(instance.distance(1, 2)).isEqualTo(5);
+        assertThat(instance.distance(2, 1)).isEqualTo(7);
+        assertThat(instance.distance(2, 0)).isEqualTo(9);
+        assertThat(instance.distances().isSymmetric()).isFalse();
+        assertThat(instance.demand(2)).isEqualTo(6);
+    }
+
+    @Test
+    void rejectsAnIncompleteFullMatrix() throws IOException {
+        Path file = write("asym.vrp", EXPLICIT.replace("9 7\n0\n", "9 7\n"));
+
+        assertThatThrownBy(() -> CvrplibReader.readInstance(file))
+                .hasMessage("asym.vrp: EDGE_WEIGHT_SECTION tiene 8 de 3² valores");
+    }
+
+    @Test
+    void rejectsOtherExplicitFormats() throws IOException {
+        Path file = write("asym.vrp", EXPLICIT.replace("FULL_MATRIX", "UPPER_ROW"));
+
+        assertThatThrownBy(() -> CvrplibReader.readInstance(file))
+                .hasMessage("asym.vrp:5: EDGE_WEIGHT_FORMAT 'UPPER_ROW' no soportado; solo FULL_MATRIX");
+    }
+
+    @Test
+    void writerRoundTripsAnAsymmetricInstance() throws IOException {
+        Instance original = CvrplibReader.readInstance(write("asym.vrp", EXPLICIT));
+        Path copy = dir.resolve("copia.vrp");
+
+        CvrplibWriter.writeExplicit(copy, original, "© colaboradores de OpenStreetMap (ODbL)");
+        Instance read = CvrplibReader.readInstance(copy);
+
+        assertThat(read.name()).isEqualTo("asym");
+        assertThat(read.capacity()).isEqualTo(10);
+        for (int i = 0; i < 3; i++) {
+            assertThat(read.demand(i)).isEqualTo(original.demand(i));
+            for (int j = 0; j < 3; j++) {
+                assertThat(read.distance(i, j)).isEqualTo(original.distance(i, j));
+            }
+        }
+        assertThat(Files.readString(copy)).contains("COMMENT : © colaboradores de OpenStreetMap (ODbL)");
     }
 
     @Test
