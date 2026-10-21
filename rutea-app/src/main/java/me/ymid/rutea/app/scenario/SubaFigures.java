@@ -36,6 +36,12 @@ public final class SubaFigures {
      */
     public static final int COLLECTIONS_PER_WEEK = 6;
 
+    /**
+     * Inicio del turno nocturno: el operador declara 18:00–02:00 como uno de sus dos turnos principales
+     * (Superservicios, 2026).
+     */
+    public static final String SHIFT_START = "18:00";
+
     /** Compactador más común del ASE 5: 17 de 32 yardas, 8 toneladas (Superservicios, 2026). */
     public static final int COMPACTOR_CAPACITY_KG = 8_000;
 
