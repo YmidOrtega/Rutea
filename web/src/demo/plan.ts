@@ -20,12 +20,16 @@ export interface Container {
   rules: string[]
 }
 
-/** Una regla de docs/normativa.md y cuántas paradas toca en el plan. */
+/**
+ * Una regla de docs/normativa.md, cuántas paradas toca en el plan y qué significa: se cumple (OK), exige que el
+ * conductor haga algo distinto en esas paradas (ACTION) o el plan no cumple (FAIL).
+ */
 export interface ComplianceCheck {
   id: string
   citation: string
   count: number
   summary: string
+  status: 'OK' | 'ACTION' | 'FAIL'
 }
 
 /**
@@ -47,7 +51,7 @@ export interface Route {
 }
 
 export interface Site {
-  id: 'relleno' | 'base'
+  id: 'relleno' | 'base' | 'eca'
   label: string
   position: LonLat
 }
@@ -69,6 +73,8 @@ export interface DemoPlan {
     /** Factor del IPCC 2006 para el diésel. */
     kgCo2PerLiter: number
     attribution: string
+    /** Lo que el plan supone sin dato publicado; el panel lo muestra tal cual. */
+    assumptions: string[]
   }
   sites: Site[]
   containers: Container[]

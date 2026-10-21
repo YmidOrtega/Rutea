@@ -143,11 +143,17 @@ function containerHtml(container: Container, shiftStart: string): string {
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
-    <span class="num">Camión ${container.route} · llega a las ${clock(secondsOfDay(shiftStart) + container.visitSeconds)}</span>
+    <span class="num">Vehículo ${container.route} · llega a las ${clock(secondsOfDay(shiftStart) + container.visitSeconds)}</span>
     ${rules}`
+}
+
+const SITE_ROLES: Record<Site['id'], string> = {
+  relleno: 'Cada viaje de no aprovechables termina aquí a descargar',
+  base: 'Los compactadores salen y vuelven aquí',
+  eca: 'Supuesta: los aprovechables se clasifican y pesan aquí (R10)',
 }
 
 function siteHtml(site: Site): string {
   return `<strong>${site.label}</strong>
-    <span>${site.id === 'relleno' ? 'Cada viaje termina aquí a descargar' : 'Los compactadores salen y vuelven aquí'}</span>`
+    <span>${SITE_ROLES[site.id]}</span>`
 }

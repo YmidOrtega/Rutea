@@ -36,11 +36,11 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
         <div className="plan-body">
           <dl className="kpis">
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
-            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas de camión" />
+            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas de vehículo" />
             <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
             <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
-            <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Camiones" />
+            <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Vehículos" />
           </dl>
 
           {STREAMS.map((stream) => {
@@ -108,7 +108,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             <ul>
               {plan.compliance.map((check) => (
                 <li key={check.id} title={check.citation}>
-                  <span className={`num rule-id ${check.id === 'R03' && check.count === 0 ? 'ok' : 'warn'}`}>
+                  <span className={`num rule-id rule-${check.status}`}>
                     {check.id}
                   </span>
                   <span>{check.summary}.</span>
@@ -121,15 +121,18 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
             <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
-            calles reales de OpenStreetMap. Cada compactador de <span className="num">8 t</span> sale de la base de
-            Fontibón, hace uno o varios viajes con su descarga en Doña Juana dentro de un turno de{' '}
-            <span className="num">{plan.meta.shiftSeconds / 3600} h</span> y vuelve a la base; se usa el menor
-            número de camiones. Los contenedores y sus cargas son simulados con cifras oficiales. Las velocidades,
-            la parada de <span className="num">{plan.meta.serviceSeconds} s</span> por contenedor y la descarga de{' '}
-            <span className="num">{plan.meta.unloadSeconds / 60} min</span> (extremo bajo del rango de 40 a 90 min
-            publicado en prensa) son supuestas; con descargas más largas hacen falta más camiones. El CO₂ usa el factor del IPCC para el diésel y un consumo
-            supuesto de <span className="num">{plan.meta.litersPerKm} L/km</span>.
+            calles reales de OpenStreetMap, con el menor número de vehículos en turnos de{' '}
+            <span className="num">{plan.meta.shiftSeconds / 3600} h</span>. Los compactadores de{' '}
+            <span className="num">8 t</span> salen de la base de Fontibón y descargan en Doña Juana en{' '}
+            <span className="num">{plan.meta.unloadSeconds / 60} min</span>, el extremo bajo del rango publicado en
+            prensa; con descargas más largas hacen falta más. Los aprovechables los recoge una organización de
+            recicladores hasta la ECA. Supuestos:
           </p>
+          <ul className="assumptions">
+            {plan.meta.assumptions.map((assumption) => (
+              <li key={assumption}>{assumption}.</li>
+            ))}
+          </ul>
         </div>
       )}
     </aside>

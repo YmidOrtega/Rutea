@@ -90,12 +90,13 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       pickable: true,
       autoHighlight: true,
     }),
-    // Relleno: punto lleno, donde termina cada viaje. Base: anillo, de donde salen los camiones.
+    // Relleno: punto lleno. Base: anillo. ECA: punto del color de los aprovechables, que terminan ahí.
     new ScatterplotLayer<Site>({
       id: 'sites',
       data: plan.sites,
       getPosition: (site) => site.position,
-      getFillColor: (site) => (site.id === 'relleno' ? palette.fg : palette.bg),
+      getFillColor: (site) =>
+        site.id === 'relleno' ? palette.fg : site.id === 'eca' ? palette.stream.RECYCLABLE : palette.bg,
       getLineColor: palette.fg,
       getRadius: 60,
       radiusMinPixels: 6,

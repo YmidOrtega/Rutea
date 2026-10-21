@@ -160,16 +160,28 @@
   gap: 6px;
 }
 
-.rule-id.warn {
+.rule-OK {
+  color: var(--ok);
+}
+
+.rule-ACTION {
   color: var(--warn);
 }
 
-.rule-id.ok {
-  color: var(--ok);
+.rule-FAIL {
+  color: var(--crit);
 }
 
 .note {
   margin: 12px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.assumptions {
+  margin: 6px 0 0;
+  padding-left: 16px;
   font-size: var(--text-12);
   line-height: 1.5;
   color: var(--fg-muted);
