@@ -58,4 +58,12 @@ class CollectionRulesTest {
 
         assertThat(pending.citation()).isEqualTo("R99 · Norma X, art. 1 (PENDIENTE_VERIFICAR)");
     }
+
+    @Test
+    @DisplayName("R07 · D. 1077/2015 art. 2.3.2.2.2.3.27, num. 5: nunca se compacta frente a centros educativos o de salud")
+    void noCompactionCitesItsVerifiedArticle() {
+        assertThat(CollectionRules.NO_COMPACTION.id()).isEqualTo("R07");
+        assertThat(CollectionRules.NO_COMPACTION.citation())
+                .isEqualTo("R07 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.27, num. 5");
+    }
 }
