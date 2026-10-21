@@ -16,7 +16,7 @@ import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.cvrplib.CvrplibReader;
 import me.ymid.rutea.solver.cvrplib.CvrplibWriter;
 
-class ExportSubaInstanceTest {
+class SubaScenarioTest {
 
     @TempDir
     Path dir;
@@ -25,7 +25,7 @@ class ExportSubaInstanceTest {
     void putsTheLandfillGateAtTheDepotAndRoadDistancesBetweenContainers() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        Instance instance = ExportSubaInstance.build(town, 30, 12, 160, 4);
+        Instance instance = SubaScenario.build(town, 30, 24, 12, 160, 4).instance();
 
         assertThat(instance.name()).isEqualTo("Suba-n13-s4");
         assertThat(instance.size()).isEqualTo(13);
@@ -41,7 +41,7 @@ class ExportSubaInstanceTest {
 
     @Test
     void survivesTheRoundTripThroughCvrplib() throws IOException {
-        Instance instance = ExportSubaInstance.build(SampleTown.graph(dir), 30, 12, 160, 4);
+        Instance instance = SubaScenario.build(SampleTown.graph(dir), 30, 24, 12, 160, 4).instance();
         Path file = dir.resolve(instance.name() + ".vrp");
 
         CvrplibWriter.writeExplicit(file, instance, "prueba");
