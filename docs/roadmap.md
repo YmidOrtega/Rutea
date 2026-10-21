@@ -165,7 +165,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:50 h.
 - [x] Normativa en el plan (`Compliance`): R02, R03 y R07, verificadas en el texto oficial, se revisan sobre cada parada con la hora de paso del planificador y 644 sitios sensibles de OSM. Plan de demo: **79 contenedores sin compactación** (R07, a 50 m o menos de un colegio o centro de salud), **335 paradas nocturnas** que requieren medidas contra el ruido (R02) y frecuencia de 6 veces por semana, que cumple el mínimo de 2 (R03). Con salida a las 18:00, 383 de las 806 paradas caen entre las 21:00 y las 06:00. Con las mismas horas de paso y salida a las 06:00, ninguna: irían de las 06:22 a las 11:53.
 - [ ] Calendario semanal por zona (R03, VRP periódico) y efecto de R07 sobre la capacidad.
-- [ ] Flota heterogénea (R06, R10).
+- [x] Flota heterogénea (R06, R10), con supuestos. R10 se reverificó: el capítulo que el Decreto 596 de 2016 agregó al Decreto 1077 aparece derogado y lo sustituyó el Decreto 1381 de 2024 (exclusividad de las organizaciones de recicladores por 15 años y transporte selectivo hasta la ECA). Los aprovechables van en vehículos sin compactación de una organización de recicladores, que salen de una ECA y vuelven a ella; R07 no aplica a esos vehículos. Plan de demo: 9 compactadores (17 viajes, 1.310,6 km) y 6 vehículos de aprovechables (17 viajes, 429,9 km, 24,7 t). Las cifras de aprovechables descansan en supuestos sin dato público (ECA, toneladas, vehículos; ver `docs/datos.md`) y el panel los lista.
+- [ ] Datos de aprovechables: inventario de ECA de la UAESP, toneladas por organización y vehículos.
 
 ## F5 — Operación en tiempo real (3 semanas)
 

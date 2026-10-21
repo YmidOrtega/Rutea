@@ -40,6 +40,13 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 | Carga media por contenedor y recolección | 110.760 × 7/6 ÷ 806 | **160 kg** |
 | CO₂ por litro de diésel | 0,84 kg/L × 43,0 TJ/Gg × 74.100 kg/TJ | **2,68 kg** |
 
+### Aprovechables
+
+| Dato | Valor | Fuente | Uso en Rutea |
+|---|---|---|---|
+| Parte de lo recogido que se aprovecha | 16 % | [El Espectador, 18 sep. 2025](https://www.elespectador.com/bogota/a-diario-se-recogen-mas-de-5600-toneladas-de-residuos-no-aprovechables-en-bogota/), en la bajada y sin fuente explícita; `PENDIENTE_VERIFICAR` | kg por día en contenedores blancos |
+| Inventario de ECA de Bogotá | Resoluciones UAESP 137 y 698 de 2023 | Citadas en conceptos de la Curaduría Urbana 3; el listado no está publicado | Pendiente: hoy la ECA es un supuesto |
+
 ## Supuestos (no son datos)
 
 - Los contenedores se reparten entre las ASE como las toneladas (15 %). No hay un inventario por localidad publicado.
@@ -53,6 +60,7 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Todo el ACPM se cuenta como diésel fósil: su fracción de biodiésel no se descuenta (`PENDIENTE_VERIFICAR`: porcentaje de mezcla vigente). Esto sobreestima un poco el CO₂ fósil.
 - `PENDIENTE_VERIFICAR`: **descarga en Doña Juana de 40 a 90 min**. "En promedio, gastan entre 40 minutos a una hora y media" ([El Tiempo, 3 jun. 2022](https://www.eltiempo.com/bogota/dona-juana-las-jugadas-del-operador-cgr-para-quedarse-en-relleno-sanitario-677588)). Es prensa, no un dato oficial. El plan de demo usa 40 min; la comparación muestra los dos extremos.
 - Sitios sensibles (R02, R07): 644 sitios de OSM alrededor de Suba (479 centros educativos, 115 hospitales y clínicas, 10 centros asistenciales y 40 hoteles), extraídos con `mvn -pl rutea-app exec:java@sensitive-sites`. La cobertura de OSM no es completa: puede faltar algún colegio. Las interpretaciones están en `docs/normativa.md`.
+- Aprovechables (`PENDIENTE_VERIFICAR` todo): 806 contenedores blancos (la otra mitad, dato UAESP); 21.100 kg por día, que salen de aplicar 16/84 a lo que pasa por los negros; la ECA en el vértice más cercano al centro de Suba, porque no hay ECA ubicadas ni en OSM ni en datos públicos; vehículos sin compactación de 1.500 kg; 20 min de descarga en la ECA; mismo turno que los compactadores. Las cifras muestran la mecánica de dos flotas, no sirven para decidir.
 - Cada compactador puede encadenar hasta 3 viajes en su turno de 8 h: base → viaje → descarga → viaje → descarga → base. Del segundo viaje en adelante sale de la portería, en el sentido que mide menos.
 
 ## Calibración del grafo
