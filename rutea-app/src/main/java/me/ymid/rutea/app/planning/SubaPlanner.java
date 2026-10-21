@@ -109,8 +109,6 @@ public final class SubaPlanner {
 
     private static DemoPlan draw(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             String method, long seed, long iterations, String idPrefix) {
-        Instance instance = scenario.instance();
-
         RoadGraph graph = scenario.graph();
         ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
         List<Container> containers = scenario.containers();
@@ -118,37 +116,8 @@ public final class SubaPlanner {
         int[] visitSeconds = new int[containers.size()];
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int t = 0; t < schedule.trucks().size(); t++) {
-            ShiftScheduler.Truck truck = schedule.trucks().get(t);
-            String id = String.format("%s-%02d", idPrefix, t + 1);
-            List<String> stops = new ArrayList<>();
-            int[] tripLoads = new int[truck.trips().length];
-            Geometry geometry = new Geometry(graph);
-            geometry.start(scenario.depotVertex());
-            long meters = 0;
-            for (int i = 0; i < truck.trips().length; i++) {
-                int k = truck.trips()[i];
-                int previous = i == 0 ? 0 : scenario.gate();
-                for (int p = 0; p < solution.routeLength(k); p++) {
-                    int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
-                    meters += leg(paths, geometry, scenario, previous, customer, id);
-                    visitSeconds[customer - 1] = geometry.seconds();
-                    geometry.stop(SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
-                    routeOf[customer - 1] = id;
-                    stops.add(containers.get(customer - 1).id());
-                    tripLoads[i] += instance.demand(customer);
-                    previous = customer;
-                }
-                meters += leg(paths, geometry, scenario, previous, scenario.gate(), id);
-                geometry.stop(schedule.unloadSeconds());
-            }
-            meters += leg(paths, geometry, scenario, scenario.gate(), 0, id);
-            if (meters != truck.meters() || geometry.seconds() != truck.seconds()) {
-                throw new IllegalStateException(id + ": el turno dibujado mide " + meters + " m y " + geometry.seconds()
-                        + " s; la asignación dice " + truck.meters() + " m y " + truck.seconds() + " s");
-            }
-            routes.add(new DemoPlan.Route(id, scenario.stream(), instance.capacity(),
-                    Arrays.stream(tripLoads).sum(), meters, geometry.seconds(), tripLoads, stops, geometry.path,
-                    geometry.times.stream().mapToInt(Integer::intValue).toArray()));
+            routes.add(drawTruck(scenario, paths, solution, schedule.trucks().get(t), schedule.unloadSeconds(),
+                    String.format("%s-%02d", idPrefix, t + 1), routeOf, visitSeconds));
         }
 
         Compliance.Result compliance = Compliance.evaluate(scenario, visitSeconds, SubaFigures.SHIFT_START);
@@ -173,6 +142,55 @@ public final class SubaPlanner {
                 SubaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
                 "© colaboradores de OpenStreetMap (ODbL 1.0)", ASSUMPTIONS);
         return new DemoPlan(meta, sites, planContainers, routes, compliance.checks());
+    }
+
+    /**
+     * El turno de un camión que cambió durante la operación (una recogida extra), con la misma geometría y las
+     * mismas comprobaciones que el plan. Un contenedor puede aparecer dos veces: en su visita y en la extra.
+     */
+    public static DemoPlan.Route redraw(SubaScenario scenario, List<int[]> trips, long meters, long seconds,
+            int unloadSeconds, String id) {
+        int[] order = new int[trips.size()];
+        Arrays.setAll(order, i -> i);
+        ShiftScheduler.Truck truck = new ShiftScheduler.Truck(order, new boolean[order.length], meters, seconds);
+        int containers = scenario.containers().size();
+        return drawTruck(scenario, new ShortestPaths(scenario.graph(), ShortestPaths.Weight.METERS),
+                new Solution(trips.toArray(int[][]::new)), truck, unloadSeconds, id, new String[containers],
+                new int[containers]);
+    }
+
+    private static DemoPlan.Route drawTruck(SubaScenario scenario, ShortestPaths paths, Solution solution,
+            ShiftScheduler.Truck truck, int unloadSeconds, String id, String[] routeOf, int[] visitSeconds) {
+        Instance instance = scenario.instance();
+        List<String> stops = new ArrayList<>();
+        int[] tripLoads = new int[truck.trips().length];
+        Geometry geometry = new Geometry(scenario.graph());
+        geometry.start(scenario.depotVertex());
+        long meters = 0;
+        for (int i = 0; i < truck.trips().length; i++) {
+            int k = truck.trips()[i];
+            int previous = i == 0 ? 0 : scenario.gate();
+            for (int p = 0; p < solution.routeLength(k); p++) {
+                int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
+                meters += leg(paths, geometry, scenario, previous, customer, id);
+                visitSeconds[customer - 1] = geometry.seconds();
+                geometry.stop(SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                routeOf[customer - 1] = id;
+                stops.add(scenario.containers().get(customer - 1).id());
+                tripLoads[i] += instance.demand(customer);
+                previous = customer;
+            }
+            meters += leg(paths, geometry, scenario, previous, scenario.gate(), id);
+            geometry.stop(unloadSeconds);
+        }
+        meters += leg(paths, geometry, scenario, scenario.gate(), 0, id);
+        if (meters != truck.meters() || geometry.seconds() != truck.seconds()) {
+            throw new IllegalStateException(id + ": el turno dibujado mide " + meters + " m y " + geometry.seconds()
+                    + " s; la asignación dice " + truck.meters() + " m y " + truck.seconds() + " s");
+        }
+        return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
+                geometry.seconds(), tripLoads, stops, geometry.path,
+                geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     /** Lo que el plan supone sin dato publicado: el panel lo muestra tal cual. Fuentes en docs/datos.md. */

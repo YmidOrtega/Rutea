@@ -87,6 +87,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>overflows</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.OverflowBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-overflows</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>suba-instance</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>

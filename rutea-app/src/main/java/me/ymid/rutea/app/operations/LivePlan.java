@@ -13,6 +13,9 @@ import me.ymid.rutea.solver.Solution;
  * El plan en curso, que se puede modificar: por camión, sus viajes con las paradas en el orden en que las hace.
  * Los nodos son índices de {@link SubaScenario#travel}: 0 es la base y {@code gate()} la portería. Las horas se
  * calculan igual que {@link ShiftScheduler}: manejo por la matriz, paradas, descargas y regreso a la base.
+ *
+ * <p>Cada parada lleva una marca: 0 si es del plan, otra si se agregó después (un desborde). Un mismo contenedor
+ * puede estar dos veces, en su visita del plan y en una recogida extra; la marca dice cuál es cuál.
  */
 final class LivePlan {
 
@@ -25,6 +28,7 @@ final class LivePlan {
     private final int unloadSeconds;
     private final int shiftSeconds;
     private final List<List<int[]>> trucks = new ArrayList<>();
+    private final List<List<int[]>> tags = new ArrayList<>();
 
     private LivePlan(SubaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
         this.scenario = scenario;
@@ -37,6 +41,7 @@ final class LivePlan {
         LivePlan live = new LivePlan(scenario, serviceSeconds, schedule.unloadSeconds(), schedule.shiftSeconds());
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             List<int[]> trips = new ArrayList<>();
+            List<int[]> marks = new ArrayList<>();
             for (int i = 0; i < truck.trips().length; i++) {
                 int k = truck.trips()[i];
                 int[] stops = new int[solution.routeLength(k)];
@@ -44,8 +49,10 @@ final class LivePlan {
                     stops[p] = solution.customer(k, truck.reversed()[i] ? stops.length - 1 - p : p);
                 }
                 trips.add(stops);
+                marks.add(new int[stops.length]);
             }
             live.trucks.add(trips);
+            live.tags.add(marks);
         }
         return live;
     }
@@ -60,6 +67,14 @@ final class LivePlan {
 
     int[] trip(int truck, int trip) {
         return trucks.get(truck).get(trip);
+    }
+
+    int tag(int truck, int trip, int position) {
+        return tags.get(truck).get(trip)[position];
+    }
+
+    int unloadSeconds() {
+        return unloadSeconds;
     }
 
     int shiftSeconds() {
@@ -101,6 +116,29 @@ final class LivePlan {
         return stops;
     }
 
+    /**
+     * Hora a la que el camión sale de cada lugar de un viaje: {@code [i][0]} del inicio del viaje (la base o la
+     * portería, después de descargar) y {@code [i][p + 1]} de la parada {@code p}, ya atendida.
+     */
+    long[][] departures(int truck) {
+        TravelMatrix travel = scenario.travel();
+        long[][] leave = new long[tripCount(truck)][];
+        long clock = 0;
+        for (int i = 0; i < leave.length; i++) {
+            int[] trip = trip(truck, i);
+            leave[i] = new long[trip.length + 1];
+            leave[i][0] = clock;
+            int previous = tripStart(i);
+            for (int p = 0; p < trip.length; p++) {
+                clock += travel.seconds(previous, trip[p]) + serviceSeconds;
+                leave[i][p + 1] = clock;
+                previous = trip[p];
+            }
+            clock += travel.seconds(previous, scenario.gate()) + unloadSeconds;
+        }
+        return leave;
+    }
+
     /** Fin del turno del camión: cuando vuelve a la base. */
     long endSeconds(int truck) {
         TravelMatrix travel = scenario.travel();
@@ -139,11 +177,31 @@ final class LivePlan {
     }
 
     void insert(int truck, int trip, int position, int node) {
-        int[] stops = trip(truck, trip);
-        int[] grown = new int[stops.length + 1];
-        System.arraycopy(stops, 0, grown, 0, position);
-        grown[position] = node;
-        System.arraycopy(stops, position, grown, position + 1, stops.length - position);
-        trucks.get(truck).set(trip, grown);
+        insert(truck, trip, position, node, 0);
+    }
+
+    void insert(int truck, int trip, int position, int node, int tag) {
+        trucks.get(truck).set(trip, inserted(trip(truck, trip), position, node));
+        tags.get(truck).set(trip, inserted(tags.get(truck).get(trip), position, tag));
+    }
+
+    void remove(int truck, int trip, int position) {
+        trucks.get(truck).set(trip, removed(trip(truck, trip), position));
+        tags.get(truck).set(trip, removed(tags.get(truck).get(trip), position));
+    }
+
+    private static int[] inserted(int[] values, int position, int value) {
+        int[] grown = new int[values.length + 1];
+        System.arraycopy(values, 0, grown, 0, position);
+        grown[position] = value;
+        System.arraycopy(values, position, grown, position + 1, values.length - position);
+        return grown;
+    }
+
+    private static int[] removed(int[] values, int position) {
+        int[] shrunk = new int[values.length - 1];
+        System.arraycopy(values, 0, shrunk, 0, position);
+        System.arraycopy(values, position + 1, shrunk, position, shrunk.length - position);
+        return shrunk;
     }
 }

@@ -188,7 +188,7 @@ public final class BreakdownBenchmark {
         return new long[] {System.nanoTime() - start, reserve.meters()};
     }
 
-    private static void row(String name, long[] values, double unit) {
+    static void row(String name, long[] values, double unit) {
         long[] sorted = values.clone();
         Arrays.sort(sorted);
         System.out.printf(Locale.ROOT, "| %s | %.1f | %.1f | %.1f | %.1f |%n", name, pick(sorted, 0.50) / unit,
