@@ -113,7 +113,7 @@ pnpm demo:data                               # regenera web/public/demo/plan-sub
   - Cambios de ruta, horario o frecuencia: aviso con **3 días** de anticipación, salvo caso fortuito o fuerza mayor.
   - Municipios con más de 5.000 usuarios: vehículos con **equipo de compactación** (excepto aprovechables, RCD y no compactables); cajas de compactación cerrada hacia disposición final.
   - Nunca se compacta frente a centros educativos, hospitales, clínicas o centros asistenciales.
-- Decreto 596 de 2016: la actividad de aprovechamiento la prestan organizaciones de recicladores de oficio. En Rutea, las rutas de aprovechables son selectivas y terminan en una ECA, no en el relleno.
+- Decreto 1381 de 2024 (sustituye lo que el Decreto 596 de 2016 había agregado al Decreto 1077): el aprovechamiento es exclusivo de las organizaciones de recicladores de oficio por 15 años e incluye el transporte selectivo hasta una ECA. En Rutea, las rutas de aprovechables son selectivas y terminan en una ECA, no en el relleno.
 - Resolución 2184 de 2019: código de colores. **Blanco** aprovechables, **verde** orgánicos aprovechables, **negro** no aprovechables. Rutea usa este código como semántica visual.
 - Bogotá: PGIRS adoptado por Decreto 345 de 2020, hoy en el Título 12 del Decreto 653 de 2025, modificado por el Decreto 045 de 2026. Contratos de aseo prorrogados hasta 2028 (Resolución CRA 1027 de 2026, según prensa: verificar).
 

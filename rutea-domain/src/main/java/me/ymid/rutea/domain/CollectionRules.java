@@ -19,6 +19,14 @@ public final class CollectionRules {
     public static final NormRef NO_COMPACTION = new NormRef("R07", Norms.DECREE_1077_2015,
             "art. 2.3.2.2.2.3.27, num. 5", Norms.DECREE_1077_2015_SOURCE, Verification.VERIFICADA);
 
+    /**
+     * El aprovechamiento es exclusivo de las organizaciones de recicladores de oficio e incluye el transporte
+     * selectivo hasta una Estación de Clasificación y Aprovechamiento (ECA).
+     */
+    public static final NormRef SELECTIVE_TO_ECA = new NormRef("R10", Norms.DECREE_1381_2024,
+            "art. 2.3.2.5.1.1, par. 1 y art. 2.3.2.5.2.6, num. 4", Norms.DECREE_1381_2024_SOURCE,
+            Verification.VERIFICADA);
+
     public static final NightWindow NIGHT_WINDOW = new NightWindow(LocalTime.of(21, 0), LocalTime.of(6, 0));
 
     static final int MINIMUM_WEEKLY_NON_RECYCLABLE = 2;

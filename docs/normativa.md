@@ -9,7 +9,7 @@ Este documento lista cada regla regulatoria que Rutea modela, de dónde sale y c
 
 > Rutea es un proyecto de portafolio. Este documento no es asesoría jurídica. Antes de usar el modelo para operar un servicio real, un profesional debe revisar la normativa vigente y el reglamento técnico aplicable.
 
-Última revisión: 19 de octubre de 2026.
+Última revisión: 20 de octubre de 2026.
 
 ## Marco general
 
@@ -17,7 +17,8 @@ Este documento lista cada regla regulatoria que Rutea modela, de dónde sale y c
 |---|---|---|
 | Ley 142 de 1994 | Régimen de servicios públicos domiciliarios, incluido el aseo | Contexto |
 | Decreto 1077 de 2015, Libro 2, Parte 3, Título 2 | Servicio público de aseo. Compila el Decreto 2981 de 2013 | Restricciones de rutas, horarios, frecuencias y vehículos |
-| Decreto 596 de 2016 | Actividad de aprovechamiento y régimen transitorio de los recicladores de oficio | Rutas selectivas de aprovechables hacia ECA |
+| Decreto 596 de 2016 | Actividad de aprovechamiento y régimen transitorio de los recicladores de oficio. Su capítulo en el Decreto 1077 (2.3.2.5) aparece derogado en el compilado de la CRA | Antecedente; ya no se cita |
+| Decreto 1381 de 2024 (MinVivienda, 14 de noviembre) | Sustituye el capítulo 2.3.2.5 del Decreto 1077: exclusividad del aprovechamiento para las organizaciones de recicladores de oficio y esquema operativo | Rutas selectivas de aprovechables hacia una ECA (R10) |
 | Resolución 2184 de 2019 (MinAmbiente y MinVivienda) | Código de colores para la separación en la fuente, obligatorio desde el 1 de enero de 2021 | Corrientes de residuo y semántica visual |
 | Decreto Distrital 345 de 2020 | PGIRS de Bogotá | Contexto de zona y metas |
 | Decreto Distrital 653 de 2025, Título 12, modificado por el Decreto 045 de 2026 | Actualización del PGIRS: economía circular y garantía de acciones afirmativas para la población recicladora | Contexto; revisar metas antes de F4 |
@@ -38,9 +39,9 @@ Artículos del Decreto 1077 de 2015 con su origen en el Decreto 2981 de 2013.
 | R07 | La compactación se hace donde cause la mínima molestia a los residentes y nunca frente a centros educativos, hospitales, clínicas o centros asistenciales. | Art. 2.3.2.2.2.3.27, num. 5 (D. 2981/2013, art. 28) | `CollectionRules.NO_COMPACTION`. `Compliance` marca "sin compactación" cada contenedor a 50 m o menos de un centro educativo, hospital, clínica o centro asistencial de OSM. La UI lo muestra con borde ámbar. El efecto sobre la capacidad (compactar después) aún no se modela. | F4 | VERIFICADA |
 | R08 | En ciudades de más de un millón de habitantes, el prestador monitorea la recolección: georreferenciación de microrrutas, posición de los vehículos (GPS) y tiempos y movimientos. | Art. 2.3.2.2.2.3.49 (D. 2981/2013, art. 50) | Justifica la capa de seguimiento en tiempo real (posiciones por WebSocket). | F5 | VERIFICADA |
 | R09 | Código de colores para la separación en la fuente: verde para orgánicos aprovechables; blanco para aprovechables (plástico, vidrio, metales, multicapa, papel y cartón); negro para no aprovechables. Obligatorio para municipios y distritos desde el 1 de enero de 2021. | Resolución 2184 de 2019, art. 4 (parágrafo adicionado por la Res. 1344 de 2020, solo para actividades del art. 2.8.10.2 del D. 780 de 2016) | `WasteStream` con su `BinColor` oficial. | F0 | VERIFICADA |
-| R10 | El aprovechamiento lo prestan organizaciones de recicladores de oficio; los aprovechables van a una Estación de Clasificación y Aprovechamiento (ECA). | Decreto 596 de 2016 | Las rutas de aprovechables tienen como destino una ECA y pertenecen a un prestador distinto del operador de no aprovechables. | F4 | PENDIENTE_VERIFICAR |
+| R10 | La actividad de aprovechamiento es exclusiva de las organizaciones de recicladores de oficio por 15 años. Incluye el transporte selectivo hasta la Estación de Clasificación y Aprovechamiento (ECA), y ahí la clasificación y el pesaje. Los vehículos pueden ser motorizados o de tracción humana, asistida o no. | Decreto 1077 de 2015, art. 2.3.2.5.1.1, parágrafo 1; art. 2.3.2.5.2.6, num. 4 y 5; art. 2.3.2.5.2.9, parágrafo 1 (texto sustituido por el Decreto 1381 de 2024) | `CollectionRules.SELECTIVE_TO_ECA`. Las rutas de aprovechables terminan en una ECA y pertenecen a una organización de recicladores, no al operador de no aprovechables. | F4 | VERIFICADA |
 
-Los artículos R01 a R08 se verificaron el 19 de octubre de 2026 en el [texto compilado del Decreto 1077 de 2015 en Función Pública](https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77216): ninguno tiene notas de modificación o derogatoria. R09 se verificó en el [gestor normativo de la CRA](https://normas.cra.gov.co/gestor/docs/resolucion_minambienteds_2184_2019.htm), con sus notas de vigencia, y coincide con el normograma de Cancillería.
+Los artículos R01 a R08 se verificaron el 19 de octubre de 2026 en el [texto compilado del Decreto 1077 de 2015 en Función Pública](https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77216): ninguno tiene notas de modificación o derogatoria. R10 se verificó el 20 de octubre de 2026 en el [texto del Decreto 1381 de 2024 en el gestor normativo de la CRA](https://normas.cra.gov.co/gestor/docs/decreto_1381_2024.htm) (Diario Oficial No. 52.940, 14 de noviembre de 2024): las frases citadas están en la parte dispositiva y la página no trae notas de suspensión ni nulidad. Antes citaba el Decreto 596 de 2016, cuyo capítulo aparece derogado en el [compilado de la CRA](https://normas.cra.gov.co/gestor/docs/decreto_0596_2016.htm). La página de Función Pública no se pudo consultar: su certificado TLS no valida. R09 se verificó en el [gestor normativo de la CRA](https://normas.cra.gov.co/gestor/docs/resolucion_minambienteds_2184_2019.htm), con sus notas de vigencia, y coincide con el normograma de Cancillería.
 
 ## Interpretaciones en el código
 
@@ -62,6 +63,7 @@ La norma no dice todo lo que el código necesita decidir. Estas son las decision
 - [Decreto 1077 de 2015, Subsección de recolección (Cancillería, normograma)](https://www.cancilleria.gov.co/sites/default/files/Normograma/docs/pdf/decreto_1077_2015_pr041.pdf)
 - [Decreto 1077 de 2015, Título 2. Servicio público de aseo (copia de un prestador)](https://aseosabaneta.com/wp-content/uploads/2021/04/Decreto-1077.pdf)
 - [Decreto 596 de 2016 (Función Pública)](https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=69038)
+- [Decreto 1381 de 2024 (gestor normativo de la CRA)](https://normas.cra.gov.co/gestor/docs/decreto_1381_2024.htm)
 - [Resolución 2184 de 2019, texto compilado (gestor normativo de la CRA)](https://normas.cra.gov.co/gestor/docs/resolucion_minambienteds_2184_2019.htm)
 - [Resolución 2184 de 2019, resumen (Safetya)](https://safetya.co/normatividad/resolucion-2184-de-2019/)
 - [MinAmbiente: código de colores unificado](https://archivo.minambiente.gov.co/index.php/noticias-minambiente/4595-gobierno-unifica-el-codigo-de-colores-para-la-separacion-de-residuos-en-la-fuente-a-nivel-nacional)
