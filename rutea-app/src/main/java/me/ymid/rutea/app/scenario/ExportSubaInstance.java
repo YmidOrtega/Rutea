@@ -13,9 +13,9 @@ import me.ymid.rutea.solver.cvrplib.CvrplibWriter;
  * Exporta la instancia real de Suba en formato CVRPLIB para que el arnés de benchmarks la mida igual que
  * las del set X, incluso contra Timefold desde {@code rutea-bench}, que no puede depender de este módulo.
  *
- * <p>El depósito (nodo 1 del {@code .vrp}) es la portería de Doña Juana: cada viaje sale del relleno, recoge
- * hasta llenar el compactador y vuelve a descargar. El tramo desde y hacia la base no entra. Las distancias
- * son metros por la red vial, asimétricas.
+ * <p>Cada ruta sale de la base de Fontibón y termina en la portería de Doña Juana: la fila del depósito (nodo 1
+ * del {@code .vrp}) son distancias desde la base y su columna, distancias hasta la portería. El regreso a la base
+ * es igual para todos los camiones y no entra. Las distancias son metros por la red vial, asimétricas.
  *
  * <p>Uso: {@code ExportSubaInstance <grafo.rgraph> <dir-salida> [--seed <n>]}
  */
@@ -38,13 +38,16 @@ public final class ExportSubaInstance {
         }
 
         RoadGraphFile.Stored stored = RoadGraphFile.read(graphFile);
-        Instance instance = SubaScenario.build(stored.graph(), seed).instance();
+        SubaScenario scenario = SubaScenario.build(stored.graph(), seed);
+        Instance instance = scenario.instance();
         Files.createDirectories(outDir);
         Path file = outDir.resolve(instance.name() + ".vrp");
-        String comment = String.format(Locale.ROOT, "Suba (ASE 5): portería de Doña Juana como depósito y %d"
-                + " contenedores negros simulados (semilla %d); distancias en metros por la red vial del extracto OSM"
-                + " con SHA-256 %s; cifras y fuentes en docs/datos.md. Datos © colaboradores de OpenStreetMap,"
-                + " ODbL 1.0", instance.customerCount(), seed, RoadGraphFile.hex(stored.sourceSha256()));
+        String comment = String.format(Locale.ROOT, "Suba (ASE 5): %d contenedores negros simulados (semilla %d);"
+                + " el depósito sale de la base de Fontibón (fila 1) y llega a la portería de Doña Juana (columna 1);"
+                + " el regreso a la base (%d m por camión) no entra; distancias en metros por la red vial del extracto"
+                + " OSM con SHA-256 %s; cifras y fuentes en docs/datos.md. Datos © colaboradores de OpenStreetMap,"
+                + " ODbL 1.0", instance.customerCount(), seed, scenario.returnMeters(),
+                RoadGraphFile.hex(stored.sourceSha256()));
         CvrplibWriter.writeExplicit(file, instance, comment);
         System.out.printf(Locale.ROOT, "%s: %d nodos, capacidad %d kg, %d kg en total (%,d bytes)%n", file,
                 instance.size(), instance.capacity(), totalDemand(instance), Files.size(file));

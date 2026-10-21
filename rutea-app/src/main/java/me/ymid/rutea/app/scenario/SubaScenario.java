@@ -1,5 +1,6 @@
 package me.ymid.rutea.app.scenario;
 
+import java.util.Arrays;
 import java.util.List;
 
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
@@ -11,14 +12,17 @@ import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
 
 /**
- * La operación de Suba traducida a CVRP: el nodo 0 es la portería de Doña Juana y el nodo {@code i} es el
- * contenedor {@code containers.get(i - 1)}. Cada ruta es un viaje que sale del relleno, recoge hasta llenar
- * el compactador y vuelve a descargar.
+ * La operación de Suba traducida a CVRP. Cada ruta es el turno de un compactador: sale de la base de Fontibón,
+ * recoge hasta llenarse y termina en la portería de Doña Juana a descargar. El nodo {@code i} es el contenedor
+ * {@code containers.get(i - 1)}; el nodo 0 es dos lugares a la vez, y la matriz asimétrica lo permite: su fila
+ * sale de la base y su columna llega a la portería. El regreso de la portería a la base es igual para todos los
+ * camiones, así que no cambia la optimización: va en {@code returnMeters}.
  *
- * @param points vértice del grafo de cada nodo de la instancia
+ * @param points vértice del grafo de cada nodo de la instancia; el del nodo 0 es la base
+ * @param returnMeters metros de la portería a la base, por camión
  */
 public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, List<Container> containers,
-        int[] points, Instance instance) {
+        int[] points, Instance instance, int returnMeters) {
 
     public SubaScenario {
         containers = List.copyOf(containers);
@@ -37,17 +41,25 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
         List<Container> containers = SimulatedContainers.place(graph, WasteStream.NON_RECYCLABLE, count, meanKg, seed);
         int[] points = new int[count + 1];
         int[] demands = new int[count + 1];
-        points[0] = gate;
+        points[0] = depot;
         for (int i = 0; i < count; i++) {
             points[i + 1] = containers.get(i).vertex();
             demands[i + 1] = containers.get(i).kg();
         }
-        TravelMatrix matrix = TravelMatrix.compute(graph, points, Runtime.getRuntime().availableProcessors());
+        // La matriz se calcula con la portería al final: [base, contenedores..., portería].
+        int[] withGate = Arrays.copyOf(points, count + 2);
+        withGate[count + 1] = gate;
+        TravelMatrix matrix = TravelMatrix.compute(graph, withGate, Runtime.getRuntime().availableProcessors());
+        int[][] distances = new int[count + 1][count + 1];
+        for (int i = 0; i <= count; i++) {
+            for (int j = 0; j <= count; j++) {
+                distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? count + 1 : j);
+            }
+        }
         // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
-        String name = "Suba-n" + (count + 1) + "-s" + seed;
-        Instance instance = new Instance(name, SubaFigures.COMPACTOR_CAPACITY_KG, demands,
-                DistanceMatrix.of(matrix.metersRows()));
-        return new SubaScenario(graph, gate, depot, containers, points, instance);
+        String name = "SubaBase-n" + (count + 1) + "-s" + seed;
+        Instance instance = new Instance(name, SubaFigures.COMPACTOR_CAPACITY_KG, demands, DistanceMatrix.of(distances));
+        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix.meters(count + 1, 0));
     }
 
     private static long siteNode(String name) {

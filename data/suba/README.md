@@ -2,7 +2,8 @@
 
 Instancias CVRP de la operación real de Suba (ASE 5) en formato CVRPLIB, con la matriz completa (`EDGE_WEIGHT_TYPE : EXPLICIT`, `FULL_MATRIX`). El arnés de benchmarks las lee igual que las del set X.
 
-- **Depósito (nodo 1):** la portería noreste del Relleno Sanitario Doña Juana. Cada ruta es un viaje que sale del relleno, recoge hasta llenar el compactador y vuelve a descargar. El tramo desde y hacia la base de Fontibón no entra.
+- **Depósito (nodo 1):** cada ruta es el turno de un compactador. Sale de la base de Fontibón, recoge hasta llenarse y termina en la portería noreste del Relleno Sanitario Doña Juana. La matriz asimétrica lo permite: la fila del nodo 1 son distancias desde la base y su columna, distancias hasta la portería. El regreso de la portería a la base es igual para todos los camiones y no entra; el `COMMENT` dice cuánto mide.
+- Antes de este modelo, el depósito era la portería en los dos sentidos (`Suba-n807-s1`). El benchmark de `docs/benchmarks/f3-suba-60s` es de esa versión.
 - **Clientes:** los contenedores negros simulados de `SimulatedContainers`, con su carga en kg.
 - **Distancias:** metros por la red vial de `data/osm/suba.rgraph`. Son asimétricas por los sentidos viales.
 - **Capacidad:** 8.000 kg, el compactador de 32 yardas, el más común del ASE 5.
@@ -17,7 +18,7 @@ Los `.vrp` no se suben al repo (pesan unos 3,4 MB). Se generan desde el grafo:
 ```bash
 mvn -pl rutea-geo compile exec:java                 # data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
 mvn -pl rutea-app -am install -DskipTests
-mvn -pl rutea-app exec:java@suba-instance           # data/suba/Suba-n807-s1.vrp
+mvn -pl rutea-app exec:java@suba-instance           # data/suba/SubaBase-n807-s1.vrp
 ```
 
 Con `-Dexec.args="<grafo> <dir> --seed <n>"` se genera otra ubicación de contenedores.

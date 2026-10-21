@@ -22,21 +22,26 @@ class SubaScenarioTest {
     Path dir;
 
     @Test
-    void putsTheLandfillGateAtTheDepotAndRoadDistancesBetweenContainers() throws IOException {
+    void leavesFromTheBaseAndArrivesAtTheLandfillGate() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        Instance instance = SubaScenario.build(town, 30, 24, 12, 160, 4).instance();
+        SubaScenario scenario = SubaScenario.build(town, 30, 24, 12, 160, 4);
+        Instance instance = scenario.instance();
 
-        assertThat(instance.name()).isEqualTo("Suba-n13-s4");
+        assertThat(instance.name()).isEqualTo("SubaBase-n13-s4");
         assertThat(instance.size()).isEqualTo(13);
         assertThat(instance.demand(0)).isZero();
         assertThat(instance.capacity()).isEqualTo(SubaFigures.COMPACTOR_CAPACITY_KG);
         int gate = town.vertexOf(30).orElseThrow();
-        ShortestPaths paths = new ShortestPaths(town, ShortestPaths.Weight.METERS);
-        paths.run(gate);
+        int base = town.vertexOf(24).orElseThrow();
         int firstContainer = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 12, 160, 4)
                 .getFirst().vertex();
-        assertThat(instance.distance(0, 1)).isEqualTo(paths.distance(firstContainer));
+        ShortestPaths paths = new ShortestPaths(town, ShortestPaths.Weight.METERS);
+
+        assertThat(instance.distance(0, 1)).as("base → contenedor").isEqualTo(paths.distances(base, new int[] {firstContainer})[0]);
+        assertThat(instance.distance(1, 0)).as("contenedor → portería").isEqualTo(paths.distances(firstContainer, new int[] {gate})[0]);
+        assertThat(scenario.returnMeters()).as("portería → base").isEqualTo(paths.distances(gate, new int[] {base})[0]);
+        assertThat(scenario.points()[0]).isEqualTo(base);
     }
 
     @Test
