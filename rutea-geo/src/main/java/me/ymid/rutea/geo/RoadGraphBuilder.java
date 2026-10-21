@@ -261,7 +261,8 @@ public final class RoadGraphBuilder {
                 int to = vertexOf[path[i]];
                 if (from != to) {
                     int[] points = Arrays.copyOfRange(path, start, i + 1);
-                    int length = (int) Math.round(length(points, nodes));
+                    // Al menos un metro: con arcos de 0 m el desempate de ShortestPaths deja de ser exacto.
+                    int length = Math.max(1, (int) Math.round(length(points, nodes)));
                     int travel = (int) Math.round(length * 3.6 / piece.way().kmPerHour());
                     int shapeId = shapes.size();
                     shapes.add(points);

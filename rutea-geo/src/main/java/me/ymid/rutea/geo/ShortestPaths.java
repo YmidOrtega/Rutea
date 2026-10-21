@@ -10,7 +10,10 @@ import java.util.Arrays;
  * bajos), así ordenar por el {@code long} es ordenar por distancia, sin objetos ni boxing.
  *
  * <p>Junto al peso que se minimiza se acumula el otro a lo largo del mismo camino: buscando por metros,
- * {@link #secondary} da los segundos de recorrer ese camino, que es el que el camión de verdad sigue.
+ * {@link #secondary} da los segundos de recorrer ese camino, que es el que el camión de verdad sigue. Entre
+ * caminos igual de cortos gana el de menor secundario, así el resultado no depende del orden de los arcos ni del
+ * sentido de la búsqueda. Exige arcos de al menos un metro: buscando por segundos, con arcos de 0 s, el secundario
+ * puede no ser el mínimo.
  */
 public final class ShortestPaths {
 
@@ -140,9 +143,12 @@ public final class ShortestPaths {
                 int w = graph.target(e);
                 boolean byMeters = weight == Weight.METERS;
                 long candidate = (long) d + (byMeters ? graph.meters(e) : graph.seconds(e));
+                int other = secondary[v] + (byMeters ? graph.seconds(e) : graph.meters(e));
                 if (candidate < distance[w]) {
-                    setDistance(w, (int) candidate, secondary[v] + (byMeters ? graph.seconds(e) : graph.meters(e)), e);
+                    setDistance(w, (int) candidate, other, e);
                     push(w, (int) candidate);
+                } else if (candidate == distance[w] && other < secondary[w]) {
+                    setDistance(w, (int) candidate, other, e);
                 }
             }
         }

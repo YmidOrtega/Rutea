@@ -94,6 +94,44 @@ class ShortestPathsTest {
         }
     }
 
+    @Test
+    void betweenEquallyShortPathsTakesTheFasterOneWhateverTheArcOrder() {
+        // 0 → 1 → 3 y 0 → 2 → 3 miden lo mismo; por 2 es más rápido.
+        int[] slowFirst = {0, 1, 100, 50};
+        int[] fastFirst = {0, 2, 100, 10};
+        RoadGraph oneOrder = TestGraphs.of(4, slowFirst, fastFirst, new int[] {1, 3, 100, 50},
+                new int[] {2, 3, 100, 10});
+        RoadGraph otherOrder = TestGraphs.of(4, fastFirst, slowFirst, new int[] {2, 3, 100, 10},
+                new int[] {1, 3, 100, 50});
+
+        for (RoadGraph graph : new RoadGraph[] {oneOrder, otherOrder}) {
+            ShortestPaths paths = new ShortestPaths(graph, Weight.METERS);
+            paths.run(0);
+
+            assertThat(paths.distance(3)).isEqualTo(200);
+            assertThat(paths.secondary(3)).isEqualTo(20);
+            assertThat(graph.target(paths.pathEdges(3)[0])).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void searchingTheReversedGraphGivesTheSamePathsTowardsTheSource() {
+        RoadGraph graph = randomGraph(200, 1200, 5);
+        ShortestPaths forward = new ShortestPaths(graph, Weight.METERS);
+        ShortestPaths backward = new ShortestPaths(graph.reversed(), Weight.METERS);
+
+        for (int target = 0; target < graph.vertexCount(); target += 13) {
+            backward.run(target);
+            for (int source = 0; source < graph.vertexCount(); source += 7) {
+                forward.run(source);
+                assertThat(backward.distance(source)).isEqualTo(forward.distance(target));
+                if (forward.distance(target) != ShortestPaths.UNREACHABLE) {
+                    assertThat(backward.secondary(source)).isEqualTo(forward.secondary(target));
+                }
+            }
+        }
+    }
+
     /** Referencia lenta pero obvia para comparar. */
     private static int[] bellmanFord(RoadGraph graph, int source) {
         int n = graph.vertexCount();
@@ -129,7 +167,8 @@ class ShortestPathsTest {
         SplittableRandom random = new SplittableRandom(seed);
         int[][] list = new int[edges][];
         for (int i = 0; i < edges; i++) {
-            list[i] = new int[] {random.nextInt(vertices), random.nextInt(vertices), random.nextInt(1, 1000), 1};
+            list[i] = new int[] {random.nextInt(vertices), random.nextInt(vertices), random.nextInt(1, 50),
+                    random.nextInt(0, 30)};
         }
         return TestGraphs.of(vertices, list);
     }
