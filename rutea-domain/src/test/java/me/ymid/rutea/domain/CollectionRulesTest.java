@@ -74,4 +74,11 @@ class CollectionRulesTest {
         assertThat(CollectionRules.SELECTIVE_TO_ECA.verification()).isEqualTo(Verification.VERIFICADA);
         assertThat(CollectionRules.SELECTIVE_TO_ECA.source().toString()).contains("decreto_1381_2024");
     }
+
+    @Test
+    @DisplayName("R06 · D. 1077/2015 art. 2.3.2.2.2.3.36, num. 3: compactación, salvo los aprovechables separados")
+    void compactionEquipmentCitesItsVerifiedArticle() {
+        assertThat(CollectionRules.COMPACTION_EQUIPMENT.citation())
+                .isEqualTo("R06 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.36, num. 3");
+    }
 }
