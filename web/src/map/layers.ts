@@ -1,6 +1,7 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
+import { isReserveId } from '../operations/live'
 import { strokeColor, type Palette } from './colors'
 import suba from './suba.json'
 
@@ -108,14 +109,21 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
   ]
 }
 
-/** Las rutas de reserva tras una avería llevan el acento: son lo que está pasando ahora (docs/diseno.md). */
-const isReserve = (route: Route) => route.id.startsWith('R-')
+/** Las rutas de reserva llevan el acento: son lo que está pasando ahora (docs/diseno.md). */
+const isReserve = (route: Route) => isReserveId(route.id)
 
 /**
- * Lo que dejó una avería: los contenedores huérfanos con borde crítico y las rutas de reserva en el acento.
- * Se dibuja encima del plan.
+ * Lo que dejaron los eventos: los contenedores huérfanos con borde crítico, los desbordados con un anillo crítico
+ * más amplio, el contenedor seleccionado con un anillo en el acento y las rutas de reserva en el acento. Se dibuja
+ * encima del plan.
  */
-export function operationLayers(reserve: Route[], orphans: Container[], palette: Palette) {
+export function operationLayers(
+  reserve: Route[],
+  orphans: Container[],
+  overflowed: Container[],
+  selected: Container | null,
+  palette: Palette,
+) {
   return [
     new PathLayer<Route>({
       id: 'reserve-routes',
@@ -142,6 +150,33 @@ export function operationLayers(reserve: Route[], orphans: Container[], palette:
       lineWidthUnits: 'pixels',
       getLineWidth: 2,
       pickable: true,
+    }),
+    new ScatterplotLayer<Container>({
+      id: 'overflows',
+      data: overflowed,
+      getPosition: (container) => container.position,
+      getLineColor: palette.crit,
+      getRadius: 40,
+      radiusMinPixels: 9,
+      radiusMaxPixels: 16,
+      filled: false,
+      stroked: true,
+      lineWidthUnits: 'pixels',
+      getLineWidth: 2,
+      pickable: true,
+    }),
+    new ScatterplotLayer<Container>({
+      id: 'selected',
+      data: selected ? [selected] : [],
+      getPosition: (container) => container.position,
+      getLineColor: palette.sodium,
+      getRadius: 60,
+      radiusMinPixels: 13,
+      radiusMaxPixels: 22,
+      filled: false,
+      stroked: true,
+      lineWidthUnits: 'pixels',
+      getLineWidth: 2,
     }),
   ]
 }

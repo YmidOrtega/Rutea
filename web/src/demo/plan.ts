@@ -111,3 +111,11 @@ export function secondsOfDay(hhmm: string): number {
   const [hours, minutes] = hhmm.split(':').map(Number)
   return hours * 3600 + minutes * 60
 }
+
+/** Segundos desde la medianoche (o más de un día) → "HH:MM". */
+export function clock(seconds: number): string {
+  const day = ((Math.floor(seconds) % 86_400) + 86_400) % 86_400
+  const hours = Math.floor(day / 3600)
+  const minutes = Math.floor((day % 3600) / 60)
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}

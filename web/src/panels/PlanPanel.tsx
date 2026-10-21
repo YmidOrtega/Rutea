@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { STREAM_NAMES, type DemoPlan, type WasteStream } from '../demo/plan'
-import type { BreakdownEvent } from '../operations/live'
+import { overflowPickup, type BreakdownEvent, type OperationEvent, type OverflowEvent } from '../operations/live'
 import './PlanPanel.css'
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   onToggle: (routeId: string) => void
   /** Con la API detrás, cada compactador puede averiarse a la hora del reloj. */
   live: boolean
-  events: BreakdownEvent[]
+  events: OperationEvent[]
   pending: string | null
   eventError: string | null
   onBreakdown: (truck: string) => void
@@ -24,9 +24,10 @@ const hours = (seconds: number) => {
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
 }
 const tonnes = (kg: number) => (kg / 1000).toFixed(1)
+const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function PlanPanel({ plan, visible, onToggle, live, events, pending, eventError, onBreakdown, clock }: Props) {
-  const broken = new Set(events.map((event) => event.truck))
+  const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
@@ -128,24 +129,13 @@ export function PlanPanel({ plan, visible, onToggle, live, events, pending, even
               <h2 className="label">Eventos</h2>
               {eventError && <p className="event-error">{eventError}</p>}
               <ul>
-                {events.map((event) => (
-                  <li key={`${event.truck}@${event.atSeconds}`}>
-                    <strong className="num">
-                      {clock(event.atSeconds)} · {event.truck} averiado
-                    </strong>
-                    <span>
-                      <span className="num">{event.orphans.length}</span> contenedores sin recoger. Sale{' '}
-                      {event.reserve.map((route) => route.id).join(', ')} a las{' '}
-                      <span className="num">{clock(event.dispatchSeconds)}</span> y llega al primero a las{' '}
-                      <span className="num">{clock(event.firstPickupSeconds)}</span>.
-                    </span>
-                    <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
-                      R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
-                      <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span>{' '}
-                      (máximo 3 h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
-                    </span>
-                  </li>
-                ))}
+                {events.map((event) =>
+                  event.type === 'breakdown' ? (
+                    <Breakdown key={event.seq} event={event} clock={clock} />
+                  ) : (
+                    <Overflow key={event.seq} event={event} clock={clock} />
+                  ),
+                )}
               </ul>
             </section>
           )}
@@ -183,6 +173,45 @@ export function PlanPanel({ plan, visible, onToggle, live, events, pending, even
         </div>
       )}
     </aside>
+  )
+}
+
+function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['clock'] }) {
+  return (
+    <li>
+      <strong className="num">
+        {clock(event.atSeconds)} · {event.truck} averiado
+      </strong>
+      <span>
+        <span className="num">{event.orphans.length}</span> contenedores sin recoger. Sale{' '}
+        {event.reserve.map((route) => route.id).join(', ')} a las{' '}
+        <span className="num">{clock(event.dispatchSeconds)}</span> y llega al primero a las{' '}
+        <span className="num">{clock(event.firstPickupSeconds)}</span>.
+      </span>
+      <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
+        R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
+        <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span> (máximo 3
+        h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+      </span>
+    </li>
+  )
+}
+
+function Overflow({ event, clock }: { event: OverflowEvent; clock: Props['clock'] }) {
+  const redispatched = event.cause !== 'reporte'
+  return (
+    <li>
+      <strong className="num">
+        {clock(event.atSeconds)} · {event.container} {redispatched ? `sin recoger tras la ${event.cause}` : 'desbordado'}
+      </strong>
+      <span className="num">{capitalized(overflowPickup(event, clock))}.</span>
+      <span>
+        Decidido en{' '}
+        <span className="num">
+          {event.latencyMs < 1 ? `${(event.latencyMs * 1000).toFixed(0)} µs` : `${event.latencyMs.toFixed(1)} ms`}
+        </span>
+      </span>
+    </li>
   )
 }
 

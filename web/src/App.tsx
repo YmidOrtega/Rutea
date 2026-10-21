@@ -5,8 +5,20 @@ import { DeckOverlay } from './map/DeckOverlay'
 import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
 import { operationLayers, staticLayers, tripsLayer, zoneLayers } from './map/layers'
-import { secondsOfDay, STREAM_NAMES, toTrips, type Container, type DemoPlan, type Site } from './demo/plan'
-import { eventKey, listenEvents, loadPlan, requestBreakdown, stopAt, type BreakdownEvent } from './operations/live'
+import { clock, secondsOfDay, STREAM_NAMES, toTrips, type Container, type DemoPlan, type Site } from './demo/plan'
+import {
+  currentPlan,
+  isReserveId,
+  listenEvents,
+  loadPlan,
+  overflowPickup,
+  requestBreakdown,
+  requestOverflow,
+  stopAt,
+  type CurrentPlan,
+  type OperationEvent,
+} from './operations/live'
+import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
 import './App.css'
 
@@ -17,7 +29,8 @@ const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: r
 export default function App() {
   const [plan, setPlan] = useState<DemoPlan | null>(null)
   const [live, setLive] = useState(false)
-  const [events, setEvents] = useState<BreakdownEvent[]>([])
+  const [events, setEvents] = useState<OperationEvent[]>([])
+  const [selected, setSelected] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [eventError, setEventError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -28,9 +41,10 @@ export default function App() {
   const [initialView] = useState(initialViewState)
 
   // Cada evento llega una vez por WebSocket y, a quien lo pidió, también en la respuesta: se cuenta una sola vez.
-  const addEvent = useCallback((event: BreakdownEvent) => {
-    setEvents((current) => (current.some((e) => eventKey(e) === eventKey(event)) ? current : [...current, event]))
-    setVisible((current) => new Set([...current, ...event.reserve.map((route) => route.id)]))
+  const addEvent = useCallback((event: OperationEvent) => {
+    setEvents((current) => (current.some((e) => e.seq === event.seq) ? current : [...current, event]))
+    const reserve = event.type === 'breakdown' ? event.reserve : event.routes.filter((route) => isReserveId(route.id))
+    setVisible((current) => new Set([...current, ...reserve.map((route) => route.id)]))
   }, [])
 
   useEffect(() => {
@@ -46,34 +60,36 @@ export default function App() {
 
   useEffect(() => (live ? listenEvents(addEvent) : undefined), [live, addEvent])
 
-  const breakdown = (truck: string) => {
-    setPending(truck)
+  const request = (key: string, send: () => Promise<OperationEvent | OperationEvent[]>) => {
+    setPending(key)
     setEventError(null)
-    requestBreakdown(truck, time)
-      .then(addEvent)
+    send()
+      .then((sent) => (Array.isArray(sent) ? sent : [sent]).forEach(addEvent))
       .catch((cause: unknown) => setEventError(cause instanceof Error ? cause.message : String(cause)))
       .finally(() => setPending(null))
   }
+  const breakdown = (truck: string) => request(truck, () => requestBreakdown(truck, time))
+  const overflow = (container: string) => request(container, () => requestOverflow(container, time))
 
-  // El plan vigente: cada camión averiado se detiene en su avería y las reservas se suman.
+  const current = useMemo(() => (plan ? currentPlan(plan, events) : null), [plan, events])
+  // Lo que se reproduce: cada camión averiado se detiene en su avería y las reservas se suman.
   const routes = useMemo(() => {
-    if (!plan) return []
-    const brokenAt = new Map(events.map((event) => [event.truck, event.atSeconds]))
-    const planned = plan.routes.map((route) =>
-      brokenAt.has(route.id) ? stopAt(route, brokenAt.get(route.id) ?? 0) : route,
-    )
-    return [...planned, ...events.flatMap((event) => event.reserve)]
-  }, [plan, events])
-  const reserve = useMemo(() => events.flatMap((event) => event.reserve), [events])
-  const orphanRoute = useMemo(() => {
-    const byContainer = new Map<string, string>()
-    for (const route of reserve) for (const stop of route.stops) byContainer.set(stop, route.id)
-    return byContainer
-  }, [reserve])
+    if (!current) return []
+    const planned = current.plan.routes.map((route) => {
+      const at = current.brokenAt.get(route.id)
+      return at === undefined ? route : stopAt(route, at)
+    })
+    return [...planned, ...current.reserve]
+  }, [current])
   const orphans = useMemo(
-    () => (plan ? plan.containers.filter((container) => orphanRoute.has(container.id)) : []),
-    [plan, orphanRoute],
+    () => current?.plan.containers.filter((container) => current.orphanRoute.has(container.id)) ?? [],
+    [current],
   )
+  const overflowed = useMemo(
+    () => current?.plan.containers.filter((container) => current.overflows.has(container.id)) ?? [],
+    [current],
+  )
+  const selectedContainer = current?.plan.containers.find((container) => container.id === selected) ?? null
 
   const trips = useMemo(() => toTrips(routes), [routes])
   const duration = useMemo(() => Math.max(0, ...trips.map((trip) => trip.timestamps.at(-1) ?? 0)), [trips])
@@ -96,10 +112,16 @@ export default function App() {
   const baseLayers = useMemo(
     () => [
       ...zone,
-      ...(plan ? staticLayers(plan, visible, palette) : []),
-      ...operationLayers(reserve.filter((route) => visible.has(route.id)), orphans, palette),
+      ...(current ? staticLayers(current.plan, visible, palette) : []),
+      ...operationLayers(
+        current?.reserve.filter((route) => visible.has(route.id)) ?? [],
+        orphans,
+        overflowed,
+        selectedContainer,
+        palette,
+      ),
     ],
-    [zone, plan, visible, palette, reserve, orphans],
+    [zone, current, visible, palette, orphans, overflowed, selectedContainer],
   )
   // Antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
   const layers = plan && (playing || time > 0)
@@ -120,7 +142,11 @@ export default function App() {
         mapStyle={BASEMAP_STYLE}
         attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
       >
-        <DeckOverlay layers={layers} getTooltip={tooltipFor(plan, orphanRoute)} />
+        <DeckOverlay
+          layers={layers}
+          getTooltip={tooltipFor(current, live)}
+          onClick={(info) => setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)}
+        />
       </MapGL>
 
       <header className="topbar panel">
@@ -141,9 +167,9 @@ export default function App() {
         )}
       </header>
 
-      {plan && (
+      {current && (
         <PlanPanel
-          plan={plan}
+          plan={current.plan}
           visible={visible}
           onToggle={toggleRoute}
           live={live}
@@ -151,7 +177,20 @@ export default function App() {
           pending={pending}
           eventError={eventError}
           onBreakdown={breakdown}
-          clock={(seconds) => clock(secondsOfDay(plan.meta.shiftStart) + seconds)}
+          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
+        />
+      )}
+
+      {current && selectedContainer && (
+        <ContainerCard
+          container={selectedContainer}
+          overflow={current.overflows.get(selectedContainer.id)}
+          now={time}
+          pending={pending !== null}
+          error={pending === null && eventError !== null ? eventError : null}
+          onReport={() => overflow(selectedContainer.id)}
+          onClose={() => setSelected(null)}
+          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
         />
       )}
 
@@ -168,19 +207,14 @@ export default function App() {
   )
 }
 
-function clock(seconds: number): string {
-  const day = ((Math.floor(seconds) % 86_400) + 86_400) % 86_400
-  const hours = Math.floor(day / 3600)
-  const minutes = Math.floor((day % 3600) / 60)
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
+
+function tooltipFor(current: CurrentPlan | null, live: boolean) {
+  return (info: PickingInfo) => (current ? tooltip(info, current, live) : null)
 }
 
-function tooltipFor(plan: DemoPlan | null, orphanRoute: Map<string, string>) {
-  return (info: PickingInfo) => tooltip(info, plan?.meta.shiftStart ?? '00:00', orphanRoute)
-}
-
-function tooltip({ object, layer }: PickingInfo, shiftStart: string, orphanRoute: Map<string, string>) {
-  if (!object || !['containers', 'orphans', 'sites'].includes(layer?.id ?? '')) return null
+function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean) {
+  if (!object || ![...CONTAINER_LAYERS, 'sites'].includes(layer?.id ?? '')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
     className: 'tooltip',
@@ -194,20 +228,27 @@ function tooltip({ object, layer }: PickingInfo, shiftStart: string, orphanRoute
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },
-    html: layer?.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container, shiftStart, orphanRoute),
+    html: layer?.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container, current, live),
   }
 }
 
-function containerHtml(container: Container, shiftStart: string, orphanRoute: Map<string, string>): string {
-  const reserve = orphanRoute.get(container.id)
+function containerHtml(container: Container, current: CurrentPlan, live: boolean): string {
+  const at = (seconds: number) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)
+  const reserve = current.orphanRoute.get(container.id)
   const orphan = reserve ? `<span class="orphan">Huérfano tras la avería de ${container.route}: lo recoge ${reserve}</span>` : ''
+  const overflow = current.overflows.get(container.id)
+  const spilled = overflow
+    ? `<span class="orphan num">Desbordado a las ${at(overflow.atSeconds)}: ${overflowPickup(overflow, at)}</span>`
+    : ''
   const rules = container.rules.map((rule) => `<span class="rule">${rule}</span>`).join('')
+  const hint = live && container.stream === 'NON_RECYCLABLE' && !overflow ? '<span>Clic para reportar un desborde</span>' : ''
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
-    <span class="num">Vehículo ${container.route} · llega a las ${clock(secondsOfDay(shiftStart) + container.visitSeconds)}</span>
-    ${orphan}${rules}`
+    <span class="num">Vehículo ${container.route} · llega a las ${at(container.visitSeconds)}</span>
+    ${orphan}${spilled}${rules}${hint}`
 }
+
 
 const SITE_ROLES: Record<Site['id'], string> = {
   relleno: 'Cada viaje de no aprovechables termina aquí a descargar',
