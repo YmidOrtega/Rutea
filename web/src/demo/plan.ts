@@ -45,6 +45,10 @@ export interface DemoPlan {
     iterations: number
     shiftStart: string
     serviceSeconds: number
+    /** Consumo supuesto: el CO₂ es estimado, no medido. */
+    litersPerKm: number
+    /** Factor del IPCC 2006 para el diésel. */
+    kgCo2PerLiter: number
     attribution: string
   }
   sites: Site[]
