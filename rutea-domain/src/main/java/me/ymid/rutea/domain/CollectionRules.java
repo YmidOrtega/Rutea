@@ -1,5 +1,6 @@
 package me.ymid.rutea.domain;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.OptionalInt;
@@ -33,6 +34,12 @@ public final class CollectionRules {
     public static final NormRef SELECTIVE_TO_ECA = new NormRef("R10", Norms.DECREE_1381_2024,
             "art. 2.3.2.5.1.1, par. 1 y art. 2.3.2.5.2.6, num. 4", Norms.DECREE_1381_2024_SOURCE,
             Verification.VERIFICADA);
+
+    /** Ante la avería de un vehículo, el servicio se restablece en máximo tres horas. */
+    public static final NormRef BREAKDOWN_RECOVERY = new NormRef("R05", Norms.DECREE_1077_2015,
+            "art. 2.3.2.2.2.3.34", Norms.DECREE_1077_2015_SOURCE, Verification.VERIFICADA);
+
+    public static final Duration MAX_BREAKDOWN_RECOVERY = Duration.ofHours(3);
 
     public static final NightWindow NIGHT_WINDOW = new NightWindow(LocalTime.of(21, 0), LocalTime.of(6, 0));
 
