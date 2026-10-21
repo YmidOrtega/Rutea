@@ -99,7 +99,7 @@ public final class PbfFixture {
         }
 
         /** Como {@link #denseNodes}, con las etiquetas de cada nodo en {@code keys_vals} (vacío si no tiene). */
-        Block taggedDenseNodes(long[] ids, long[] latNano, long[] lonNano, String[]... tagsPerNode) {
+        public Block taggedDenseNodes(long[] ids, long[] latNano, long[] lonNano, String[]... tagsPerNode) {
             LongList keysAndValues = new LongList(16);
             for (String[] tags : tagsPerNode) {
                 for (String tag : tags) {
