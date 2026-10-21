@@ -163,7 +163,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
   Encadenar viajes ahorra km, porque el segundo viaje sale de la portería y se ahorra la salida desde la base y un regreso. Y el tiempo de descarga en Doña Juana define el tamaño de la flota: con 40 min bastan 9 camiones; con 90, hacen falta 16. En el barrido ingenuo, algunos viajes ni solos caben en el turno (cuadrantes de 500 m y de 4 km).
 - [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:50 h.
-- [ ] Turnos y ventanas horarias (R02), frecuencias (R03) y paradas sin compactación (R07).
+- [x] Normativa en el plan (`Compliance`): R02, R03 y R07, verificadas en el texto oficial, se revisan sobre cada parada con la hora de paso del planificador y 644 sitios sensibles de OSM. Plan de demo: **79 contenedores sin compactación** (R07, a 50 m o menos de un colegio o centro de salud), **335 paradas nocturnas** que requieren medidas contra el ruido (R02) y frecuencia de 6 veces por semana, que cumple el mínimo de 2 (R03). Con salida a las 18:00, 383 de las 806 paradas caen entre las 21:00 y las 06:00. Con las mismas horas de paso y salida a las 06:00, ninguna: irían de las 06:22 a las 11:53.
+- [ ] Calendario semanal por zona (R03, VRP periódico) y efecto de R07 sobre la capacidad.
 - [ ] Flota heterogénea (R06, R10).
 
 ## F5 — Operación en tiempo real (3 semanas)

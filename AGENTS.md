@@ -67,6 +67,7 @@ mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de eva
 mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
 mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/SubaBase-n807-s1.vrp (ver data/suba/README.md)
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
+mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
@@ -124,7 +125,7 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 - Diseño oscuro primero, con tokens en `web/src/styles/tokens.css`. No se escriben colores literales en componentes.
 - Los colores de las corrientes de residuo siguen la Resolución 2184 de 2019 (adaptados para verse sobre un mapa oscuro; ver `docs/diseno.md`).
 - Cifras con `font-variant-numeric: tabular-nums`. Respeta `prefers-reduced-motion` (sin animación de camiones por defecto en ese caso).
-- El plan de demo (`pnpm demo:data`, requiere `data/osm/suba.rgraph`) va sobre las calles reales de OSM. Los contenedores y sus cargas son simulados, y la UI lo dice explícitamente; nunca se presentan como datos de operación.
+- El plan de demo (`pnpm demo:data`, requiere `data/osm/suba.rgraph` y `data/osm/suba-sitios-sensibles.csv`) va sobre las calles reales de OSM. Los contenedores y sus cargas son simulados, y la UI lo dice explícitamente; nunca se presentan como datos de operación.
 
 ## Flujo de trabajo
 

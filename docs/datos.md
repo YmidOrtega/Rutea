@@ -52,6 +52,7 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - `PENDIENTE_VERIFICAR`: **0,8 L de diésel por km** para un compactador en recolección. No hay cifra publicada para Bogotá. Como el CO₂ sale proporcional a los km, el porcentaje de ahorro entre dos planes no depende de este valor; las toneladas absolutas sí.
 - Todo el ACPM se cuenta como diésel fósil: su fracción de biodiésel no se descuenta (`PENDIENTE_VERIFICAR`: porcentaje de mezcla vigente). Esto sobreestima un poco el CO₂ fósil.
 - `PENDIENTE_VERIFICAR`: **descarga en Doña Juana de 40 a 90 min**. "En promedio, gastan entre 40 minutos a una hora y media" ([El Tiempo, 3 jun. 2022](https://www.eltiempo.com/bogota/dona-juana-las-jugadas-del-operador-cgr-para-quedarse-en-relleno-sanitario-677588)). Es prensa, no un dato oficial. El plan de demo usa 40 min; la comparación muestra los dos extremos.
+- Sitios sensibles (R02, R07): 644 sitios de OSM alrededor de Suba (479 centros educativos, 115 hospitales y clínicas, 10 centros asistenciales y 40 hoteles), extraídos con `mvn -pl rutea-app exec:java@sensitive-sites`. La cobertura de OSM no es completa: puede faltar algún colegio. Las interpretaciones están en `docs/normativa.md`.
 - Cada compactador puede encadenar hasta 3 viajes en su turno de 8 h: base → viaje → descarga → viaje → descarga → base. Del segundo viaje en adelante sale de la portería, en el sentido que mide menos.
 
 ## Calibración del grafo
