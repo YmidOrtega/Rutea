@@ -2,10 +2,16 @@ package me.ymid.rutea.app.operations;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 import me.ymid.rutea.app.planning.ShiftScheduler;
+import me.ymid.rutea.app.planning.SubaPlanner;
 import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.geo.RoadGraph;
+import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 
@@ -16,11 +22,36 @@ import me.ymid.rutea.solver.Solution;
  *
  * <p>Cada parada lleva una marca: 0 si es del plan, otra si se agregó después (un desborde). Un mismo contenedor
  * puede estar dos veces, en su visita del plan y en una recogida extra; la marca dice cuál es cuál.
+ *
+ * <p>Cada tramo usa la red vigente cuando el camión arranca. Si una vía se cierra mientras va en camino y el resto
+ * del camino pasa por ella, termina el arco en que va y sigue por la red nueva. Un camión que quedó dentro de una
+ * zona aislada sale por donde entró.
  */
 final class LivePlan {
 
     /** Una parada en el plan: el camión, su viaje, la posición en el viaje y la hora de llegada. */
     record Stop(int truck, int trip, int position, int node, long arriveSeconds) {
+    }
+
+    /** @param position parada a la que llega, {@link #TO_GATE} o {@link #TO_BASE} */
+    record Leg(int trip, int position, int from, int to, long departSeconds, long seconds, long meters, int network,
+            boolean rerouted) {
+
+        long arriveSeconds() {
+            return departSeconds + seconds;
+        }
+    }
+
+    static final int TO_GATE = -1;
+    static final int TO_BASE = -2;
+
+    record Network(long fromSeconds, TravelMatrix travel, boolean[] closed) {
+    }
+
+    private record Detour(long seconds, long meters, List<SubaPlanner.Arc> arcs, boolean rerouted) {
+    }
+
+    private record LegKey(int from, int to, long departSeconds) {
     }
 
     private final SubaScenario scenario;
@@ -29,12 +60,18 @@ final class LivePlan {
     private final int shiftSeconds;
     private final List<List<int[]>> trucks = new ArrayList<>();
     private final List<List<int[]>> tags = new ArrayList<>();
+    private final List<Network> networks = new ArrayList<>();
+    private final Map<LegKey, Detour> detours = new HashMap<>();
+    /** Despachar un desborde recorre los tramos de cada camión varias veces: se calculan una vez por cambio. */
+    private final Map<Integer, List<Leg>> legs = new HashMap<>();
+    private final Map<RoadGraph, ShortestPaths> searches = new IdentityHashMap<>();
 
     private LivePlan(SubaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
         this.scenario = scenario;
         this.serviceSeconds = serviceSeconds;
         this.unloadSeconds = unloadSeconds;
         this.shiftSeconds = shiftSeconds;
+        networks.add(new Network(0, scenario.travel(), new boolean[scenario.graph().shapeCount()]));
     }
 
     static LivePlan of(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, int serviceSeconds) {
@@ -98,20 +135,61 @@ final class LivePlan {
         return Arrays.stream(trip(truck, trip)).map(scenario.instance()::demand).sum();
     }
 
-    List<Stop> timeline(int truck) {
-        TravelMatrix travel = scenario.travel();
-        List<Stop> stops = new ArrayList<>();
+    /** Los cierres van en orden: uno anterior al último cambiaría las redes que vinieron después. */
+    void addNetwork(long fromSeconds, TravelMatrix travel, int[] closedShapes) {
+        Network last = networks.getLast();
+        if (fromSeconds < last.fromSeconds()) {
+            throw new IllegalArgumentException("ya hay un cierre a " + last.fromSeconds() + " s; uno a " + fromSeconds
+                    + " s tendría que cambiar lo que vino después");
+        }
+        boolean[] closed = last.closed().clone();
+        for (int shape : closedShapes) {
+            closed[shape] = true;
+        }
+        networks.add(new Network(fromSeconds, travel, closed));
+        detours.clear();
+        legs.clear();
+    }
+
+    List<Network> networks() {
+        return List.copyOf(networks);
+    }
+
+    TravelMatrix travelAt(long seconds) {
+        return networks.get(networkAt(seconds)).travel();
+    }
+
+    List<Leg> legs(int truck) {
+        return legs.computeIfAbsent(truck, this::walk);
+    }
+
+    private List<Leg> walk(int truck) {
+        List<Leg> legs = new ArrayList<>();
         long clock = 0;
+        int gate = scenario.gate();
         for (int i = 0; i < tripCount(truck); i++) {
             int previous = tripStart(i);
             int[] trip = trip(truck, i);
             for (int p = 0; p < trip.length; p++) {
-                clock += travel.seconds(previous, trip[p]);
-                stops.add(new Stop(truck, i, p, trip[p], clock));
-                clock += serviceSeconds;
+                Leg leg = leg(i, p, previous, trip[p], clock);
+                legs.add(leg);
+                clock = leg.arriveSeconds() + serviceSeconds;
                 previous = trip[p];
             }
-            clock += travel.seconds(previous, scenario.gate()) + unloadSeconds;
+            Leg toGate = leg(i, TO_GATE, previous, gate, clock);
+            legs.add(toGate);
+            clock = toGate.arriveSeconds() + unloadSeconds;
+        }
+        legs.add(leg(tripCount(truck) - 1, TO_BASE, gate, 0, clock));
+        return List.copyOf(legs);
+    }
+
+    List<Stop> timeline(int truck) {
+        List<Stop> stops = new ArrayList<>();
+        for (Leg leg : legs(truck)) {
+            if (leg.position() >= 0) {
+                stops.add(new Stop(truck, leg.trip(), leg.position(), leg.to(), leg.arriveSeconds()));
+            }
         }
         return stops;
     }
@@ -121,51 +199,31 @@ final class LivePlan {
      * portería, después de descargar) y {@code [i][p + 1]} de la parada {@code p}, ya atendida.
      */
     long[][] departures(int truck) {
-        TravelMatrix travel = scenario.travel();
         long[][] leave = new long[tripCount(truck)][];
-        long clock = 0;
         for (int i = 0; i < leave.length; i++) {
-            int[] trip = trip(truck, i);
-            leave[i] = new long[trip.length + 1];
-            leave[i][0] = clock;
-            int previous = tripStart(i);
-            for (int p = 0; p < trip.length; p++) {
-                clock += travel.seconds(previous, trip[p]) + serviceSeconds;
-                leave[i][p + 1] = clock;
-                previous = trip[p];
+            leave[i] = new long[trip(truck, i).length + 1];
+        }
+        for (Leg leg : legs(truck)) {
+            if (leg.position() >= 0) {
+                leave[leg.trip()][leg.position()] = leg.departSeconds();
+            } else if (leg.position() == TO_GATE) {
+                leave[leg.trip()][trip(truck, leg.trip()).length] = leg.departSeconds();
             }
-            clock += travel.seconds(previous, scenario.gate()) + unloadSeconds;
         }
         return leave;
     }
 
     /** Fin del turno del camión: cuando vuelve a la base. */
     long endSeconds(int truck) {
-        TravelMatrix travel = scenario.travel();
-        long clock = 0;
-        for (int i = 0; i < tripCount(truck); i++) {
-            int previous = tripStart(i);
-            for (int node : trip(truck, i)) {
-                clock += travel.seconds(previous, node) + serviceSeconds;
-                previous = node;
-            }
-            clock += travel.seconds(previous, scenario.gate()) + unloadSeconds;
-        }
-        return clock + travel.seconds(scenario.gate(), 0);
+        return legs(truck).getLast().arriveSeconds();
     }
 
     long meters(int truck) {
-        TravelMatrix travel = scenario.travel();
         long meters = 0;
-        for (int i = 0; i < tripCount(truck); i++) {
-            int previous = tripStart(i);
-            for (int node : trip(truck, i)) {
-                meters += travel.meters(previous, node);
-                previous = node;
-            }
-            meters += travel.meters(previous, scenario.gate());
+        for (Leg leg : legs(truck)) {
+            meters += leg.meters();
         }
-        return meters + travel.meters(scenario.gate(), 0);
+        return meters;
     }
 
     long meters() {
@@ -176,18 +234,145 @@ final class LivePlan {
         return total;
     }
 
+    List<SubaPlanner.Arc> arcs(Leg leg) {
+        Detour detour = detour(leg.from(), leg.to(), leg.departSeconds(), leg.network());
+        if (detour != null) {
+            return detour.arcs();
+        }
+        return path(networks.get(leg.network()).travel().graph(), leg.from(), leg.to());
+    }
+
     void insert(int truck, int trip, int position, int node) {
         insert(truck, trip, position, node, 0);
     }
 
     void insert(int truck, int trip, int position, int node, int tag) {
+        legs.remove(truck);
         trucks.get(truck).set(trip, inserted(trip(truck, trip), position, node));
         tags.get(truck).set(trip, inserted(tags.get(truck).get(trip), position, tag));
     }
 
     void remove(int truck, int trip, int position) {
+        legs.remove(truck);
         trucks.get(truck).set(trip, removed(trip(truck, trip), position));
         tags.get(truck).set(trip, removed(tags.get(truck).get(trip), position));
+    }
+
+    void reorder(int truck, int trip, int from, int[] positions) {
+        int[] stops = trip(truck, trip).clone();
+        int[] marks = tags.get(truck).get(trip).clone();
+        int[] oldStops = stops.clone();
+        int[] oldMarks = marks.clone();
+        for (int k = 0; k < positions.length; k++) {
+            stops[from + k] = oldStops[positions[k]];
+            marks[from + k] = oldMarks[positions[k]];
+        }
+        legs.remove(truck);
+        trucks.get(truck).set(trip, stops);
+        tags.get(truck).set(trip, marks);
+    }
+
+    private Leg leg(int trip, int position, int from, int to, long depart) {
+        int network = networkAt(depart);
+        while (!networks.get(network).travel().reachable(from, to)) {
+            network--;
+        }
+        Detour detour = detour(from, to, depart, network);
+        if (detour != null) {
+            return new Leg(trip, position, from, to, depart, detour.seconds(), detour.meters(), network,
+                    detour.rerouted());
+        }
+        TravelMatrix travel = networks.get(network).travel();
+        return new Leg(trip, position, from, to, depart, travel.seconds(from, to), travel.meters(from, to), network,
+                false);
+    }
+
+    /** {@code null} si ninguna red empieza mientras el camión va en camino: entonces basta la matriz. */
+    private Detour detour(int from, int to, long depart, int network) {
+        int next = network + 1;
+        while (next < networks.size() && networks.get(next).fromSeconds() <= depart) {
+            next++;
+        }
+        TravelMatrix travel = networks.get(network).travel();
+        if (next == networks.size() || networks.get(next).fromSeconds() >= depart + travel.seconds(from, to)) {
+            return null;
+        }
+        LegKey key = new LegKey(from, to, depart);
+        Detour cached = detours.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        List<SubaPlanner.Arc> arcs = new ArrayList<>(path(travel.graph(), from, to));
+        boolean rerouted = false;
+        for (int j = next; j < networks.size(); j++) {
+            Network closing = networks.get(j);
+            long clock = depart;
+            int at = 0;
+            while (at < arcs.size() && clock < closing.fromSeconds()) {
+                clock += arcs.get(at).seconds();
+                at++;
+            }
+            if (at == arcs.size()) {
+                break;
+            }
+            boolean crosses = false;
+            for (int k = at; k < arcs.size() && !crosses; k++) {
+                int shape = arcs.get(k).graph().shape(arcs.get(k).edge());
+                crosses = closing.closed()[shape < 0 ? ~shape : shape];
+            }
+            if (!crosses) {
+                continue;
+            }
+            RoadGraph graph = closing.travel().graph();
+            int here = at == 0 ? vertex(from) : arcs.get(at - 1).graph().target(arcs.get(at - 1).edge());
+            ShortestPaths search = search(graph);
+            search.distances(here, new int[] {vertex(to)});
+            if (search.distance(vertex(to)) == ShortestPaths.UNREACHABLE) {
+                // El destino quedó aislado con el camión ya en camino: llega.
+                continue;
+            }
+            List<SubaPlanner.Arc> rest = new ArrayList<>(arcs.subList(0, at));
+            for (int edge : search.pathEdges(vertex(to))) {
+                rest.add(new SubaPlanner.Arc(graph, edge));
+            }
+            arcs = rest;
+            rerouted = true;
+        }
+        long seconds = 0;
+        long meters = 0;
+        for (SubaPlanner.Arc arc : arcs) {
+            seconds += arc.seconds();
+            meters += arc.meters();
+        }
+        Detour detour = new Detour(seconds, meters, List.copyOf(arcs), rerouted);
+        detours.put(key, detour);
+        return detour;
+    }
+
+    private ShortestPaths search(RoadGraph graph) {
+        return searches.computeIfAbsent(graph, g -> new ShortestPaths(g, ShortestPaths.Weight.METERS));
+    }
+
+    private List<SubaPlanner.Arc> path(RoadGraph graph, int from, int to) {
+        ShortestPaths search = search(graph);
+        search.distances(vertex(from), new int[] {vertex(to)});
+        List<SubaPlanner.Arc> arcs = new ArrayList<>();
+        for (int edge : search.pathEdges(vertex(to))) {
+            arcs.add(new SubaPlanner.Arc(graph, edge));
+        }
+        return arcs;
+    }
+
+    private int vertex(int place) {
+        return scenario.travel().vertex(place);
+    }
+
+    private int networkAt(long seconds) {
+        int network = 0;
+        while (network + 1 < networks.size() && networks.get(network + 1).fromSeconds() <= seconds) {
+            network++;
+        }
+        return network;
     }
 
     private static int[] inserted(int[] values, int position, int value) {

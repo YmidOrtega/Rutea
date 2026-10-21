@@ -26,7 +26,6 @@ final class Insertion {
      * @param excluded camión que no recibe nada (el averiado); -1 si ninguno
      */
     static List<Placement> cheapest(LivePlan live, List<Integer> pending, long atSeconds, int excluded) {
-        TravelMatrix travel = live.scenario().travel();
         int gate = live.scenario().gate();
         int capacity = live.scenario().instance().capacity();
         List<Placement> placed = new ArrayList<>();
@@ -55,6 +54,7 @@ final class Insertion {
                         if (trip.length == 0 || arrive[i][p == 0 ? 0 : p - 1] <= atSeconds) {
                             continue;
                         }
+                        TravelMatrix travel = live.travelAt(atSeconds);
                         int previous = p == 0 ? live.tripStart(i) : trip[p - 1];
                         int next = p == trip.length ? gate : trip[p];
                         for (int o = 0; o < pending.size(); o++) {

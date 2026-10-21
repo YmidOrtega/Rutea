@@ -1,6 +1,7 @@
 package me.ymid.rutea.app.operations;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -20,6 +21,8 @@ import me.ymid.rutea.app.planning.SubaPlanner;
 import me.ymid.rutea.app.scenario.SubaFigures;
 import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.geo.RoadGraph;
+import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.alns.AlnsSolver;
@@ -90,11 +93,10 @@ class LiveOperationTest {
                 first.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
         int t = dispatch.truck();
 
-        // redraw falla si la geometría no mide lo mismo que el plan vivo.
-        DemoPlan.Route route = SubaPlanner.redraw(scenario, operation.trips(t), operation.meters(t),
-                operation.endSeconds(t), operation.unloadSeconds(), "C-01");
+        DemoPlan.Route route = operation.route(t, "C-01");
 
         assertThat(route.distanceMeters()).isEqualTo(operation.meters(t));
+        assertThat(route.durationSeconds()).isEqualTo(operation.endSeconds(t));
         assertThat(route.stops()).filteredOn(scenario.containers().get(first.node() - 1).id()::equals).hasSize(2);
     }
 
@@ -129,6 +131,115 @@ class LiveOperationTest {
         });
         assertThat(operation.meters(extra.truck())).isEqualTo(meters - extra.extraMeters());
         assertThat(operation.outOfService(extra.truck(), after)).isEmpty();
+    }
+
+    @Test
+    void aClosureAheadOfATruckSendsItAroundAndTheDrawingAvoidsTheStreet() {
+        LiveOperation operation = fresh();
+        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+
+        LiveOperation.Closure closure = operation.close(crossing.shape(), crossing.leg().departSeconds());
+
+        assertThat(closure.changes()).extracting(LiveOperation.TruckChange::truck).contains(crossing.truck());
+        assertThat(closure.changes()).allSatisfy(change -> assertThat(change.extraMeters()).isPositive());
+        DemoPlan.Route route = operation.route(crossing.truck(), "C-01");
+        assertThat(route.distanceMeters()).isEqualTo(operation.meters(crossing.truck()));
+        assertThat(route.durationSeconds()).isEqualTo(operation.endSeconds(crossing.truck()));
+    }
+
+    @Test
+    void aTruckAlreadyOnItsWayWhenTheStreetClosesFinishesItsArcAndTurns() {
+        LiveOperation operation = fresh();
+        LivePlan plan = LivePlan.of(scenario, solution, schedule, SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        Crossing crossing = firstCrossing(plan, 1);
+        // Cerrar después de que arrancó: va por el primer arco cuando llega el aviso.
+        long at = crossing.leg().departSeconds() + 1;
+
+        LiveOperation.Closure closure = operation.close(crossing.shape(), at);
+
+        assertThat(closure.changes()).filteredOn(change -> change.truck() == crossing.truck())
+                .singleElement().satisfies(change -> assertThat(change.rerouted()).isTrue());
+        DemoPlan.Route route = operation.route(crossing.truck(), "C-01");
+        assertThat(route.distanceMeters()).isEqualTo(operation.meters(crossing.truck()));
+    }
+
+    @Test
+    void reorderingWhatIsLeftNeverDrivesMoreThanOnlyRerouting() {
+        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+        LiveOperation reroute = fresh();
+        LiveOperation resequence = fresh();
+        resequence.closurePolicy(LiveOperation.ClosurePolicy.RESEQUENCE);
+
+        reroute.close(crossing.shape(), crossing.leg().departSeconds());
+        resequence.close(crossing.shape(), crossing.leg().departSeconds());
+
+        for (int t = 0; t < schedule.trucks().size(); t++) {
+            assertThat(resequence.meters(t)).isLessThanOrEqualTo(reroute.meters(t));
+            assertThat(resequence.route(t, "C-01").distanceMeters()).isEqualTo(resequence.meters(t));
+        }
+    }
+
+    @Test
+    void aClosureThatIsolatesContainersDropsTheirPendingVisits() {
+        RoadGraph graph = scenario.graph();
+        for (int shape = 0; shape < graph.shapeCount(); shape++) {
+            TravelMatrix closed = scenario.travel().closing(new int[] {shape}, 1).matrix();
+            if (!closed.reachable(0, scenario.gate()) || !closed.reachable(scenario.gate(), 0)) {
+                continue;
+            }
+            LiveOperation operation = fresh();
+            LiveOperation.Closure closure = operation.close(shape, 0);
+            if (closure.isolated().isEmpty()) {
+                continue;
+            }
+            int node = closure.isolated().getFirst();
+
+            assertThat(closure.dropped()).containsAll(closure.isolated());
+            for (int t = 0; t < schedule.trucks().size(); t++) {
+                assertThat(operation.trips(t)).allSatisfy(trip -> assertThat(trip).doesNotContain(node));
+            }
+            assertThatThrownBy(() -> operation.overflow(node, 10)).hasMessageContaining("aislado");
+            return;
+        }
+        throw new AssertionError("ningún cierre del pueblo aísla un contenedor");
+    }
+
+    @Test
+    void refusesAClosureThatCutsOffTheGate() {
+        RoadGraph graph = scenario.graph();
+        for (int shape = 0; shape < graph.shapeCount(); shape++) {
+            TravelMatrix closed = scenario.travel().closing(new int[] {shape}, 1).matrix();
+            if (!closed.reachable(0, scenario.gate())) {
+                int cut = shape;
+                assertThatThrownBy(() -> fresh().close(cut, 0)).hasMessageContaining("portería");
+                return;
+            }
+        }
+        throw new AssertionError("ningún cierre del pueblo aísla la portería");
+    }
+
+    private record Crossing(int truck, LivePlan.Leg leg, int shape) {
+    }
+
+    /** Un tramo y un trazo de su camino, a partir del arco {@code fromArc}, que se puede cerrar sin aislar nada. */
+    private static Crossing firstCrossing(LivePlan plan, int fromArc) {
+        for (int t = 0; t < plan.truckCount(); t++) {
+            for (LivePlan.Leg leg : plan.legs(t)) {
+                List<SubaPlanner.Arc> arcs = plan.arcs(leg);
+                for (int k = fromArc; k < arcs.size(); k++) {
+                    int shape = arcs.get(k).graph().shape(arcs.get(k).edge());
+                    int street = shape < 0 ? ~shape : shape;
+                    TravelMatrix closed = scenario.travel().closing(new int[] {street}, 1).matrix();
+                    if (closed.reachable(0, scenario.gate()) && closed.reachable(scenario.gate(), 0)
+                            && closed.reachable(leg.from(), leg.to())) {
+                        return new Crossing(t, leg, street);
+                    }
+                }
+            }
+        }
+        throw new AssertionError("ningún tramo sirve para el cierre");
     }
 
     private static ShiftScheduler.Visit firstVisit(int truck) {

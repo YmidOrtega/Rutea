@@ -35,6 +35,23 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
         return new SubaScenario(graph, gateVertex, depotVertex, containers, points, instance, travel, sensitive);
     }
 
+    /** Un contenedor aislado por un cierre queda a {@link TravelMatrix#UNREACHABLE}. */
+    public SubaScenario withTravel(TravelMatrix matrix) {
+        int n = instance.size();
+        int[][] distances = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? gate() : j);
+            }
+        }
+        int[] demands = new int[n];
+        for (int i = 1; i < n; i++) {
+            demands[i] = instance.demand(i);
+        }
+        Instance closed = new Instance(instance.name(), instance.capacity(), demands, DistanceMatrix.of(distances));
+        return new SubaScenario(matrix.graph(), gateVertex, depotVertex, containers, points, closed, matrix, sites);
+    }
+
     /** Con los sitios de {@link AreaSpec#SUBA} y las cifras de {@link SubaFigures}. */
     public static SubaScenario build(RoadGraph graph, long seed) {
         int count = SubaFigures.nonRecyclableContainers();

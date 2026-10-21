@@ -144,19 +144,49 @@ public final class SubaPlanner {
         return new DemoPlan(meta, sites, planContainers, routes, compliance.checks());
     }
 
-    /**
-     * El turno de un camión que cambió durante la operación (una recogida extra), con la misma geometría y las
-     * mismas comprobaciones que el plan. Un contenedor puede aparecer dos veces: en su visita y en la extra.
-     */
-    public static DemoPlan.Route redraw(SubaScenario scenario, List<int[]> trips, long meters, long seconds,
+    /** Tras un cierre, un turno pasa por grafos distintos y cada índice de arco es de su grafo. */
+    public record Arc(RoadGraph graph, int edge) {
+
+        public int meters() {
+            return graph.meters(edge);
+        }
+
+        public int seconds() {
+            return graph.seconds(edge);
+        }
+    }
+
+    /** Un tramo por parada, uno a la portería por viaje y el regreso a la base, en ese orden. */
+    public static DemoPlan.Route redraw(SubaScenario scenario, List<int[]> trips, List<List<Arc>> legs,
             int unloadSeconds, String id) {
-        int[] order = new int[trips.size()];
-        Arrays.setAll(order, i -> i);
-        ShiftScheduler.Truck truck = new ShiftScheduler.Truck(order, new boolean[order.length], meters, seconds);
-        int containers = scenario.containers().size();
-        return drawTruck(scenario, new ShortestPaths(scenario.graph(), ShortestPaths.Weight.METERS),
-                new Solution(trips.toArray(int[][]::new)), truck, unloadSeconds, id, new String[containers],
-                new int[containers]);
+        int expected = 1;
+        for (int[] trip : trips) {
+            expected += trip.length + 1;
+        }
+        if (legs.size() != expected) {
+            throw new IllegalArgumentException(id + ": " + legs.size() + " tramos para " + expected + " lugares");
+        }
+        Instance instance = scenario.instance();
+        List<String> stops = new ArrayList<>();
+        int[] tripLoads = new int[trips.size()];
+        Geometry geometry = new Geometry(scenario.graph());
+        geometry.start(scenario.depotVertex());
+        long meters = 0;
+        int leg = 0;
+        for (int i = 0; i < trips.size(); i++) {
+            for (int customer : trips.get(i)) {
+                meters += geometry.follow(legs.get(leg++));
+                geometry.stop(SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                stops.add(scenario.containers().get(customer - 1).id());
+                tripLoads[i] += instance.demand(customer);
+            }
+            meters += geometry.follow(legs.get(leg++));
+            geometry.stop(unloadSeconds);
+        }
+        meters += geometry.follow(legs.get(leg));
+        return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
+                geometry.seconds(), tripLoads, stops, geometry.path,
+                geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     private static DemoPlan.Route drawTruck(SubaScenario scenario, ShortestPaths paths, Solution solution,
@@ -272,7 +302,11 @@ public final class SubaPlanner {
 
     private static long follow(ShortestPaths paths, Geometry geometry, int from, int to) {
         paths.distances(from, new int[] {to});
-        return geometry.follow(paths.pathEdges(to));
+        List<Arc> arcs = new ArrayList<>();
+        for (int edge : paths.pathEdges(to)) {
+            arcs.add(new Arc(geometry.graph, edge));
+        }
+        return geometry.follow(arcs);
     }
 
     /** [lon, lat] con 5 decimales: alrededor de un metro, más fino que lo que se ve en el mapa. */
@@ -295,9 +329,11 @@ public final class SubaPlanner {
             add(graph.latE7(vertex), graph.lonE7(vertex));
         }
 
-        long follow(int[] edges) {
+        long follow(List<Arc> arcs) {
             long meters = 0;
-            for (int edge : edges) {
+            for (Arc arc : arcs) {
+                RoadGraph graph = arc.graph();
+                int edge = arc.edge();
                 meters += graph.meters(edge);
                 int shape = graph.shape(edge);
                 boolean reversed = shape < 0;
