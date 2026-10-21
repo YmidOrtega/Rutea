@@ -140,16 +140,29 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Reporte por turno y por plan (`PlanReport`): km con el regreso a la base, horas, toneladas, litros y CO₂. Usa el factor del IPCC 2006 (2,68 kg CO₂/L) y un consumo supuesto de 0,8 L/km (`PENDIENTE_VERIFICAR`). El panel del mapa muestra las horas de camión y el CO₂ estimado.
 - [x] Comparación (`mvn -pl rutea-app exec:java@baseline`; `SubaBase-n807-s1`; ALNS con semilla 1 y 2.000 iteraciones, determinista). CSV en `docs/benchmarks/f4-baseline/`.
 
-  | Método | Turnos | km | Horas | t CO₂ |
-  |---|---:|---:|---:|---:|
-  | Barrido, cuadrantes de 500 m | 17 | 1.816,7 | 70,9 | 3,89 |
-  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 69,9 | 3,82 |
-  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 69,8 | 3,80 |
-  | Barrido, cuadrantes de 4 km | 17 | 1.858,6 | 72,0 | 3,98 |
-  | **Rutea (`alns`)** | 17 | **1.410,9** | **56,0** | **3,02** |
+  Un camión por viaje en los dos planes; las horas cuentan las paradas y una descarga de 90 min por viaje:
 
-  Frente al mejor barrido: **20,5 % menos km, 19,8 % menos horas y 20,5 % menos CO₂**, unas 0,78 t de CO₂ menos por día de recolección con el consumo supuesto. Las horas bajan menos que los km porque las 806 paradas de 60 s son iguales en los dos planes. El barrido es una línea base ingenua, no las microrrutas reales de Área Limpia, que no son públicas.
-- [ ] Varios viajes por turno, con el tiempo de descarga en el relleno.
+  | Método | Turnos | km | Horas | t CO₂ | Turnos de más de 8 h |
+  |---|---:|---:|---:|---:|---:|
+  | Barrido, cuadrantes de 500 m | 17 | 1.816,7 | 96,4 | 3,89 | 1 |
+  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 95,4 | 3,82 | 0 |
+  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 95,3 | 3,80 | 0 |
+  | Barrido, cuadrantes de 4 km | 17 | 1.858,6 | 97,5 | 3,98 | 1 |
+  | **Rutea (`alns`)** | 17 | **1.410,9** | **81,5** | **3,02** | 0 |
+
+  Frente al mejor barrido: **20,5 % menos km, 14,5 % menos horas y 20,5 % menos CO₂**, unas 0,78 t de CO₂ menos por día de recolección con el consumo supuesto. Las horas bajan menos que los km porque las paradas y las descargas son iguales en los dos planes. Si además se encadenan viajes (abajo), Rutea baja a 1.326,5 km: 25,3 % menos que el mejor barrido. El barrido es una línea base ingenua, no las microrrutas reales de Área Limpia, que no son públicas.
+- [x] Varios viajes por turno (`ShiftScheduler`): los viajes de ALNS se reparten entre camiones con programación dinámica exacta sobre los subconjuntos de viajes. Minimiza primero los camiones y después los km, con hasta 3 viajes por camión en un turno de 8 h que cuenta paradas, descargas y regreso. Un viaje que ni solo cabe queda marcado como horas extra. Para que distancia y tiempo hablen del mismo recorrido, `TravelMatrix` ahora da los segundos del camino más corto en metros, no los del más rápido (y hace la mitad de los Dijkstra).
+
+  Los 17 viajes de ALNS (`SubaBase-n807-s1`, semilla 1, 2.000 iteraciones), con la descarga en los dos extremos del rango publicado:
+
+  | Reparto | Camiones | km | Horas de camión | Último regreso |
+  |---|---:|---:|---:|---:|
+  | Un viaje por camión | 17 | 1.410,9 | 81,5 | 23:54 |
+  | Mínimo de camiones, descarga de 40 min | **9** (8 con 2 viajes) | **1.326,5** | **64,6** | 01:56 |
+  | Mínimo de camiones, descarga de 90 min | 16 (1 con 2 viajes) | 1.398,7 | 81,1 | 01:47 |
+
+  Encadenar viajes ahorra km, porque el segundo viaje sale de la portería y se ahorra la salida desde la base y un regreso. Y el tiempo de descarga en Doña Juana define el tamaño de la flota: con 40 min bastan 9 camiones; con 90, hacen falta 16. En el barrido ingenuo, algunos viajes ni solos caben en el turno (cuadrantes de 500 m y de 4 km).
+- [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:50 h.
 - [ ] Turnos y ventanas horarias (R02), frecuencias (R03) y paradas sin compactación (R07).
 - [ ] Flota heterogénea (R06, R10).
 

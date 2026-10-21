@@ -1,0 +1,4 @@
+instance,seed,iterations,option,unload_s,trucks,km,truck_hours,kg_co2,last_return_s,overtime_trucks
+SubaBase-n807-s1,1,2000,un viaje por camión,5400,17,1410.929,81.466,3021.07,21294,0
+SubaBase-n807-s1,1,2000,menos camiones, descarga de 40 min,2400,9,1326.507,64.644,2840.31,28593,0
+SubaBase-n807-s1,1,2000,menos camiones, descarga de 90 min,5400,16,1398.668,81.088,2994.82,28069,0

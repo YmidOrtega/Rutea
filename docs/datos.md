@@ -14,7 +14,8 @@ Las cifras de la Superservicios salen del [informe de inspección a Área Limpia
 | Parte del ASE 5 en las toneladas de la ciudad | 15 % | PGIRS, en el informe de la Superservicios | Demanda y número de contenedores |
 | Toneladas domiciliarias por cargue lateral (contenedores) | mínimo 13 % | PPSA de Área Limpia, en el informe de la Superservicios | Demanda (se usa el mínimo) |
 | Frecuencia de recolección | de 3 a 6 veces por semana | Operador, en el informe de la Superservicios | 6 veces: carga de 7/6 días |
-| Turnos | 06:00–14:00 y 18:00–02:00 (88 microrrutas cada uno), y otros menores | Operador, en el informe de la Superservicios | F4 (turnos) |
+| Turnos | 06:00–14:00 y 18:00–02:00 (88 microrrutas cada uno), y otros menores | Operador, en el informe de la Superservicios | Turno de 8 h desde las 18:00 |
+| Camiones y toneladas que entran a Doña Juana | 684 camiones y 6.368 t por día en promedio (≈ 9,3 t por camión) | [La República, 2025](https://www.larepublica.co/responsabilidad-social/control-de-emisiones-de-metano-tarea-pendiente-de-dona-juana-y-de-los-bogotanos-4070876) | Corrobora cargas de 8 t por viaje |
 | Flota de compactadores | 17 de 32 yd (8 t), 2 de 27 yd (7 t), 8 de 25 yd (6 t), 1 de 16 yd (4 t); el operador declara 38 en total y el desglose suma 28 | Operador, en el informe de la Superservicios | Capacidad de 8.000 kg |
 | Contenedores de no aprovechables en vía pública | de 3.200 L, 2.400 L y 1.100 L | Operador, en el informe de la Superservicios | F4 (capacidad por contenedor) |
 | Base de operaciones | Avenida Calle 17 # 124-81, La Estancia, Fontibón | Informe de la Superservicios | Sitio `base`: esquina Av. Calle 17 × Carrera 124, nodo OSM 865490722 |
@@ -50,7 +51,8 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Densidad del diésel: 0,84 kg/L, el valor típico; no es un dato verificado del ACPM colombiano.
 - `PENDIENTE_VERIFICAR`: **0,8 L de diésel por km** para un compactador en recolección. No hay cifra publicada para Bogotá. Como el CO₂ sale proporcional a los km, el porcentaje de ahorro entre dos planes no depende de este valor; las toneladas absolutas sí.
 - Todo el ACPM se cuenta como diésel fósil: su fracción de biodiésel no se descuenta (`PENDIENTE_VERIFICAR`: porcentaje de mezcla vigente). Esto sobreestima un poco el CO₂ fósil.
-- Cada compactador hace un solo viaje por turno: sale de la base a las 18:00, recoge, descarga en Doña Juana y vuelve a la base. El tiempo de descarga en el relleno todavía no se cuenta.
+- `PENDIENTE_VERIFICAR`: **descarga en Doña Juana de 40 a 90 min**. "En promedio, gastan entre 40 minutos a una hora y media" ([El Tiempo, 3 jun. 2022](https://www.eltiempo.com/bogota/dona-juana-las-jugadas-del-operador-cgr-para-quedarse-en-relleno-sanitario-677588)). Es prensa, no un dato oficial. El plan de demo usa 40 min; la comparación muestra los dos extremos.
+- Cada compactador puede encadenar hasta 3 viajes en su turno de 8 h: base → viaje → descarga → viaje → descarga → base. Del segundo viaje en adelante sale de la portería, en el sentido que mide menos.
 
 ## Calibración del grafo
 
