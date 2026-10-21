@@ -1,4 +1,4 @@
-import { loadDemoPlan, type DemoPlan, type Route } from '../demo/plan'
+import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
@@ -39,7 +39,28 @@ export interface OverflowEvent {
   visits: Record<string, number>
 }
 
-export type OperationEvent = BreakdownEvent | OverflowEvent
+/** Una vía cerrada: los compactadores que pasaban por ella se desvían y sus turnos se redibujan. */
+export interface ClosureEvent {
+  type: 'closure'
+  seq: number
+  atSeconds: number
+  roadClass: string
+  path: LonLat[]
+  latencyMs: number
+  /** Filas más columnas de la matriz recalculadas, de matrixSize. */
+  recomputed: number
+  matrixSize: number
+  changedPairs: number
+  isolated: string[]
+  /** Aislados con una visita pendiente, que sale del plan. */
+  dropped: string[]
+  changes: { truck: string; extraMeters: number; extraSeconds: number; rerouted: boolean; late: boolean }[]
+  routes: Route[]
+  visits: Record<string, number>
+  citation: string
+}
+
+export type OperationEvent = BreakdownEvent | OverflowEvent | ClosureEvent
 
 export interface LoadedPlan {
   plan: DemoPlan
@@ -76,6 +97,9 @@ export const requestBreakdown = (truck: string, atSeconds: number) =>
 
 export const requestOverflow = (container: string, atSeconds: number) =>
   post<OverflowEvent>('/api/overflows', { container, atSeconds: Math.floor(atSeconds) })
+
+export const requestClosure = ([lon, lat]: LonLat, atSeconds: number) =>
+  post<ClosureEvent>('/api/closures', { lon, lat, atSeconds: Math.floor(atSeconds) })
 
 async function post<T extends object>(url: string, request: object): Promise<T> {
   const response = await fetch(url, {
@@ -138,6 +162,9 @@ export interface CurrentPlan {
   overflows: Map<string, OverflowEvent>
   /** Compactador → hora de su avería. */
   brokenAt: Map<string, number>
+  closures: ClosureEvent[]
+  /** Contenedor → el cierre que lo dejó sin acceso. */
+  isolated: Map<string, ClosureEvent>
 }
 
 /** El plan vigente después de los eventos, aplicados en el orden del servidor. */
@@ -148,6 +175,8 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
   const orphanRoute = new Map<string, string>()
   const overflows = new Map<string, OverflowEvent>()
   const brokenAt = new Map<string, number>()
+  const closures: ClosureEvent[] = []
+  const isolated = new Map<string, ClosureEvent>()
   for (const event of [...events].sort((a, b) => a.seq - b.seq)) {
     if (event.type === 'breakdown') {
       brokenAt.set(event.truck, event.atSeconds)
@@ -155,7 +184,12 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
       for (const route of event.reserve) for (const stop of route.stops) orphanRoute.set(stop, route.id)
       continue
     }
-    overflows.set(event.container, event)
+    if (event.type === 'closure') {
+      closures.push(event)
+      for (const container of event.isolated) isolated.set(container, event)
+    } else {
+      overflows.set(event.container, event)
+    }
     for (const route of event.routes) {
       if (isReserveId(route.id)) reserve.push(route)
       else routes.set(route.id, route)
@@ -166,7 +200,15 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
     const seconds = visits.get(container.id)
     return seconds === undefined ? container : { ...container, visitSeconds: seconds }
   })
-  return { plan: { ...plan, routes: [...routes.values()], containers }, reserve, orphanRoute, overflows, brokenAt }
+  return {
+    plan: { ...plan, routes: [...routes.values()], containers },
+    reserve,
+    orphanRoute,
+    overflows,
+    brokenAt,
+    closures,
+    isolated,
+  }
 }
 
 /** Las rutas de reserva, tras una avería o un desborde, empiezan por R- (R-03-1, R-N0123). */
@@ -184,3 +226,18 @@ export function overflowPickup(event: OverflowEvent, at: (seconds: number) => st
       return `ningún compactador tiene cupo; sale ${event.truck} y llega a las ${at(event.pickupSeconds)} (${minutes} min)`
   }
 }
+
+const ROAD_CLASSES: Record<string, string> = {
+  MOTORWAY: 'autopista',
+  TRUNK: 'vía troncal',
+  PRIMARY: 'vía primaria',
+  SECONDARY: 'vía secundaria',
+  TERTIARY: 'vía terciaria',
+  UNCLASSIFIED: 'vía sin clasificar',
+  RESIDENTIAL: 'calle residencial',
+  LIVING_STREET: 'calle peatonal',
+  SERVICE: 'vía de servicio',
+  TRACK: 'trocha',
+}
+
+export const roadClassName = (roadClass: string) => ROAD_CLASSES[roadClass] ?? roadClass.toLowerCase()

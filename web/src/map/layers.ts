@@ -1,7 +1,7 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
-import { isReserveId } from '../operations/live'
+import { isReserveId, type ClosureEvent } from '../operations/live'
 import { strokeColor, type Palette } from './colors'
 import suba from './suba.json'
 
@@ -122,9 +122,48 @@ export function operationLayers(
   orphans: Container[],
   overflowed: Container[],
   selected: Container | null,
+  closures: ClosureEvent[],
   palette: Palette,
 ) {
   return [
+    // Una barrera: núcleo crítico sobre un borde del fondo, para que se lea encima de cualquier ruta.
+    new PathLayer<ClosureEvent>({
+      id: 'closures-edge',
+      data: closures,
+      getPath: (closure) => closure.path,
+      getColor: palette.bg,
+      getWidth: 9,
+      widthUnits: 'pixels',
+      capRounded: true,
+      parameters: FLAT,
+    }),
+    new PathLayer<ClosureEvent>({
+      id: 'closures',
+      data: closures,
+      getPath: (closure) => closure.path,
+      getColor: palette.crit,
+      getWidth: 5,
+      widthUnits: 'pixels',
+      capRounded: true,
+      pickable: true,
+      parameters: FLAT,
+    }),
+    // A la escala de la localidad, una cuadra cerrada mide un par de píxeles: el anillo la hace visible.
+    new ScatterplotLayer<ClosureEvent>({
+      id: 'closure-marks',
+      data: closures,
+      getPosition: (closure) => closure.path[Math.floor(closure.path.length / 2)],
+      getFillColor: palette.bg,
+      getLineColor: palette.crit,
+      getRadius: 30,
+      radiusMinPixels: 7,
+      radiusMaxPixels: 12,
+      stroked: true,
+      lineWidthUnits: 'pixels',
+      getLineWidth: 2.5,
+      pickable: true,
+      parameters: FLAT,
+    }),
     new PathLayer<Route>({
       id: 'reserve-routes',
       data: reserve,

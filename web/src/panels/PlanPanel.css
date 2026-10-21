@@ -250,6 +250,40 @@
   font-weight: 500;
 }
 
+.road-closure {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-bottom: 10px;
+}
+
+.road-closure-toggle {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.road-closure-toggle:hover:not(:disabled),
+.road-closure-toggle[aria-pressed='true'] {
+  border-color: var(--crit);
+  color: var(--crit);
+}
+
+.road-closure-toggle:disabled {
+  color: var(--fg-muted);
+  cursor: progress;
+}
+
+.road-closure-hint {
+  margin: 6px 0 0;
+  font-size: var(--text-12);
+  color: var(--fg-muted);
+}
+
 .event-error {
   margin: 0 0 6px;
   font-size: var(--text-12);

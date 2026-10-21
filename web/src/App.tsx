@@ -5,7 +5,16 @@ import { DeckOverlay } from './map/DeckOverlay'
 import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
 import { operationLayers, staticLayers, tripsLayer, zoneLayers } from './map/layers'
-import { clock, secondsOfDay, STREAM_NAMES, toTrips, type Container, type DemoPlan, type Site } from './demo/plan'
+import {
+  clock,
+  secondsOfDay,
+  STREAM_NAMES,
+  toTrips,
+  type Container,
+  type DemoPlan,
+  type LonLat,
+  type Site,
+} from './demo/plan'
 import {
   currentPlan,
   isReserveId,
@@ -13,8 +22,11 @@ import {
   loadPlan,
   overflowPickup,
   requestBreakdown,
+  requestClosure,
   requestOverflow,
+  roadClassName,
   stopAt,
+  type ClosureEvent,
   type CurrentPlan,
   type OperationEvent,
 } from './operations/live'
@@ -32,6 +44,7 @@ export default function App() {
   const [events, setEvents] = useState<OperationEvent[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
+  const [closing, setClosing] = useState(false)
   const [eventError, setEventError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [visible, setVisible] = useState<Set<string>>(new Set())
@@ -70,6 +83,17 @@ export default function App() {
   }
   const breakdown = (truck: string) => request(truck, () => requestBreakdown(truck, time))
   const overflow = (container: string) => request(container, () => requestOverflow(container, time))
+  const closure = (at: LonLat) => {
+    setClosing(false)
+    request('closure', () => requestClosure(at, time))
+  }
+
+  useEffect(() => {
+    if (!closing) return
+    const cancel = (event: KeyboardEvent) => event.key === 'Escape' && setClosing(false)
+    window.addEventListener('keydown', cancel)
+    return () => window.removeEventListener('keydown', cancel)
+  }, [closing])
 
   const current = useMemo(() => (plan ? currentPlan(plan, events) : null), [plan, events])
   // Lo que se reproduce: cada camión averiado se detiene en su avería y las reservas se suman.
@@ -82,7 +106,10 @@ export default function App() {
     return [...planned, ...current.reserve]
   }, [current])
   const orphans = useMemo(
-    () => current?.plan.containers.filter((container) => current.orphanRoute.has(container.id)) ?? [],
+    () =>
+      current?.plan.containers.filter(
+        (container) => current.orphanRoute.has(container.id) || current.isolated.has(container.id),
+      ) ?? [],
     [current],
   )
   const overflowed = useMemo(
@@ -118,6 +145,7 @@ export default function App() {
         orphans,
         overflowed,
         selectedContainer,
+        current?.closures ?? [],
         palette,
       ),
     ],
@@ -145,7 +173,14 @@ export default function App() {
         <DeckOverlay
           layers={layers}
           getTooltip={tooltipFor(current, live)}
-          onClick={(info) => setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)}
+          getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
+          onClick={(info) => {
+            if (closing) {
+              if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
+              return
+            }
+            setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
+          }}
         />
       </MapGL>
 
@@ -177,6 +212,8 @@ export default function App() {
           pending={pending}
           eventError={eventError}
           onBreakdown={breakdown}
+          closing={closing}
+          onClosing={setClosing}
           clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
         />
       )}
@@ -208,13 +245,14 @@ export default function App() {
 }
 
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
+const CLOSURE_LAYERS = ['closures', 'closure-marks']
 
 function tooltipFor(current: CurrentPlan | null, live: boolean) {
   return (info: PickingInfo) => (current ? tooltip(info, current, live) : null)
 }
 
 function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean) {
-  if (!object || ![...CONTAINER_LAYERS, 'sites'].includes(layer?.id ?? '')) return null
+  if (!object || ![...CONTAINER_LAYERS, 'sites', ...CLOSURE_LAYERS].includes(layer?.id ?? '')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
     className: 'tooltip',
@@ -228,7 +266,12 @@ function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boo
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },
-    html: layer?.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container, current, live),
+    html:
+      layer?.id === 'sites'
+        ? siteHtml(object as Site)
+        : CLOSURE_LAYERS.includes(layer?.id ?? '')
+          ? closureHtml(object as ClosureEvent, current)
+          : containerHtml(object as Container, current, live),
   }
 }
 
@@ -240,15 +283,27 @@ function containerHtml(container: Container, current: CurrentPlan, live: boolean
   const spilled = overflow
     ? `<span class="orphan num">Desbordado a las ${at(overflow.atSeconds)}: ${overflowPickup(overflow, at)}</span>`
     : ''
+  const closure = current.isolated.get(container.id)
+  const cutOff = closure
+    ? `<span class="orphan num">Sin acceso desde las ${at(closure.atSeconds)} por el cierre de una ${roadClassName(closure.roadClass)}</span>`
+    : ''
   const rules = container.rules.map((rule) => `<span class="rule">${rule}</span>`).join('')
   const hint = live && container.stream === 'NON_RECYCLABLE' && !overflow ? '<span>Clic para reportar un desborde</span>' : ''
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
     <span class="num">Vehículo ${container.route} · llega a las ${at(container.visitSeconds)}</span>
-    ${orphan}${spilled}${rules}${hint}`
+    ${orphan}${spilled}${cutOff}${rules}${hint}`
 }
 
+
+function closureHtml(closure: ClosureEvent, current: CurrentPlan): string {
+  const at = clock(secondsOfDay(current.plan.meta.shiftStart) + closure.atSeconds)
+  const trucks = closure.changes.map((change) => change.truck).join(', ')
+  const road = roadClassName(closure.roadClass)
+  return `<strong class="num">${road.charAt(0).toUpperCase() + road.slice(1)} cerrada a las ${at}</strong>
+    <span>${trucks ? `Se desvían ${trucks}` : 'No cambia ningún turno'}</span>`
+}
 
 const SITE_ROLES: Record<Site['id'], string> = {
   relleno: 'Cada viaje de no aprovechables termina aquí a descargar',
