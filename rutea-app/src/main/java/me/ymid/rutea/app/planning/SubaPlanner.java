@@ -20,8 +20,9 @@ import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.alns.AlnsSolver;
 
 /**
- * Resuelve el escenario de Suba y devuelve cada viaje como una geometría sobre las calles reales, con la
- * hora de paso por cada punto.
+ * Resuelve el escenario de Suba y devuelve el turno de cada compactador como una geometría sobre las calles
+ * reales: base → contenedores → portería del relleno → base, con la hora de paso por cada punto y una parada
+ * de {@link SubaFigures#SERVICE_SECONDS_PER_CONTAINER} en cada contenedor.
  */
 public final class SubaPlanner {
 
@@ -67,18 +68,26 @@ public final class SubaPlanner {
                 load += instance.demand(customer);
             }
             Geometry geometry = new Geometry(graph);
-            geometry.start(scenario.points()[0]);
+            geometry.start(scenario.depotVertex());
             for (int i = 1; i < nodes.length; i++) {
-                int from = scenario.points()[nodes[i - 1]];
-                int to = scenario.points()[nodes[i]];
-                paths.distances(from, new int[] {to});
-                long meters = geometry.follow(paths.pathEdges(to));
+                // El nodo 0 es la base al salir y la portería al llegar.
+                int from = i == 1 ? scenario.depotVertex() : scenario.points()[nodes[i - 1]];
+                int to = nodes[i] == 0 ? scenario.gateVertex() : scenario.points()[nodes[i]];
+                long meters = follow(paths, geometry, from, to);
                 if (meters != instance.distance(nodes[i - 1], nodes[i])) {
                     throw new IllegalStateException(id + ": el camino dibujado mide " + meters
                             + " m y la matriz dice " + instance.distance(nodes[i - 1], nodes[i]));
                 }
+                if (nodes[i] != 0) {
+                    geometry.stop(SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                }
             }
-            long distance = Evaluator.routeCost(instance, solution, k);
+            long back = follow(paths, geometry, scenario.gateVertex(), scenario.depotVertex());
+            if (back != scenario.returnMeters()) {
+                throw new IllegalStateException(id + ": el regreso dibujado mide " + back + " m y el escenario dice "
+                        + scenario.returnMeters());
+            }
+            long distance = Evaluator.routeCost(instance, solution, k) + back;
             routes.add(new DemoPlan.Route(id, WasteStream.NON_RECYCLABLE, instance.capacity(), load, distance,
                     geometry.seconds(), stops, geometry.path, geometry.times.stream().mapToInt(Integer::intValue).toArray()));
         }
@@ -96,8 +105,13 @@ public final class SubaPlanner {
                         lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))));
         DemoPlan.Meta meta = new DemoPlan.Meta("Suba", true, "Calles reales de OpenStreetMap; contenedores y cargas simulados",
                 solver.name(), settings.seed(), settings.iterationLimit(), SubaFigures.SHIFT_START,
-                "© colaboradores de OpenStreetMap (ODbL 1.0)");
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, "© colaboradores de OpenStreetMap (ODbL 1.0)");
         return new DemoPlan(meta, sites, planContainers, routes);
+    }
+
+    private static long follow(ShortestPaths paths, Geometry geometry, int from, int to) {
+        paths.distances(from, new int[] {to});
+        return geometry.follow(paths.pathEdges(to));
     }
 
     /** [lon, lat] con 5 decimales: alrededor de un metro, más fino que lo que se ve en el mapa. */
@@ -153,6 +167,14 @@ public final class SubaPlanner {
             int a = first + (reversed ? count - i : i - 1);
             int b = first + (reversed ? count - 1 - i : i);
             return Haversine.meters(graph.shapeLatE7(a), graph.shapeLonE7(a), graph.shapeLatE7(b), graph.shapeLonE7(b));
+        }
+
+        /** El camión se queda quieto: el mismo punto otra vez, con la hora de salida. */
+        void stop(int seconds) {
+            double[] here = path.getLast();
+            clock += seconds;
+            path.add(here);
+            times.add((int) Math.round(clock));
         }
 
         private void add(int latE7, int lonE7) {

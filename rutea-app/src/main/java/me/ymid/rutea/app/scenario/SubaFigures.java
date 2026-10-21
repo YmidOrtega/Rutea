@@ -42,6 +42,13 @@ public final class SubaFigures {
      */
     public static final String SHIFT_START = "18:00";
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: segundos detenido en cada contenedor. No hay estudio publicado para Bogotá;
+     * los fabricantes anuncian de 6 a 10 s por ciclo del brazo de cargue lateral (Heil, Bucher), que es solo
+     * una cota inferior: la parada también incluye acercarse, alinearse y revisar. Se supone 60 s.
+     */
+    public static final int SERVICE_SECONDS_PER_CONTAINER = 60;
+
     /** Compactador más común del ASE 5: 17 de 32 yardas, 8 toneladas (Superservicios, 2026). */
     public static final int COMPACTOR_CAPACITY_KG = 8_000;
 

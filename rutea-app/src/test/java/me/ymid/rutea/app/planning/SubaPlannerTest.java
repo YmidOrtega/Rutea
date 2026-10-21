@@ -6,6 +6,7 @@ import static org.assertj.core.data.Offset.offset;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -55,15 +56,35 @@ class SubaPlannerTest {
     }
 
     @Test
-    void everyTripStartsAndEndsAtTheLandfillGateWithinCapacity() {
-        double[] gate = plan.sites().stream().filter(site -> site.id().equals("relleno")).findFirst().orElseThrow()
-                .position();
+    void everyShiftLeavesTheBaseUnloadsAtTheGateAndComesBack() {
+        double[] gate = site("relleno");
+        double[] base = site("base");
 
         assertThat(plan.routes()).allSatisfy(route -> {
-            assertThat(route.path().getFirst()).containsExactly(gate);
-            assertThat(route.path().getLast()).containsExactly(gate);
+            assertThat(route.path().getFirst()).containsExactly(base);
+            assertThat(route.path().getLast()).containsExactly(base);
+            assertThat(route.path()).anySatisfy(point -> assertThat(point).containsExactly(gate));
             assertThat(route.loadKg()).isPositive().isLessThanOrEqualTo(route.capacityKg());
         });
+    }
+
+    @Test
+    void stopsAtEveryContainerForTheServiceTime() {
+        assertThat(plan.routes()).allSatisfy(route -> {
+            int stops = 0;
+            for (int i = 1; i < route.path().size(); i++) {
+                if (Arrays.equals(route.path().get(i), route.path().get(i - 1))
+                        && route.times()[i] - route.times()[i - 1] == plan.meta().serviceSeconds()) {
+                    stops++;
+                }
+            }
+            assertThat(stops).as(route.id()).isEqualTo(route.stops().size());
+        });
+        assertThat(plan.meta().serviceSeconds()).isEqualTo(60);
+    }
+
+    private static double[] site(String id) {
+        return plan.sites().stream().filter(site -> site.id().equals(id)).findFirst().orElseThrow().position();
     }
 
     @Test
