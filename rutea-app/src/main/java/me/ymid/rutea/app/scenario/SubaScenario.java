@@ -21,12 +21,18 @@ import me.ymid.rutea.solver.Instance;
  * @param points vértice del grafo de cada nodo de la instancia; el del nodo 0 es la base
  * @param travel metros y segundos entre todos los lugares: 0 es la base, {@code i} el nodo {@code i} y
  *     {@link #gate()} la portería
+ * @param sites sitios sensibles para R02 y R07; vacío si no se cargaron
  */
 public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, List<Container> containers,
-        int[] points, Instance instance, TravelMatrix travel) {
+        int[] points, Instance instance, TravelMatrix travel, List<SensitiveSites.Site> sites) {
 
     public SubaScenario {
         containers = List.copyOf(containers);
+        sites = List.copyOf(sites);
+    }
+
+    public SubaScenario withSites(List<SensitiveSites.Site> sensitive) {
+        return new SubaScenario(graph, gateVertex, depotVertex, containers, points, instance, travel, sensitive);
     }
 
     /** Con los sitios de {@link AreaSpec#SUBA} y las cifras de {@link SubaFigures}. */
@@ -60,7 +66,7 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
         // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
         String name = "SubaBase-n" + (count + 1) + "-s" + seed;
         Instance instance = new Instance(name, SubaFigures.COMPACTOR_CAPACITY_KG, demands, DistanceMatrix.of(distances));
-        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix);
+        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix, List.of());
     }
 
     /** Índice de la portería en {@link #travel}; la base es 0 y el contenedor del nodo {@code i}, {@code i}. */

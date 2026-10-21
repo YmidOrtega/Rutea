@@ -3,6 +3,7 @@ package me.ymid.rutea.app.planning;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.geo.RoadGraphFile;
 import tools.jackson.databind.json.JsonMapper;
@@ -14,21 +15,28 @@ public final class DemoPlanExporter {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 2 || args.length > 3) {
-            System.err.println("uso: DemoPlanExporter <grafo.rgraph> <archivo.json> [semilla]");
+        if (args.length < 3 || args.length > 4) {
+            System.err.println("uso: DemoPlanExporter <grafo.rgraph> <sitios.csv> <archivo.json> [semilla]");
             System.exit(2);
         }
         Path graphFile = Path.of(args[0]);
-        Path out = Path.of(args[1]);
-        long seed = args.length == 3 ? Long.parseLong(args[2]) : SubaPlanner.DEFAULT_SEED;
+        Path sitesFile = Path.of(args[1]);
+        Path out = Path.of(args[2]);
+        long seed = args.length == 4 ? Long.parseLong(args[3]) : SubaPlanner.DEFAULT_SEED;
         if (!Files.exists(graphFile)) {
             System.err.println("No existe " + graphFile + ". Constrúyelo con: mvn -pl rutea-geo compile exec:java"
                     + " (requiere el extracto; ver data/osm/README.md)");
             System.exit(1);
         }
 
+        if (!Files.exists(sitesFile)) {
+            System.err.println("No existe " + sitesFile + ". Extráelo con: mvn -pl rutea-app exec:java@sensitive-sites");
+            System.exit(1);
+        }
+
         long start = System.nanoTime();
-        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(graphFile).graph(), seed);
+        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(graphFile).graph(), seed)
+                .withSites(SensitiveSites.read(sitesFile));
         DemoPlan plan = SubaPlanner.plan(scenario, seed);
         Files.createDirectories(out.toAbsolutePath().getParent());
         JsonMapper.builder().build().writeValue(out.toFile(), plan);

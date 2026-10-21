@@ -33,6 +33,7 @@ Thumbs.db
 data/osm/*.pbf
 data/osm/*.pbf.md5
 data/osm/*.rgraph
+data/osm/*.csv
 
 # Instancias de Suba (se generan; ver data/suba/README.md)
 data/suba/*.vrp

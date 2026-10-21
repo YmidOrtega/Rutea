@@ -8,7 +8,8 @@ import me.ymid.rutea.domain.WasteStream;
  * Plan que dibuja el frontend. Las posiciones van como [lon, lat], el orden que esperan MapLibre y deck.gl.
  * Las calles son reales (OSM); los contenedores y sus cargas son simulados.
  */
-public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, List<Route> routes) {
+public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, List<Route> routes,
+        List<Compliance.Check> compliance) {
 
     /**
      * @param network de dónde salen las calles
@@ -29,8 +30,14 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
     public record Site(String id, String label, double[] position) {
     }
 
-    /** Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. */
-    public record Container(String id, WasteStream stream, double[] position, int kg, String route) {
+    /**
+     * Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto.
+     *
+     * @param visitSeconds segundos desde el inicio del turno hasta que el camión llega
+     * @param rules lo que la norma exige en esta parada (R02, R07), en texto
+     */
+    public record Container(String id, WasteStream stream, double[] position, int kg, String route, int visitSeconds,
+            boolean noCompaction, boolean nightNoise, List<String> rules) {
     }
 
     /**

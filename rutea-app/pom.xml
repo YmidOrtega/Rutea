@@ -62,6 +62,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>sensitive-sites</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractSensitiveSites</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba-sitios-sensibles.csv</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>suba-instance</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>

@@ -89,6 +89,7 @@ public final class SubaPlanner {
         ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
         List<Container> containers = scenario.containers();
         String[] routeOf = new String[containers.size()];
+        int[] visitSeconds = new int[containers.size()];
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int t = 0; t < schedule.trucks().size(); t++) {
             ShiftScheduler.Truck truck = schedule.trucks().get(t);
@@ -104,6 +105,7 @@ public final class SubaPlanner {
                 for (int p = 0; p < solution.routeLength(k); p++) {
                     int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
                     meters += leg(paths, geometry, scenario, previous, customer, id);
+                    visitSeconds[customer - 1] = geometry.seconds();
                     geometry.stop(SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
                     routeOf[customer - 1] = id;
                     stops.add(containers.get(customer - 1).id());
@@ -123,11 +125,13 @@ public final class SubaPlanner {
                     geometry.times.stream().mapToInt(Integer::intValue).toArray()));
         }
 
+        Compliance.Result compliance = Compliance.evaluate(scenario, visitSeconds, SubaFigures.SHIFT_START);
         List<DemoPlan.Container> planContainers = new ArrayList<>(containers.size());
         for (int i = 0; i < containers.size(); i++) {
             Container c = containers.get(i);
+            Compliance.Stop stop = compliance.stops().get(i);
             planContainers.add(new DemoPlan.Container(c.id(), c.stream(), lonLat(c.latE7(), c.lonE7()), c.kg(),
-                    routeOf[i]));
+                    routeOf[i], visitSeconds[i], stop.noCompaction(), stop.nightNoise(), stop.reasons()));
         }
         List<DemoPlan.Site> sites = List.of(
                 new DemoPlan.Site("relleno", "Relleno Doña Juana · portería",
@@ -139,7 +143,7 @@ public final class SubaPlanner {
                 SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
                 SubaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
                 "© colaboradores de OpenStreetMap (ODbL 1.0)");
-        return new DemoPlan(meta, sites, planContainers, routes);
+        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks());
     }
 
     /**
