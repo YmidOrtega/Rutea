@@ -31,6 +31,7 @@ import me.ymid.rutea.domain.CollectionRules;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.geo.TravelMatrix;
+import me.ymid.rutea.sim.SimulationClock;
 import me.ymid.rutea.solver.Solution;
 
 /**
@@ -59,6 +60,8 @@ public class OperationsService {
     private LiveOperation operation;
     private DemoPlan plan;
     private final List<OperationEvent> events = new ArrayList<>();
+    private final Map<String, Vehicle> vehicles = new LinkedHashMap<>();
+    private SimulationClock clock;
 
     /**
      * Las rutas llegan como texto: si Spring las convirtiera a {@code Path}, pasaría por el cargador de recursos del
@@ -132,7 +135,7 @@ public class OperationsService {
         BreakdownEvent event = new BreakdownEvent(events.size() + 1, truckId, atSeconds, dispatch, replan.latencyNanos() / 1e6, orphans,
                 reserve, replan.firstPickupSeconds(), replan.lastPickupSeconds(), replan.meetsRecoveryRule(),
                 CollectionRules.BREAKDOWN_RECOVERY.citation());
-        events.add(event);
+        add(event);
         List<OperationEvent> produced = new ArrayList<>(List.of(event));
         for (LiveOperation.Dispatch again : operation.outOfService(truck, atSeconds)) {
             produced.add(record(again, "avería de " + truckId));
@@ -204,8 +207,53 @@ public class OperationsService {
                 repair.rows() + repair.columns(), repair.matrix().size(), repair.changedPairs(),
                 ids(closure.isolated()), ids(closure.dropped()), changes, routes, visits,
                 CollectionRules.ROUTE_CHANGE_NOTICE.citation());
-        events.add(event);
+        add(event);
         return event;
+    }
+
+    /** {@code false} mientras el plan no esté armado: la telemetría espera sin forzar el armado. */
+    public synchronized boolean ready() {
+        return plan != null;
+    }
+
+    /** Segundos del reloj de la simulación, desde el inicio del turno. */
+    public synchronized long now() {
+        plan();
+        return (long) clock.seconds();
+    }
+
+    public synchronized SimulationClock.State clock() {
+        plan();
+        return clock.state();
+    }
+
+    /**
+     * Reproduce o pausa el reloj compartido y fija su velocidad. Reproducir con el turno terminado empieza un turno
+     * nuevo: se borran los eventos y el plan vuelve al original.
+     *
+     * @return si empezó un turno nuevo
+     */
+    public synchronized boolean clock(boolean running, double speed) {
+        plan();
+        clock.speed(speed);
+        if (!running) {
+            clock.pause();
+            return false;
+        }
+        if (!clock.finished()) {
+            clock.play();
+            return false;
+        }
+        operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
+                SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        events.clear();
+        resetVehicles();
+        clock.restart();
+        return true;
+    }
+
+    synchronized List<Vehicle> vehicles() {
+        return List.copyOf(vehicles.values());
     }
 
     /** Lo que pasó en esta sesión, en orden: un cliente que llega tarde ve el mismo estado que los demás. */
@@ -244,8 +292,32 @@ public class OperationsService {
         OverflowEvent event = new OverflowEvent(events.size() + 1, container, dispatch.atSeconds(), cause,
                 dispatch.pickup(), truck, dispatch.pickupSeconds(), dispatch.extraMeters(),
                 dispatch.latencyNanos() / 1e6, routes, visits);
-        events.add(event);
+        add(event);
         return event;
+    }
+
+    private void add(OperationEvent event) {
+        events.add(event);
+        switch (event) {
+            case BreakdownEvent breakdown -> {
+                vehicles.computeIfPresent(breakdown.truck(), (id, vehicle) -> vehicle.brokenAt(breakdown.atSeconds()));
+                breakdown.reserve().forEach(route -> vehicles.put(route.id(), Vehicle.of(route)));
+            }
+            case OverflowEvent overflow -> overflow.routes().forEach(route -> vehicles.put(route.id(), Vehicle.of(route)));
+            case ClosureEvent closure -> closure.routes().forEach(route -> vehicles.put(route.id(),
+                    Vehicle.of(route).brokenAt(vehicles.get(route.id()).brokenAtSeconds())));
+        }
+        clock.end(endOfShift());
+    }
+
+    private void resetVehicles() {
+        vehicles.clear();
+        plan.routes().forEach(route -> vehicles.put(route.id(), Vehicle.of(route)));
+        clock.end(endOfShift());
+    }
+
+    private double endOfShift() {
+        return vehicles.values().stream().mapToDouble(vehicle -> vehicle.track().end()).max().orElseThrow();
     }
 
     private List<String> ids(List<Integer> nodes) {
@@ -265,6 +337,9 @@ public class OperationsService {
         }
         throw new IllegalArgumentException("no hay contenedor " + containerId);
     }
+
+    /** La velocidad con la que el mapa ya reproducía el plan: una hora de turno en un minuto. */
+    static final double CLOCK_SPEED = 60;
 
     /** Iteraciones de ALNS al replanificar en vivo: las mismas que se midieron en el benchmark de averías. */
     static final long ITERATIONS = 300;
@@ -307,6 +382,8 @@ public class OperationsService {
                     SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
             SubaScenario recyclables = SubaScenario.buildRecyclable(scenario.graph(), seed).withSites(scenario.sites());
             plan = SubaPlanner.merge(waste.plan(), SubaPlanner.fleet(recyclables, SubaFigures.ECA_UNLOAD_SECONDS, seed).plan());
+            clock = new SimulationClock(CLOCK_SPEED, 1);
+            resetVehicles();
         } catch (IOException e) {
             throw new DataMissingException("No se pudo leer el grafo o los sitios: " + e.getMessage());
         }

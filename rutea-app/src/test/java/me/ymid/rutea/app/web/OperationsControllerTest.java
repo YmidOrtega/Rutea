@@ -3,6 +3,7 @@ package me.ymid.rutea.app.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,6 +58,20 @@ class OperationsControllerTest {
     void overflowWithoutOsmDataIsAlsoUnavailable() throws Exception {
         mvc.perform(post("/api/overflows").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"container\":\"N0001\",\"atSeconds\":600}"))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void eventsWithoutAnHourHappenAtTheSimulationClockAndAlsoNeedTheData() throws Exception {
+        mvc.perform(post("/api/breakdowns").contentType(MediaType.APPLICATION_JSON).content("{\"truck\":\"C-01\"}"))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void telemetryAndClockWithoutOsmDataAreUnavailable() throws Exception {
+        mvc.perform(get("/api/telemetry")).andExpect(status().isServiceUnavailable());
+        mvc.perform(put("/api/clock").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"running\":true,\"speed\":60}"))
                 .andExpect(status().isServiceUnavailable());
     }
 

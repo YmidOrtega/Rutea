@@ -29,6 +29,10 @@
     </dependency>
     <dependency>
       <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-sim</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>me.ymid.rutea</groupId>
       <artifactId>rutea-geo</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
