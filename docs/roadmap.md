@@ -191,8 +191,9 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
   | Avería → reserva en el primer huérfano | 39,9 min | 53,0 min | 67,3 min | 73,4 min |
 
   En frío (la primera avería, con la JVM sin calentar): 54,4 ms. R05 se cumple en las 500 averías: la reserva llega en 73 min en el peor caso, con un despacho supuesto de 15 min (`PENDIENTE_VERIFICAR`). Con 300 iteraciones, arrancar en caliente o desde cero da casi lo mismo (+0,05 % de km): en problemas de este tamaño ALNS converge rápido de cualquier forma. Lo que gana el arranque en caliente es que el plan nuevo conserva el orden que ya conocían los conductores.
+- [x] Operación en vivo (R05, R08). `rutea-app` sirve el plan (`GET /api/plan`, armado en segundo plano al arrancar), simula averías (`POST /api/breakdowns`) y las difunde por WebSocket (`/ws/events`) a todos los clientes; `GET /api/events` da el historial a quien llega tarde. En el mapa, cada compactador tiene un botón para averiarlo a la hora del reloj: el camión se detiene, sus contenedores huérfanos se marcan en rojo, la reserva aparece en el acento y el panel registra el evento con su latencia y R05. Sin la API, el mapa usa el plan estático y no ofrece averías.
 - [ ] Reasignar huérfanos a camiones en servicio con margen, frente a la reserva.
-- [ ] Reloj acelerable, eventos (vía cerrada, contenedor desbordado) y WebSocket (R08); sensores de llenado.
+- [ ] Más eventos (vía cerrada, contenedor desbordado), posiciones transmitidas por el servidor y sensores de llenado.
 
 ## F6 — Producto y publicación (2–3 semanas)
 

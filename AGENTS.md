@@ -69,11 +69,11 @@ mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/s
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
-mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
+mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan, averías y eventos por WebSocket (requiere los datos de data/osm)
 
 # Frontend
 cd web && pnpm install
-pnpm dev                                     # http://localhost:5173 (proxy /api → :8080)
+pnpm dev                                     # http://localhost:5173 (proxy /api y /ws → :8080); sin la API usa el plan estático
 pnpm build
 pnpm demo:data                               # regenera web/public/demo/plan-suba.json
 ```

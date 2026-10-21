@@ -56,6 +56,7 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 - **Barra superior**: nombre, zona, turno y reloj de simulación.
 - **Panel izquierdo**: indicadores del plan (km, toneladas, contenedores, CO₂) y la lista de rutas (activar/desactivar, color de corriente, carga usada / capacidad).
 - **Línea de tiempo inferior**: reproducir/pausar, velocidad (×60, ×300, ×900) y deslizador de hora. La franja de 21:00 a 06:00 se marca con la nota de la regla R02.
+- **Eventos (F5)**: con la API detrás, cada compactador de la lista tiene un botón que lo avería a la hora del reloj. El camión se detiene donde estaba. Sus contenedores huérfanos llevan borde `--crit` y la ruta de reserva va en el acento `--sodium`, porque es lo que está pasando ahora. El panel registra cada evento con la hora, los contenedores sin recoger, la salida y llegada de la reserva, R05 y la latencia de replanificar.
 - **Tooltip**: al pasar sobre un contenedor muestra ID, corriente, carga simulada en kg y viaje asignado; sobre un sitio, su nombre.
 
 ## Accesibilidad
