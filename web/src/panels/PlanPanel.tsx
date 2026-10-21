@@ -77,7 +77,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                             {km(route.distanceMeters)}
                             <span className="unit">km</span>
                           </span>
-                          <span className="num route-stat" title="Duración del viaje, sin tiempo de servicio">
+                          <span className="num route-stat" title="Duración del turno, con las paradas y sin la descarga">
                             {hours(route.durationSeconds)}
                             <span className="unit">h</span>
                           </span>
@@ -94,9 +94,11 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
             <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
-            calles reales de OpenStreetMap. Cada viaje sale de la portería de Doña Juana, recoge hasta llenar un
-            compactador de <span className="num">8 t</span> y vuelve a descargar. Los contenedores y sus cargas
-            son simulados con cifras oficiales; las velocidades son supuestas y aún no hay tiempo de servicio.
+            calles reales de OpenStreetMap. Cada compactador de <span className="num">8 t</span> sale de la base de
+            Fontibón, recoge hasta llenarse, descarga en Doña Juana y vuelve a la base. Los contenedores y sus
+            cargas son simulados con cifras oficiales. Las velocidades y la parada de{' '}
+            <span className="num">{plan.meta.serviceSeconds} s</span> por contenedor son supuestas; aún no se
+            cuenta el tiempo de descarga en el relleno.
           </p>
         </div>
       )}

@@ -143,5 +143,5 @@ function containerHtml(container: Container): string {
 
 function siteHtml(site: Site): string {
   return `<strong>${site.label}</strong>
-    <span>${site.id === 'relleno' ? 'Cada viaje termina aquí a descargar' : 'Base de los compactadores'}</span>`
+    <span>${site.id === 'relleno' ? 'Cada compactador descarga aquí' : 'Los compactadores salen y vuelven aquí'}</span>`
 }

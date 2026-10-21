@@ -13,7 +13,10 @@ export interface Container {
   route: string
 }
 
-/** Un viaje: sale del relleno, recoge y vuelve a descargar. `times[i]`: segundos hasta `path[i]`. */
+/**
+ * El turno de un compactador: base → contenedores → relleno → base. `times[i]`: segundos desde la salida hasta
+ * `path[i]`; en cada contenedor el punto se repite con la hora en que el camión vuelve a arrancar.
+ */
 export interface Route {
   id: string
   stream: WasteStream
@@ -41,6 +44,7 @@ export interface DemoPlan {
     seed: number
     iterations: number
     shiftStart: string
+    serviceSeconds: number
     attribution: string
   }
   sites: Site[]
@@ -67,7 +71,7 @@ export async function loadDemoPlan(url = '/demo/plan-suba.json'): Promise<DemoPl
   return (await response.json()) as DemoPlan
 }
 
-/** Los tiempos salen de las velocidades por tipo de vía del grafo; aún sin tiempo de servicio por contenedor. */
+/** Los tiempos salen de las velocidades por tipo de vía del grafo y de la parada en cada contenedor. */
 export function toTrips(routes: Route[]): Trip[] {
   return routes.map((route) => ({ route, timestamps: route.times }))
 }
