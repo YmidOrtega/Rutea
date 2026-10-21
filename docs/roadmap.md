@@ -10,8 +10,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F1 | Primer solver | Completa |
 | F2 | Metaheurística y paralelismo | Completa |
 | F3 | Mapa real: Suba completa | Completa |
-| F4 | Restricciones del dominio | **Siguiente** |
-| F5 | Operación en tiempo real | Pendiente |
+| F4 | Restricciones del dominio | Completa |
+| F5 | Operación en tiempo real | **Siguiente** |
 | F6 | Producto y publicación | Pendiente |
 
 ## F0 — Fundamentos (1–2 semanas)
@@ -132,7 +132,41 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Paradas sin compactación (R07).
 - Reporte por ruta: km, horas, toneladas, CO₂ estimado a partir del consumo de diésel.
 
-**Criterio de cierre:** comparación contra un barrido ingenuo por cuadrantes en la zona piloto, con ahorro en km y CO₂.
+**Criterio de cierre:** comparación contra un barrido ingenuo por cuadrantes en la zona piloto, con ahorro en km y CO₂. **Cumplido** el 2026-10-20: 20,5 % menos km y CO₂ que el mejor barrido, y 25,3 % menos km si se encadenan viajes. Quedan pendientes de datos, no de código: el inventario de ECA, el calendario semanal por zona (R03) y el efecto de R07 sobre la capacidad.
+
+**Avance** (2026-10-20; i5-14400F, Java 21.0.12):
+
+- [x] Línea base `QuadrantSweep`: cuadrantes recorridos en serpentina de norte a sur, franjas de 200 m dentro de cada uno, y llenado secuencial hasta 8 t. Se prueba con varios tamaños de cuadrante y se compara contra el mejor.
+- [x] Reporte por turno y por plan (`PlanReport`): km con el regreso a la base, horas, toneladas, litros y CO₂. Usa el factor del IPCC 2006 (2,68 kg CO₂/L) y un consumo supuesto de 0,8 L/km (`PENDIENTE_VERIFICAR`). El panel del mapa muestra las horas de camión y el CO₂ estimado.
+- [x] Comparación (`mvn -pl rutea-app exec:java@baseline`; `SubaBase-n807-s1`; ALNS con semilla 1 y 2.000 iteraciones, determinista). CSV en `docs/benchmarks/f4-baseline/`.
+
+  Un camión por viaje en los dos planes; las horas cuentan las paradas y una descarga de 90 min por viaje:
+
+  | Método | Turnos | km | Horas | t CO₂ | Turnos de más de 8 h |
+  |---|---:|---:|---:|---:|---:|
+  | Barrido, cuadrantes de 500 m | 17 | 1.816,7 | 96,4 | 3,89 | 1 |
+  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 95,4 | 3,82 | 0 |
+  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 95,3 | 3,80 | 0 |
+  | Barrido, cuadrantes de 4 km | 17 | 1.858,6 | 97,5 | 3,98 | 1 |
+  | **Rutea (`alns`)** | 17 | **1.410,9** | **81,5** | **3,02** | 0 |
+
+  Frente al mejor barrido: **20,5 % menos km, 14,5 % menos horas y 20,5 % menos CO₂**, unas 0,78 t de CO₂ menos por día de recolección con el consumo supuesto. Las horas bajan menos que los km porque las paradas y las descargas son iguales en los dos planes. Si además se encadenan viajes (abajo), Rutea baja a 1.326,5 km: 25,3 % menos que el mejor barrido. El barrido es una línea base ingenua, no las microrrutas reales de Área Limpia, que no son públicas.
+- [x] Varios viajes por turno (`ShiftScheduler`): los viajes de ALNS se reparten entre camiones con programación dinámica exacta sobre los subconjuntos de viajes. Minimiza primero los camiones y después los km, con hasta 3 viajes por camión en un turno de 8 h que cuenta paradas, descargas y regreso. Un viaje que ni solo cabe queda marcado como horas extra. Para que distancia y tiempo hablen del mismo recorrido, `TravelMatrix` ahora da los segundos del camino más corto en metros, no los del más rápido (y hace la mitad de los Dijkstra).
+
+  Los 17 viajes de ALNS (`SubaBase-n807-s1`, semilla 1, 2.000 iteraciones), con la descarga en los dos extremos del rango publicado:
+
+  | Reparto | Camiones | km | Horas de camión | Último regreso |
+  |---|---:|---:|---:|---:|
+  | Un viaje por camión | 17 | 1.410,9 | 81,5 | 23:54 |
+  | Mínimo de camiones, descarga de 40 min | **9** (8 con 2 viajes) | **1.326,5** | **64,6** | 01:56 |
+  | Mínimo de camiones, descarga de 90 min | 16 (1 con 2 viajes) | 1.398,7 | 81,1 | 01:47 |
+
+  Encadenar viajes ahorra km, porque el segundo viaje sale de la portería y se ahorra la salida desde la base y un regreso. Y el tiempo de descarga en Doña Juana define el tamaño de la flota: con 40 min bastan 9 camiones; con 90, hacen falta 16. En el barrido ingenuo, algunos viajes ni solos caben en el turno (cuadrantes de 500 m y de 4 km).
+- [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:50 h.
+- [x] Normativa en el plan (`Compliance`): R02, R03 y R07, verificadas en el texto oficial, se revisan sobre cada parada con la hora de paso del planificador y 644 sitios sensibles de OSM. Plan de demo: **79 contenedores sin compactación** (R07, a 50 m o menos de un colegio o centro de salud), **335 paradas nocturnas** que requieren medidas contra el ruido (R02) y frecuencia de 6 veces por semana, que cumple el mínimo de 2 (R03). Con salida a las 18:00, 383 de las 806 paradas caen entre las 21:00 y las 06:00. Con las mismas horas de paso y salida a las 06:00, ninguna: irían de las 06:22 a las 11:53.
+- [ ] Calendario semanal por zona (R03, VRP periódico) y efecto de R07 sobre la capacidad.
+- [x] Flota heterogénea (R06, R10), con supuestos. R10 se reverificó: el capítulo que el Decreto 596 de 2016 agregó al Decreto 1077 aparece derogado y lo sustituyó el Decreto 1381 de 2024 (exclusividad de las organizaciones de recicladores por 15 años y transporte selectivo hasta la ECA). Los aprovechables van en vehículos sin compactación de una organización de recicladores, que salen de una ECA y vuelven a ella; R07 no aplica a esos vehículos. Plan de demo: 9 compactadores (17 viajes, 1.310,6 km) y 6 vehículos de aprovechables (17 viajes, 429,9 km, 24,7 t). Las cifras de aprovechables descansan en supuestos sin dato público (ECA, toneladas, vehículos; ver `docs/datos.md`) y el panel los lista.
+- [ ] Datos de aprovechables: inventario de ECA de la UAESP, toneladas por organización y vehículos.
 
 ## F5 — Operación en tiempo real (3 semanas)
 

@@ -72,7 +72,7 @@ export default function App() {
         mapStyle={BASEMAP_STYLE}
         attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
       >
-        <DeckOverlay layers={layers} getTooltip={tooltip} />
+        <DeckOverlay layers={layers} getTooltip={tooltipFor(plan)} />
       </Map>
 
       <header className="topbar panel">
@@ -115,7 +115,11 @@ function clock(seconds: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
-function tooltip({ object, layer }: PickingInfo) {
+function tooltipFor(plan: DemoPlan | null) {
+  return (info: PickingInfo) => tooltip(info, plan?.meta.shiftStart ?? '00:00')
+}
+
+function tooltip({ object, layer }: PickingInfo, shiftStart: string) {
   if (!object || (layer?.id !== 'containers' && layer?.id !== 'sites')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
@@ -130,18 +134,26 @@ function tooltip({ object, layer }: PickingInfo) {
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },
-    html: layer.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container),
+    html: layer.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container, shiftStart),
   }
 }
 
-function containerHtml(container: Container): string {
+function containerHtml(container: Container, shiftStart: string): string {
+  const rules = container.rules.map((rule) => `<span class="rule">${rule}</span>`).join('')
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
-    <span class="num">Viaje ${container.route}</span>`
+    <span class="num">Vehículo ${container.route} · llega a las ${clock(secondsOfDay(shiftStart) + container.visitSeconds)}</span>
+    ${rules}`
+}
+
+const SITE_ROLES: Record<Site['id'], string> = {
+  relleno: 'Cada viaje de no aprovechables termina aquí a descargar',
+  base: 'Los compactadores salen y vuelven aquí',
+  eca: 'Supuesta: los aprovechables se clasifican y pesan aquí (R10)',
 }
 
 function siteHtml(site: Site): string {
   return `<strong>${site.label}</strong>
-    <span>${site.id === 'relleno' ? 'Cada compactador descarga aquí' : 'Los compactadores salen y vuelven aquí'}</span>`
+    <span>${SITE_ROLES[site.id]}</span>`
 }

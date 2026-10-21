@@ -66,6 +66,8 @@ mvn -pl rutea-bench -am compile exec:java@compare   # el mismo arnés con Timefo
 mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de evaluación de movimientos
 mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
 mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/SubaBase-n807-s1.vrp (ver data/suba/README.md)
+mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
+mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
 
 # Frontend
@@ -111,7 +113,7 @@ pnpm demo:data                               # regenera web/public/demo/plan-sub
   - Cambios de ruta, horario o frecuencia: aviso con **3 días** de anticipación, salvo caso fortuito o fuerza mayor.
   - Municipios con más de 5.000 usuarios: vehículos con **equipo de compactación** (excepto aprovechables, RCD y no compactables); cajas de compactación cerrada hacia disposición final.
   - Nunca se compacta frente a centros educativos, hospitales, clínicas o centros asistenciales.
-- Decreto 596 de 2016: la actividad de aprovechamiento la prestan organizaciones de recicladores de oficio. En Rutea, las rutas de aprovechables son selectivas y terminan en una ECA, no en el relleno.
+- Decreto 1381 de 2024 (sustituye lo que el Decreto 596 de 2016 había agregado al Decreto 1077): el aprovechamiento es exclusivo de las organizaciones de recicladores de oficio por 15 años e incluye el transporte selectivo hasta una ECA. En Rutea, las rutas de aprovechables son selectivas y terminan en una ECA, no en el relleno.
 - Resolución 2184 de 2019: código de colores. **Blanco** aprovechables, **verde** orgánicos aprovechables, **negro** no aprovechables. Rutea usa este código como semántica visual.
 - Bogotá: PGIRS adoptado por Decreto 345 de 2020, hoy en el Título 12 del Decreto 653 de 2025, modificado por el Decreto 045 de 2026. Contratos de aseo prorrogados hasta 2028 (Resolución CRA 1027 de 2026, según prensa: verificar).
 
@@ -123,7 +125,7 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 - Diseño oscuro primero, con tokens en `web/src/styles/tokens.css`. No se escriben colores literales en componentes.
 - Los colores de las corrientes de residuo siguen la Resolución 2184 de 2019 (adaptados para verse sobre un mapa oscuro; ver `docs/diseno.md`).
 - Cifras con `font-variant-numeric: tabular-nums`. Respeta `prefers-reduced-motion` (sin animación de camiones por defecto en ese caso).
-- El plan de demo (`pnpm demo:data`, requiere `data/osm/suba.rgraph`) va sobre las calles reales de OSM. Los contenedores y sus cargas son simulados, y la UI lo dice explícitamente; nunca se presentan como datos de operación.
+- El plan de demo (`pnpm demo:data`, requiere `data/osm/suba.rgraph` y `data/osm/suba-sitios-sensibles.csv`) va sobre las calles reales de OSM. Los contenedores y sus cargas son simulados, y la UI lo dice explícitamente; nunca se presentan como datos de operación.
 
 ## Flujo de trabajo
 
@@ -134,4 +136,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F4 — Restricciones del dominio.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F5 — Operación en tiempo real.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.

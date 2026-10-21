@@ -1,0 +1,6 @@
+instance,method,seed,iterations,trips,km,hours,tonnes,liters,kg_co2,liters_per_km
+SubaBase-n807-s1,barrido-cuadrantes-500m,1,,17,1816.726,96.406,128.454,1453.38,3889.96,0.800
+SubaBase-n807-s1,barrido-cuadrantes-1000m,1,,17,1783.906,95.355,128.454,1427.12,3819.69,0.800
+SubaBase-n807-s1,barrido-cuadrantes-2000m,1,,17,1775.333,95.299,128.454,1420.27,3801.33,0.800
+SubaBase-n807-s1,barrido-cuadrantes-4000m,1,,17,1858.578,97.493,128.454,1486.86,3979.58,0.800
+SubaBase-n807-s1,alns,1,2000,17,1410.929,81.466,128.454,1128.74,3021.07,0.800

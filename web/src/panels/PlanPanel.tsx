@@ -21,6 +21,9 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
+  const totalSeconds = plan.routes.reduce((sum, route) => sum + route.durationSeconds, 0)
+  const co2Kg = (totalMeters / 1000) * plan.meta.litersPerKm * plan.meta.kgCo2PerLiter
+  const trips = plan.routes.reduce((sum, route) => sum + route.tripLoadsKg.length, 0)
 
   return (
     <aside className="plan panel" aria-label="Plan de recolección">
@@ -33,9 +36,11 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
         <div className="plan-body">
           <dl className="kpis">
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
+            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas de vehículo" />
             <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
+            <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
-            <Kpi value={String(plan.routes.length)} label="Viajes" />
+            <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Vehículos" />
           </dl>
 
           {STREAMS.map((stream) => {
@@ -49,7 +54,8 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                 </h2>
                 <ul className="routes">
                   {routes.map((route) => {
-                    const load = route.loadKg / route.capacityKg
+                    // Carga promedio por viaje: cada viaje llena el compactador por separado.
+                    const load = route.loadKg / (route.capacityKg * route.tripLoadsKg.length)
                     return (
                       <li key={route.id}>
                         <button
@@ -58,14 +64,21 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                           title={visible.has(route.id) ? 'Ocultar ruta' : 'Mostrar ruta'}
                           onClick={() => onToggle(route.id)}
                         >
-                          <span className="num route-id">{route.id}</span>
+                          <span className="num route-id">
+                            {route.id}
+                            {route.tripLoadsKg.length > 1 && (
+                              <span className="unit" title={`${route.tripLoadsKg.length} viajes en el turno`}>
+                                ×{route.tripLoadsKg.length}
+                              </span>
+                            )}
+                          </span>
                           <span
                             className="load"
                             role="meter"
-                            aria-label={`Carga de ${route.id}`}
+                            aria-label={`Carga promedio por viaje de ${route.id}`}
                             aria-valuemin={0}
                             aria-valuemax={route.capacityKg}
-                            aria-valuenow={route.loadKg}
+                            aria-valuenow={Math.round(route.loadKg / route.tripLoadsKg.length)}
                           >
                             <span className={`load-bar swatch-${stream}`} style={{ width: `${load * 100}%` }} />
                           </span>
@@ -77,7 +90,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                             {km(route.distanceMeters)}
                             <span className="unit">km</span>
                           </span>
-                          <span className="num route-stat" title="Duración del turno, con las paradas y sin la descarga">
+                          <span className="num route-stat" title="Duración del turno, con paradas y descargas">
                             {hours(route.durationSeconds)}
                             <span className="unit">h</span>
                           </span>
@@ -90,16 +103,36 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             )
           })}
 
+          <section className="compliance" aria-label="Normativa">
+            <h2 className="label">Normativa</h2>
+            <ul>
+              {plan.compliance.map((check) => (
+                <li key={check.id} title={check.citation}>
+                  <span className={`num rule-id rule-${check.status}`}>
+                    {check.id}
+                  </span>
+                  <span>{check.summary}.</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <p className="note">
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
             <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
-            calles reales de OpenStreetMap. Cada compactador de <span className="num">8 t</span> sale de la base de
-            Fontibón, recoge hasta llenarse, descarga en Doña Juana y vuelve a la base. Los contenedores y sus
-            cargas son simulados con cifras oficiales. Las velocidades y la parada de{' '}
-            <span className="num">{plan.meta.serviceSeconds} s</span> por contenedor son supuestas; aún no se
-            cuenta el tiempo de descarga en el relleno.
+            calles reales de OpenStreetMap, con el menor número de vehículos en turnos de{' '}
+            <span className="num">{plan.meta.shiftSeconds / 3600} h</span>. Los compactadores de{' '}
+            <span className="num">8 t</span> salen de la base de Fontibón y descargan en Doña Juana en{' '}
+            <span className="num">{plan.meta.unloadSeconds / 60} min</span>, el extremo bajo del rango publicado en
+            prensa; con descargas más largas hacen falta más. Los aprovechables los recoge una organización de
+            recicladores hasta la ECA. Supuestos:
           </p>
+          <ul className="assumptions">
+            {plan.meta.assumptions.map((assumption) => (
+              <li key={assumption}>{assumption}.</li>
+            ))}
+          </ul>
         </div>
       )}
     </aside>

@@ -52,6 +52,27 @@
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>baseline</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.CompareBaseline</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f4-baseline</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sensitive-sites</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractSensitiveSites</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba-sitios-sensibles.csv</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>suba-instance</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>

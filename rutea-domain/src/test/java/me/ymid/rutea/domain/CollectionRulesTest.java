@@ -58,4 +58,27 @@ class CollectionRulesTest {
 
         assertThat(pending.citation()).isEqualTo("R99 · Norma X, art. 1 (PENDIENTE_VERIFICAR)");
     }
+
+    @Test
+    @DisplayName("R07 · D. 1077/2015 art. 2.3.2.2.2.3.27, num. 5: nunca se compacta frente a centros educativos o de salud")
+    void noCompactionCitesItsVerifiedArticle() {
+        assertThat(CollectionRules.NO_COMPACTION.id()).isEqualTo("R07");
+        assertThat(CollectionRules.NO_COMPACTION.citation())
+                .isEqualTo("R07 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.27, num. 5");
+    }
+
+    @Test
+    @DisplayName("R10 · D. 1077/2015 (texto del D. 1381/2024) art. 2.3.2.5.2.6: transporte selectivo hasta la ECA")
+    void selectiveTransportCitesTheDecreeThatReplacedDecree596() {
+        assertThat(CollectionRules.SELECTIVE_TO_ECA.id()).isEqualTo("R10");
+        assertThat(CollectionRules.SELECTIVE_TO_ECA.verification()).isEqualTo(Verification.VERIFICADA);
+        assertThat(CollectionRules.SELECTIVE_TO_ECA.source().toString()).contains("decreto_1381_2024");
+    }
+
+    @Test
+    @DisplayName("R06 · D. 1077/2015 art. 2.3.2.2.2.3.36, num. 3: compactación, salvo los aprovechables separados")
+    void compactionEquipmentCitesItsVerifiedArticle() {
+        assertThat(CollectionRules.COMPACTION_EQUIPMENT.citation())
+                .isEqualTo("R06 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.36, num. 3");
+    }
 }

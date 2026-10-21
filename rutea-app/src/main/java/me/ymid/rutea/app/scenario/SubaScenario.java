@@ -19,13 +19,20 @@ import me.ymid.rutea.solver.Instance;
  * camiones, así que no cambia la optimización: va en {@code returnMeters}.
  *
  * @param points vértice del grafo de cada nodo de la instancia; el del nodo 0 es la base
- * @param returnMeters metros de la portería a la base, por camión
+ * @param travel metros y segundos entre todos los lugares: 0 es la base, {@code i} el nodo {@code i} y
+ *     {@link #gate()} la portería
+ * @param sites sitios sensibles para R02 y R07; vacío si no se cargaron
  */
 public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, List<Container> containers,
-        int[] points, Instance instance, int returnMeters) {
+        int[] points, Instance instance, TravelMatrix travel, List<SensitiveSites.Site> sites) {
 
     public SubaScenario {
         containers = List.copyOf(containers);
+        sites = List.copyOf(sites);
+    }
+
+    public SubaScenario withSites(List<SensitiveSites.Site> sensitive) {
+        return new SubaScenario(graph, gateVertex, depotVertex, containers, points, instance, travel, sensitive);
     }
 
     /** Con los sitios de {@link AreaSpec#SUBA} y las cifras de {@link SubaFigures}. */
@@ -36,9 +43,27 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
     }
 
     static SubaScenario build(RoadGraph graph, long gateNode, long depotNode, int count, double meanKg, long seed) {
-        int gate = vertex(graph, gateNode, "la portería del relleno");
-        int depot = vertex(graph, depotNode, "la base");
-        List<Container> containers = SimulatedContainers.place(graph, WasteStream.NON_RECYCLABLE, count, meanKg, seed);
+        return build(graph, WasteStream.NON_RECYCLABLE, vertex(graph, depotNode, "la base"),
+                vertex(graph, gateNode, "la portería del relleno"), SubaFigures.COMPACTOR_CAPACITY_KG, count, meanKg,
+                seed, "SubaBase");
+    }
+
+    /**
+     * Aprovechables (R10): una organización de recicladores sale de la ECA, recoge los contenedores blancos y
+     * vuelve a la misma ECA a descargar, en vehículos sin compactación (R06). La ECA es un supuesto (ver
+     * {@link SubaFigures#ecaVertex}); los contenedores se ubican con otra semilla derivada para no caer encima de
+     * los negros.
+     */
+    public static SubaScenario buildRecyclable(RoadGraph graph, long seed) {
+        int count = SubaFigures.recyclableContainers();
+        int eca = SubaFigures.ecaVertex(graph);
+        return build(graph, WasteStream.RECYCLABLE, eca, eca, SubaFigures.RECYCLABLE_VEHICLE_KG, count,
+                SubaFigures.meanRecyclableKgPerCollection(count), seed * 31 + 17, "SubaReciclaje");
+    }
+
+    static SubaScenario build(RoadGraph graph, WasteStream stream, int depot, int gate, int capacityKg, int count,
+            double meanKg, long seed, String namePrefix) {
+        List<Container> containers = SimulatedContainers.place(graph, stream, count, meanKg, seed);
         int[] points = new int[count + 1];
         int[] demands = new int[count + 1];
         points[0] = depot;
@@ -57,9 +82,27 @@ public record SubaScenario(RoadGraph graph, int gateVertex, int depotVertex, Lis
             }
         }
         // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
-        String name = "SubaBase-n" + (count + 1) + "-s" + seed;
-        Instance instance = new Instance(name, SubaFigures.COMPACTOR_CAPACITY_KG, demands, DistanceMatrix.of(distances));
-        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix.meters(count + 1, 0));
+        String name = namePrefix + "-n" + (count + 1) + "-s" + seed;
+        Instance instance = new Instance(name, capacityKg, demands, DistanceMatrix.of(distances));
+        return new SubaScenario(graph, gate, depot, containers, points, instance, matrix, List.of());
+    }
+
+    public WasteStream stream() {
+        return containers.getFirst().stream();
+    }
+
+    /** Índice de la portería en {@link #travel}; la base es 0 y el contenedor del nodo {@code i}, {@code i}. */
+    public int gate() {
+        return containers.size() + 1;
+    }
+
+    /** Metros de la portería a la base: el regreso de cada camión al final del turno. */
+    public int returnMeters() {
+        return travel.meters(gate(), 0);
+    }
+
+    public int returnSeconds() {
+        return travel.seconds(gate(), 0);
     }
 
     private static long siteNode(String name) {

@@ -94,7 +94,7 @@
 
 .route {
   display: grid;
-  grid-template-columns: 40px 1fr 36px 56px 44px;
+  grid-template-columns: 58px 1fr 36px 56px 44px;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -134,8 +134,54 @@
   text-align: right;
 }
 
+.compliance {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.compliance h2 {
+  margin: 0 0 6px;
+  font-weight: 500;
+}
+
+.compliance ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-12);
+  line-height: 1.45;
+}
+
+.compliance li {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 6px;
+}
+
+.rule-OK {
+  color: var(--ok);
+}
+
+.rule-ACTION {
+  color: var(--warn);
+}
+
+.rule-FAIL {
+  color: var(--crit);
+}
+
 .note {
   margin: 12px 0 0;
+  font-size: var(--text-12);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.assumptions {
+  margin: 6px 0 0;
+  padding-left: 16px;
   font-size: var(--text-12);
   line-height: 1.5;
   color: var(--fg-muted);
