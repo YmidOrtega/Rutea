@@ -9,8 +9,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F0 | Fundamentos | Completa |
 | F1 | Primer solver | Completa |
 | F2 | Metaheurística y paralelismo | Completa |
-| F3 | Mapa real: Suba completa | **Siguiente** |
-| F4 | Restricciones del dominio | Pendiente |
+| F3 | Mapa real: Suba completa | Completa |
+| F4 | Restricciones del dominio | **Siguiente** |
 | F5 | Operación en tiempo real | Pendiente |
 | F6 | Producto y publicación | Pendiente |
 
@@ -82,7 +82,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Recalcular solo lo afectado cuando se cierra una vía.
 - El frontend reemplaza la cuadrícula simulada por las geometrías reales.
 
-**Criterio de cierre:** el solver planifica la zona piloto y las rutas se dibujan sobre calles reales.
+**Criterio de cierre:** el solver planifica la zona piloto y las rutas se dibujan sobre calles reales. **Cumplido** el 2026-10-20.
 
 **Avance** (2026-10-20; extracto `colombia-261019`; i5-14400F, 16 hilos, Java 21.0.12):
 
@@ -110,6 +110,18 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Frontend sobre las geometrías reales: `pnpm demo:data` resuelve Suba con ALNS (semilla 7, 2.000 iteraciones, ~16 s) y dibuja los 17 viajes calle por calle (37.374 puntos, 1.224,1 km). Las horas de paso salen de las velocidades del grafo. El planificador verifica que cada tramo dibujado mida lo mismo que la matriz que optimizó el solver.
 - [x] Turno completo de cada compactador: base de Fontibón → contenedores → portería de Doña Juana → base. La instancia (`SubaBase-n807-s1`) usa el nodo 0 como dos lugares gracias a la matriz asimétrica: su fila sale de la base y su columna llega a la portería. El regreso es fijo por camión y no cambia la optimización. El benchmark de arriba es del modelo anterior (`Suba-n807-s1`, con la portería como depósito en los dos sentidos).
 - [x] Parada de 60 s en cada contenedor (`PENDIENTE_VERIFICAR`; ver `docs/datos.md`). Plan de demo (semilla 7): 1.400,2 km con los regresos; turnos de 2,57 a 4,57 h (3,28 h en promedio) y de 31 a 55 contenedores. Saliendo a las 18:00, el último vuelve a la base a las 22:34, dentro del turno de 18:00 a 02:00 sin contar la descarga. Hay margen para un segundo viaje por turno (F4).
+- [x] Benchmark del modelo con base (`SubaBase-n807-s1`, sin BKS), en las mismas condiciones que el anterior: 60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.12; hasta 7 procesos a la vez. El costo es el del solver: base → contenedores → portería, sin el regreso fijo a la base. CSV en `docs/benchmarks/f3-suba-base-60s/`.
+
+  | Solver | En frío (prom.; mín.–máx.) | En caliente (prom.; mín.–máx.) | Viajes |
+  |---|---:|---:|---:|
+  | `nearest-neighbor` | 1.177,0 km | 1.177,0 km | 17 |
+  | `clarke-wright` | 1.122,1 km | 1.122,1 km | 18 |
+  | `local-search` | 1.071,9 km; 1.064,7–1.077,5 | igual | 17–18 |
+  | `alns` | 1.019,7 km; 1.013,8–1.023,8 | 1.021,5 km; 1.021,0–1.021,9 | 17 |
+  | `alns-x4` | **1.017,7 km**; 1.013,0–1.020,0 | **1.021,3 km**; 1.019,7–1.022,5 | 17 |
+  | `timefold` 2.7.1, configuración por defecto | 1.376,3 km; 1.366,6–1.383,1 | 1.355,6 km; 1.338,1–1.364,5 | 17 |
+
+  Las 36 soluciones son factibles según el `Evaluator`. Clarke-Wright no minimiza la cantidad de viajes y aquí usa uno de más; ALNS siempre llega al mínimo de 17. Timefold queda un 35 % por encima de `alns-x4` en frío. Entre `alns` y `alns-x4`, y entre frío y caliente, las diferencias (≤ 0,4 %) están dentro de la dispersión entre semillas.
 
 ## F4 — Restricciones del dominio (3 semanas)
 

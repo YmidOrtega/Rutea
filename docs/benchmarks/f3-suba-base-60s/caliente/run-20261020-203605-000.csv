@@ -1,0 +1,4 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+SubaBase-n807-s1,806,timefold,1,60000,,1364454,,,true,60016.710,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+SubaBase-n807-s1,806,timefold,2,60000,,1364213,,,true,60022.082,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+SubaBase-n807-s1,806,timefold,3,60000,,1338109,,,true,60008.891,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1

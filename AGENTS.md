@@ -134,4 +134,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F3 — Mapa real: Suba completa.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F4 — Restricciones del dominio.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
