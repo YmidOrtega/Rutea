@@ -26,3 +26,14 @@ Desviarse menos ahorra un 12 % de km, pero casi duplica el P95 de espera mientra
 - En el 28,4 % de los desbordes ningún compactador tiene cupo o turno y sale una reserva: el plan con el menor número de camiones deja poco margen, como ya se vio con las averías.
 - En 78 de los 340 desbordes que recoge un camión en servicio, una reserva habría llegado antes. La regla prefiere no sacar un camión por un solo contenedor; si la operación fija un plazo, esta regla cambia.
 - Pendiente: los sensores de llenado simulados generarán desbordes solos, y los aprovechables todavía no tienen operación en vivo.
+
+## Remedición (2026-10-21)
+
+Con el desempate de la matriz del ADR 0007 (`docs/benchmarks/f5-overflows/overflows-20261021-182034-482.csv`):
+
+| Regla | Reporte → recogida P50 | P95 | km agregados |
+|---|---:|---:|---:|
+| El que llega primero | 31,7 min | 99,6 min | 13.019,9 |
+| El que menos se desvía | 45,5 min | 207,3 min | 11.464,9 |
+
+Sale una reserva en el 28,0 % de los desbordes, y en 75 de los 340 que recoge un camión en servicio una reserva habría llegado antes. Despachar tarda 41,9 µs (P50) y 163,3 µs (P99), más que antes (29,6 y 143,9 µs), porque cada tramo averigua qué red rige a su hora. La decisión no cambia.

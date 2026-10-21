@@ -38,3 +38,15 @@ Se agregaron dos estrategias junto a la de solo reserva (`BreakdownReplanner.Str
 | Reasignar solo si evita la reserva | 343 | 35.456,1 (−1,3 %) | 39,9 / 149,3 min | 500/500 |
 
 Con el plan de menos camiones, los que siguen en servicio tienen poco margen: absorben 7 huérfanos de mediana y evitan la reserva en 8 de 500 averías. "Reasignar solo si evita la reserva" nunca empeora los km frente a "solo reserva". "Reasignar primero" acelera la respuesta a costa de km. Es una decisión operativa, así que las tres quedan disponibles; la API en vivo usa "solo reserva", que no cambia la ruta de ningún camión en servicio.
+
+## Remedición (2026-10-21)
+
+Con el desempate de la matriz del ADR 0007, los metros no cambian, pero los horarios se mueven unos segundos y la asignación de turnos cambia un poco. Las mismas 500 averías (`docs/benchmarks/f5-breakdowns/breakdowns-20261021-182219-353.csv`):
+
+| Estrategia | Reserva (total) | km agregados | Primer huérfano recogido (P50 / máx.) | R05 |
+|---|---:|---:|---:|---:|
+| Solo reserva | 354 | 35.084,1 | 39,9 / 76,4 min | 500/500 |
+| Reasignar primero | 342 | 41.865,8 (+19,3 %) | 13,2 / 87,6 min | 500/500 |
+| Reasignar solo si evita la reserva | 342 | 34.403,4 (−1,9 %) | 39,0 / 87,6 min | 500/500 |
+
+Reasignar evita la reserva en 12 de 500 averías. La latencia P99 de replanificar, en caliente, queda en 124,6 ms. La decisión no cambia.
