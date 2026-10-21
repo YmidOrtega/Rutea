@@ -59,6 +59,11 @@
 }
 
 /* Lo que exige la norma en la parada: con el color de advertencia, porque cambia lo que hace el conductor */
+.tooltip .orphan {
+  margin-top: 4px;
+  color: var(--crit);
+}
+
 .tooltip .rule {
   margin-top: 4px;
   color: var(--warn);

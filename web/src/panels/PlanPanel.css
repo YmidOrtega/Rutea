@@ -93,11 +93,12 @@
 }
 
 .route {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: 58px 1fr 36px 56px 44px;
   align-items: center;
   gap: 8px;
-  width: 100%;
   padding: 4px 6px;
   margin: 0 -6px;
   background: none;
@@ -185,6 +186,74 @@
   font-size: var(--text-12);
   line-height: 1.5;
   color: var(--fg-muted);
+}
+
+/* La avería es una alerta: lleva el acento solo cuando el foco o el puntero están encima. */
+.routes li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.breakdown {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.breakdown:hover:not(:disabled),
+.breakdown:focus-visible {
+  color: var(--sodium);
+  border-color: var(--sodium);
+}
+
+.breakdown:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.events {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-bottom: 10px;
+}
+
+.events h2 {
+  margin: 0 0 6px;
+  font-weight: 500;
+}
+
+.events ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: var(--text-12);
+  line-height: 1.45;
+}
+
+.events li {
+  display: grid;
+  gap: 2px;
+}
+
+.events strong {
+  color: var(--sodium);
+  font-weight: 500;
+}
+
+.event-error {
+  margin: 0 0 6px;
+  font-size: var(--text-12);
+  color: var(--crit);
 }
 
 @media (max-width: 640px) {

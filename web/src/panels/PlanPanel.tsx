@@ -1,11 +1,19 @@
 import { useState } from 'react'
 import { STREAM_NAMES, type DemoPlan, type WasteStream } from '../demo/plan'
+import type { BreakdownEvent } from '../operations/live'
 import './PlanPanel.css'
 
 interface Props {
   plan: DemoPlan
   visible: Set<string>
   onToggle: (routeId: string) => void
+  /** Con la API detrás, cada compactador puede averiarse a la hora del reloj. */
+  live: boolean
+  events: BreakdownEvent[]
+  pending: string | null
+  eventError: string | null
+  onBreakdown: (truck: string) => void
+  clock: (secondsFromShiftStart: number) => string
 }
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
@@ -17,7 +25,8 @@ const hours = (seconds: number) => {
 }
 const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 
-export function PlanPanel({ plan, visible, onToggle }: Props) {
+export function PlanPanel({ plan, visible, onToggle, live, events, pending, eventError, onBreakdown, clock }: Props) {
+  const broken = new Set(events.map((event) => event.truck))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
@@ -36,7 +45,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
         <div className="plan-body">
           <dl className="kpis">
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
-            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas de vehículo" />
+            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas" />
             <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
             <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
@@ -95,6 +104,17 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                             <span className="unit">h</span>
                           </span>
                         </button>
+                        {live && route.id.startsWith('C-') && (
+                          <button
+                            className="breakdown"
+                            disabled={pending !== null || broken.has(route.id)}
+                            onClick={() => onBreakdown(route.id)}
+                            aria-label={`Simular avería de ${route.id} a la hora del reloj`}
+                            title={broken.has(route.id) ? `${route.id} ya está averiado` : 'Simular avería ahora'}
+                          >
+                            {pending === route.id ? '…' : '!'}
+                          </button>
+                        )}
                       </li>
                     )
                   })}
@@ -102,6 +122,33 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
               </section>
             )
           })}
+
+          {(events.length > 0 || eventError) && (
+            <section className="events" aria-label="Eventos" aria-live="polite">
+              <h2 className="label">Eventos</h2>
+              {eventError && <p className="event-error">{eventError}</p>}
+              <ul>
+                {events.map((event) => (
+                  <li key={`${event.truck}@${event.atSeconds}`}>
+                    <strong className="num">
+                      {clock(event.atSeconds)} · {event.truck} averiado
+                    </strong>
+                    <span>
+                      <span className="num">{event.orphans.length}</span> contenedores sin recoger. Sale{' '}
+                      {event.reserve.map((route) => route.id).join(', ')} a las{' '}
+                      <span className="num">{clock(event.dispatchSeconds)}</span> y llega al primero a las{' '}
+                      <span className="num">{clock(event.firstPickupSeconds)}</span>.
+                    </span>
+                    <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
+                      R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
+                      <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span>{' '}
+                      (máximo 3 h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="compliance" aria-label="Normativa">
             <h2 className="label">Normativa</h2>
