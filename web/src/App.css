@@ -58,6 +58,12 @@
   color: var(--fg-muted);
 }
 
+/* Lo que exige la norma en la parada: con el color de advertencia, porque cambia lo que hace el conductor */
+.tooltip .rule {
+  margin-top: 4px;
+  color: var(--warn);
+}
+
 .status {
   position: absolute;
   top: 72px;

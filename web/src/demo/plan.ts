@@ -4,13 +4,28 @@ export type WasteStream = 'RECYCLABLE' | 'ORGANIC' | 'NON_RECYCLABLE'
 /** [lon, lat], el orden de MapLibre y deck.gl. */
 export type LonLat = [number, number]
 
-/** Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. */
+/**
+ * Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. `rules` dice, en
+ * texto, lo que la norma exige en esta parada (R02, R07).
+ */
 export interface Container {
   id: string
   stream: WasteStream
   position: LonLat
   kg: number
   route: string
+  visitSeconds: number
+  noCompaction: boolean
+  nightNoise: boolean
+  rules: string[]
+}
+
+/** Una regla de docs/normativa.md y cuántas paradas toca en el plan. */
+export interface ComplianceCheck {
+  id: string
+  citation: string
+  count: number
+  summary: string
 }
 
 /**
@@ -58,6 +73,7 @@ export interface DemoPlan {
   sites: Site[]
   containers: Container[]
   routes: Route[]
+  compliance: ComplianceCheck[]
 }
 
 export interface Trip {

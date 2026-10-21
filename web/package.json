@@ -12,7 +12,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "demo:data": "cd .. && ./mvnw -q -pl rutea-app -am package -DskipTests && java -Dloader.main=me.ymid.rutea.app.planning.DemoPlanExporter -cp rutea-app/target/rutea-app.jar org.springframework.boot.loader.launch.PropertiesLauncher data/osm/suba.rgraph web/public/demo/plan-suba.json"
+    "demo:data": "cd .. && ./mvnw -q -pl rutea-app -am package -DskipTests && java -Dloader.main=me.ymid.rutea.app.planning.DemoPlanExporter -cp rutea-app/target/rutea-app.jar org.springframework.boot.loader.launch.PropertiesLauncher data/osm/suba.rgraph data/osm/suba-sitios-sensibles.csv web/public/demo/plan-suba.json"
   },
   "dependencies": {
     "@deck.gl/core": "^9.4.0",

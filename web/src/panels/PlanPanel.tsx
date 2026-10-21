@@ -103,6 +103,20 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             )
           })}
 
+          <section className="compliance" aria-label="Normativa">
+            <h2 className="label">Normativa</h2>
+            <ul>
+              {plan.compliance.map((check) => (
+                <li key={check.id} title={check.citation}>
+                  <span className={`num rule-id ${check.id === 'R03' && check.count === 0 ? 'ok' : 'warn'}`}>
+                    {check.id}
+                  </span>
+                  <span>{check.summary}.</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <p className="note">
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}

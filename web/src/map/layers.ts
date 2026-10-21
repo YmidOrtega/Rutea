@@ -79,7 +79,8 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       data: containers,
       getPosition: (container) => container.position,
       getFillColor: (container) => palette.stream[container.stream],
-      getLineColor: (container) => strokeColor(palette, container.stream),
+      // Ámbar si ahí no se puede compactar (R07): es lo único que el conductor tiene que hacer distinto.
+      getLineColor: (container) => (container.noCompaction ? palette.warn : strokeColor(palette, container.stream)),
       getRadius: 14,
       radiusMinPixels: 3,
       radiusMaxPixels: 9,
