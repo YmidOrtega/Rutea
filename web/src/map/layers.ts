@@ -2,6 +2,7 @@ import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
 import { isReserveId, type ClosureEvent } from '../operations/live'
+import type { VehicleTrack } from '../operations/telemetry'
 import { strokeColor, type Palette } from './colors'
 import suba from './suba.json'
 
@@ -108,9 +109,6 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
     }),
   ]
 }
-
-/** Las rutas de reserva llevan el acento: son lo que está pasando ahora (docs/diseno.md). */
-const isReserve = (route: Route) => isReserveId(route.id)
 
 /**
  * Lo que dejaron los eventos: los contenedores huérfanos con borde crítico, los desbordados con un anillo crítico
@@ -220,13 +218,14 @@ export function operationLayers(
   ]
 }
 
+/** Las reservas llevan el acento: son lo que está pasando ahora (docs/diseno.md). */
 export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, palette: Palette) {
   return new TripsLayer<Trip>({
     id: 'trips',
-    data: trips.filter((trip) => visible.has(trip.route.id)),
-    getPath: (trip) => trip.route.path,
+    data: trips.filter((trip) => visible.has(trip.id)),
+    getPath: (trip) => trip.path,
     getTimestamps: (trip) => trip.timestamps,
-    getColor: (trip) => (isReserve(trip.route) ? palette.sodium : strokeColor(palette, trip.route.stream)),
+    getColor: (trip) => (isReserveId(trip.id) ? palette.sodium : strokeColor(palette, trip.stream)),
     getWidth: 4,
     widthUnits: 'pixels',
     jointRounded: true,
@@ -235,5 +234,30 @@ export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, pa
     parameters: FLAT,
     trailLength: 900,
     currentTime: time,
+  })
+}
+
+export interface VehicleMark {
+  vehicle: VehicleTrack
+  position: LonLat
+}
+
+/** Dónde reporta estar cada vehículo. El averiado lleva el borde crítico; el que terminó su turno no se dibuja. */
+export function vehiclesLayer(marks: VehicleMark[], visible: Set<string>, palette: Palette) {
+  return new ScatterplotLayer<VehicleMark>({
+    id: 'vehicles',
+    data: marks.filter((mark) => visible.has(mark.vehicle.id) && mark.vehicle.state !== 'DONE'),
+    getPosition: (mark) => mark.position,
+    getFillColor: (mark) =>
+      isReserveId(mark.vehicle.id) ? palette.sodium : strokeColor(palette, mark.vehicle.stream),
+    getLineColor: (mark) => (mark.vehicle.state === 'BROKEN' ? palette.crit : palette.bg),
+    getRadius: 20,
+    radiusMinPixels: 4,
+    radiusMaxPixels: 8,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: (mark) => (mark.vehicle.state === 'BROKEN' ? 2.5 : 1.5),
+    pickable: true,
+    parameters: FLAT,
   })
 }

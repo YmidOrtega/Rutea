@@ -45,8 +45,20 @@
   cursor: pointer;
 }
 
-.play:hover {
+.play:hover,
+.speed:hover {
   background: var(--line);
+}
+
+.speed {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-12);
+  cursor: pointer;
 }
 
 .tooltip strong,

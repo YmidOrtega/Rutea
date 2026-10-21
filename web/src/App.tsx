@@ -4,7 +4,7 @@ import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
 import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
-import { operationLayers, staticLayers, tripsLayer, zoneLayers } from './map/layers'
+import { operationLayers, staticLayers, tripsLayer, vehiclesLayer, zoneLayers, type VehicleMark } from './map/layers'
 import {
   clock,
   secondsOfDay,
@@ -18,23 +18,34 @@ import {
 import {
   currentPlan,
   isReserveId,
-  listenEvents,
+  listen,
   loadPlan,
   overflowPickup,
   requestBreakdown,
   requestClosure,
   requestOverflow,
   roadClassName,
-  stopAt,
   type ClosureEvent,
   type CurrentPlan,
   type OperationEvent,
 } from './operations/live'
+import {
+  applyTelemetry,
+  emptyFeed,
+  feedTime,
+  feedTrips,
+  positionAt,
+  setClock,
+  VEHICLE_STATES,
+  type Feed,
+} from './operations/telemetry'
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
+/** Velocidades del reloj compartido: un cuarto de hora, una hora o cuatro horas de turno por minuto. */
+const SPEEDS = [15, 60, 240]
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -48,8 +59,10 @@ export default function App() {
   const [eventError, setEventError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [visible, setVisible] = useState<Set<string>>(new Set())
-  const [time, setTime] = useState(0)
-  const [playing, setPlaying] = useState(() => !prefersReducedMotion())
+  const [frameTime, setTime] = useState(0)
+  const [reducedMotion] = useState(prefersReducedMotion)
+  const [playing, setPlaying] = useState(() => !reducedMotion)
+  const [feed, setFeed] = useState<Feed | null>(null)
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
 
@@ -67,11 +80,23 @@ export default function App() {
         setLive(loaded.live)
         setVisible(new Set(loaded.plan.routes.map((route) => route.id)))
         loaded.events.forEach(addEvent)
+        if (loaded.telemetry) setFeed(applyTelemetry(emptyFeed(loaded.telemetry.clock), loaded.telemetry))
       })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)))
   }, [addEvent])
 
-  useEffect(() => (live ? listenEvents(addEvent) : undefined), [live, addEvent])
+  useEffect(() => {
+    if (!live || !plan) return
+    return listen({
+      event: addEvent,
+      telemetry: (message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)),
+      reset: () => {
+        setEvents([])
+        setFeed((current) => current && { ...current, vehicles: new Map() })
+        setVisible(new Set(plan.routes.map((route) => route.id)))
+      },
+    })
+  }, [live, plan, addEvent])
 
   const request = (key: string, send: () => Promise<OperationEvent | OperationEvent[]>) => {
     setPending(key)
@@ -81,11 +106,17 @@ export default function App() {
       .catch((cause: unknown) => setEventError(cause instanceof Error ? cause.message : String(cause)))
       .finally(() => setPending(null))
   }
-  const breakdown = (truck: string) => request(truck, () => requestBreakdown(truck, time))
-  const overflow = (container: string) => request(container, () => requestOverflow(container, time))
+  const breakdown = (truck: string) => request(truck, () => requestBreakdown(truck))
+  const overflow = (container: string) => request(container, () => requestOverflow(container))
   const closure = (at: LonLat) => {
     setClosing(false)
-    request('closure', () => requestClosure(at, time))
+    request('closure', () => requestClosure(at))
+  }
+  const controlClock = (running: boolean, speed: number) => {
+    setEventError(null)
+    setClock(running, speed)
+      .then((message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)))
+      .catch((cause: unknown) => setEventError(cause instanceof Error ? cause.message : String(cause)))
   }
 
   useEffect(() => {
@@ -96,15 +127,6 @@ export default function App() {
   }, [closing])
 
   const current = useMemo(() => (plan ? currentPlan(plan, events) : null), [plan, events])
-  // Lo que se reproduce: cada camión averiado se detiene en su avería y las reservas se suman.
-  const routes = useMemo(() => {
-    if (!current) return []
-    const planned = current.plan.routes.map((route) => {
-      const at = current.brokenAt.get(route.id)
-      return at === undefined ? route : stopAt(route, at)
-    })
-    return [...planned, ...current.reserve]
-  }, [current])
   const orphans = useMemo(
     () =>
       current?.plan.containers.filter(
@@ -118,11 +140,26 @@ export default function App() {
   )
   const selectedContainer = current?.plan.containers.find((container) => container.id === selected) ?? null
 
-  const trips = useMemo(() => toTrips(routes), [routes])
+  // Con la API, el mapa dibuja lo que transmiten los vehículos; sin ella, reproduce el plan estático por su cuenta.
+  const animated = feed !== null && feed.clock.running && !reducedMotion
+  // Pausado, o sin animación por preferencia del sistema, el mapa queda en la hora del último reporte.
+  const time = feed && !animated ? feed.clock.seconds : frameTime
+  const trips = useMemo(() => (feed ? feedTrips(feed) : toTrips(plan?.routes ?? [])), [feed, plan])
   const duration = useMemo(() => Math.max(0, ...trips.map((trip) => trip.timestamps.at(-1) ?? 0)), [trips])
 
   useEffect(() => {
-    if (!playing || duration === 0) return
+    if (!feed || !animated) return
+    let frame = 0
+    const tick = (now: number) => {
+      setTime(feedTime(feed, now))
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [feed, animated])
+
+  useEffect(() => {
+    if (feed || !playing || duration === 0) return
     let frame = 0
     let last = performance.now()
     const tick = (now: number) => {
@@ -133,7 +170,7 @@ export default function App() {
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [playing, duration])
+  }, [feed, playing, duration])
 
   const zone = useMemo(() => zoneLayers(palette), [palette])
   const baseLayers = useMemo(
@@ -151,10 +188,17 @@ export default function App() {
     ],
     [zone, current, visible, palette, orphans, overflowed, selectedContainer],
   )
-  // Antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
-  const layers = plan && (playing || time > 0)
-    ? [...baseLayers, tripsLayer(trips, visible, time, palette)]
-    : baseLayers
+  const marks: VehicleMark[] = feed
+    ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
+    : []
+  // Sin API y antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
+  const layers = feed
+    ? [...baseLayers, tripsLayer(trips, visible, time, palette), vehiclesLayer(marks, visible, palette)]
+    : plan && (playing || time > 0)
+      ? [...baseLayers, tripsLayer(trips, visible, time, palette)]
+      : baseLayers
+  const sim = feed?.clock
+  const finished = sim !== undefined && !sim.running && sim.seconds >= sim.endSeconds
 
   const toggleRoute = (routeId: string) =>
     setVisible((current) => {
@@ -191,13 +235,33 @@ export default function App() {
         {plan && (
           <>
             <span className="num clock" aria-label="Hora simulada">{clock(secondsOfDay(plan.meta.shiftStart) + time)}</span>
-            <button
-              className="play"
-              onClick={() => setPlaying(!playing)}
-              aria-label={playing ? 'Pausar' : 'Reproducir'}
-            >
-              {playing ? '❚❚' : '▶'}
-            </button>
+            {sim ? (
+              <>
+                <button
+                  className="play"
+                  onClick={() => controlClock(!sim.running, sim.speed)}
+                  aria-label={sim.running ? 'Pausar' : finished ? 'Empezar un turno nuevo' : 'Reproducir'}
+                  title={finished ? 'Turno nuevo: borra los eventos' : 'El reloj es el mismo para todos'}
+                >
+                  {sim.running ? '❚❚' : finished ? '↺' : '▶'}
+                </button>
+                <button
+                  className="speed num"
+                  onClick={() => controlClock(sim.running, SPEEDS[(SPEEDS.indexOf(sim.speed) + 1) % SPEEDS.length])}
+                  aria-label={`Velocidad del reloj: ${sim.speed} veces el tiempo real`}
+                >
+                  {sim.speed}×
+                </button>
+              </>
+            ) : (
+              <button
+                className="play"
+                onClick={() => setPlaying(!playing)}
+                aria-label={playing ? 'Pausar' : 'Reproducir'}
+              >
+                {playing ? '❚❚' : '▶'}
+              </button>
+            )}
           </>
         )}
       </header>
@@ -252,7 +316,7 @@ function tooltipFor(current: CurrentPlan | null, live: boolean) {
 }
 
 function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean) {
-  if (!object || ![...CONTAINER_LAYERS, 'sites', ...CLOSURE_LAYERS].includes(layer?.id ?? '')) return null
+  if (!object || ![...CONTAINER_LAYERS, 'sites', 'vehicles', ...CLOSURE_LAYERS].includes(layer?.id ?? '')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
     className: 'tooltip',
@@ -269,7 +333,9 @@ function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boo
     html:
       layer?.id === 'sites'
         ? siteHtml(object as Site)
-        : CLOSURE_LAYERS.includes(layer?.id ?? '')
+        : layer?.id === 'vehicles'
+          ? vehicleHtml(object as VehicleMark)
+          : CLOSURE_LAYERS.includes(layer?.id ?? '')
           ? closureHtml(object as ClosureEvent, current)
           : containerHtml(object as Container, current, live),
   }
@@ -297,11 +363,17 @@ function containerHtml(container: Container, current: CurrentPlan, live: boolean
 }
 
 
+function vehicleHtml({ vehicle }: VehicleMark): string {
+  return `<strong class="num">${vehicle.id}</strong>
+    <span>${capitalize(VEHICLE_STATES[vehicle.state])} · posición transmitida por el servidor</span>`
+}
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
 function closureHtml(closure: ClosureEvent, current: CurrentPlan): string {
   const at = clock(secondsOfDay(current.plan.meta.shiftStart) + closure.atSeconds)
   const trucks = closure.changes.map((change) => change.truck).join(', ')
-  const road = roadClassName(closure.roadClass)
-  return `<strong class="num">${road.charAt(0).toUpperCase() + road.slice(1)} cerrada a las ${at}</strong>
+  return `<strong class="num">${capitalize(roadClassName(closure.roadClass))} cerrada a las ${at}</strong>
     <span>${trucks ? `Se desvían ${trucks}` : 'No cambia ningún turno'}</span>`
 }
 

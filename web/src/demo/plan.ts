@@ -83,7 +83,9 @@ export interface DemoPlan {
 }
 
 export interface Trip {
-  route: Route
+  id: string
+  stream: WasteStream
+  path: LonLat[]
   timestamps: number[]
 }
 
@@ -103,7 +105,7 @@ export async function loadDemoPlan(url = '/demo/plan-suba.json'): Promise<DemoPl
 
 /** Los tiempos salen de las velocidades por tipo de vía del grafo y de la parada en cada contenedor. */
 export function toTrips(routes: Route[]): Trip[] {
-  return routes.map((route) => ({ route, timestamps: route.times }))
+  return routes.map((route) => ({ id: route.id, stream: route.stream, path: route.path, timestamps: route.times }))
 }
 
 /** "18:00" → segundos desde la medianoche. */

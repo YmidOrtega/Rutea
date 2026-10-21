@@ -1,4 +1,5 @@
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
+import { fetchTelemetry, type TelemetryMessage } from './telemetry'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
@@ -68,6 +69,8 @@ export interface LoadedPlan {
   live: boolean
   /** Lo que ya ocurrió en la sesión del servidor. */
   events: OperationEvent[]
+  /** Los vehículos en la calle y el reloj del servidor; sin API, el mapa reproduce el plan por su cuenta. */
+  telemetry: TelemetryMessage | null
 }
 
 /** Recién arrancada, la API tarda unos 27 s en armar el plan. */
@@ -80,26 +83,26 @@ export async function loadPlan(): Promise<LoadedPlan> {
     const response = await fetch('/api/plan', { signal: abort.signal })
     if (response.ok) {
       const plan = (await response.json()) as DemoPlan
-      const events = await fetch('/api/events').then((r) => (r.ok ? (r.json() as Promise<OperationEvent[]>) : []))
-      return { plan, live: true, events }
+      const [events, telemetry] = await Promise.all([
+        fetch('/api/events').then((r) => (r.ok ? (r.json() as Promise<OperationEvent[]>) : [])),
+        fetchTelemetry(),
+      ])
+      return { plan, live: true, events, telemetry }
     }
   } catch {
     // Sin API: se sigue con el plan estático.
   } finally {
     clearTimeout(timer)
   }
-  return { plan: await loadDemoPlan(), live: false, events: [] }
+  return { plan: await loadDemoPlan(), live: false, events: [], telemetry: null }
 }
 
-/** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. */
-export const requestBreakdown = (truck: string, atSeconds: number) =>
-  post<OperationEvent[]>('/api/breakdowns', { truck, atSeconds: Math.floor(atSeconds) })
+/** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. Todo a la hora del servidor. */
+export const requestBreakdown = (truck: string) => post<OperationEvent[]>('/api/breakdowns', { truck })
 
-export const requestOverflow = (container: string, atSeconds: number) =>
-  post<OverflowEvent>('/api/overflows', { container, atSeconds: Math.floor(atSeconds) })
+export const requestOverflow = (container: string) => post<OverflowEvent>('/api/overflows', { container })
 
-export const requestClosure = ([lon, lat]: LonLat, atSeconds: number) =>
-  post<ClosureEvent>('/api/closures', { lon, lat, atSeconds: Math.floor(atSeconds) })
+export const requestClosure = ([lon, lat]: LonLat) => post<ClosureEvent>('/api/closures', { lon, lat })
 
 async function post<T extends object>(url: string, request: object): Promise<T> {
   const response = await fetch(url, {
@@ -114,8 +117,15 @@ async function post<T extends object>(url: string, request: object): Promise<T> 
   return body
 }
 
-/** Escucha los eventos de la operación; reconecta con espera creciente si se cae. Devuelve cómo cerrar. */
-export function listenEvents(onEvent: (event: OperationEvent) => void): () => void {
+export interface Listeners {
+  event: (event: OperationEvent) => void
+  telemetry: (message: TelemetryMessage) => void
+  /** Empezó un turno nuevo: los eventos se borran. */
+  reset: () => void
+}
+
+/** Escucha la operación; reconecta con espera creciente si se cae. Devuelve cómo cerrar. */
+export function listen(listeners: Listeners): () => void {
   let socket: WebSocket | null = null
   let retry = 1_000
   let closed = false
@@ -126,7 +136,12 @@ export function listenEvents(onEvent: (event: OperationEvent) => void): () => vo
     socket.onopen = () => {
       retry = 1_000
     }
-    socket.onmessage = (message) => onEvent(JSON.parse(String(message.data)) as OperationEvent)
+    socket.onmessage = (message) => {
+      const data = JSON.parse(String(message.data)) as OperationEvent | TelemetryMessage | { type: 'reset' }
+      if (data.type === 'telemetry') listeners.telemetry(data)
+      else if (data.type === 'reset') listeners.reset()
+      else listeners.event(data)
+    }
     socket.onclose = () => {
       if (!closed) {
         timer = window.setTimeout(connect, retry)
@@ -143,14 +158,6 @@ export function listenEvents(onEvent: (event: OperationEvent) => void): () => vo
 }
 
 
-/** El camión averiado se detiene donde estaba: su recorrido se corta a la hora de la avería. */
-export function stopAt(route: Route, atSeconds: number): Route {
-  const keep = route.times.findIndex((t) => t > atSeconds)
-  if (keep === -1) return route
-  const end = Math.max(1, keep)
-  return { ...route, path: route.path.slice(0, end), times: route.times.slice(0, end) }
-}
-
 export interface CurrentPlan {
   /** El plan con los turnos que cambiaron por un desborde y las horas de visita corridas. */
   plan: DemoPlan
@@ -160,8 +167,6 @@ export interface CurrentPlan {
   orphanRoute: Map<string, string>
   /** Contenedor → su último desborde. */
   overflows: Map<string, OverflowEvent>
-  /** Compactador → hora de su avería. */
-  brokenAt: Map<string, number>
   closures: ClosureEvent[]
   /** Contenedor → el cierre que lo dejó sin acceso. */
   isolated: Map<string, ClosureEvent>
@@ -174,12 +179,10 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
   const reserve: Route[] = []
   const orphanRoute = new Map<string, string>()
   const overflows = new Map<string, OverflowEvent>()
-  const brokenAt = new Map<string, number>()
   const closures: ClosureEvent[] = []
   const isolated = new Map<string, ClosureEvent>()
   for (const event of [...events].sort((a, b) => a.seq - b.seq)) {
     if (event.type === 'breakdown') {
-      brokenAt.set(event.truck, event.atSeconds)
       reserve.push(...event.reserve)
       for (const route of event.reserve) for (const stop of route.stops) orphanRoute.set(stop, route.id)
       continue
@@ -205,7 +208,6 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
     reserve,
     orphanRoute,
     overflows,
-    brokenAt,
     closures,
     isolated,
   }
