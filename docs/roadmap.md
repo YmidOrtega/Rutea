@@ -10,8 +10,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F1 | Primer solver | Completa |
 | F2 | Metaheurística y paralelismo | Completa |
 | F3 | Mapa real: Suba completa | Completa |
-| F4 | Restricciones del dominio | **Siguiente** |
-| F5 | Operación en tiempo real | Pendiente |
+| F4 | Restricciones del dominio | Completa |
+| F5 | Operación en tiempo real | **Siguiente** |
 | F6 | Producto y publicación | Pendiente |
 
 ## F0 — Fundamentos (1–2 semanas)
@@ -132,7 +132,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Paradas sin compactación (R07).
 - Reporte por ruta: km, horas, toneladas, CO₂ estimado a partir del consumo de diésel.
 
-**Criterio de cierre:** comparación contra un barrido ingenuo por cuadrantes en la zona piloto, con ahorro en km y CO₂.
+**Criterio de cierre:** comparación contra un barrido ingenuo por cuadrantes en la zona piloto, con ahorro en km y CO₂. **Cumplido** el 2026-10-20: 20,5 % menos km y CO₂ que el mejor barrido, y 25,3 % menos km si se encadenan viajes. Quedan pendientes de datos, no de código: el inventario de ECA, el calendario semanal por zona (R03) y el efecto de R07 sobre la capacidad.
 
 **Avance** (2026-10-20; i5-14400F, Java 21.0.12):
 
