@@ -16,12 +16,8 @@ import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.local.LocalSearchSolver;
 
 /**
- * Genera el plan de demo: contenedores simulados en las esquinas de una cuadrícula sobre Suba,
- * una instancia CVRP por corriente (las corrientes nunca comparten ruta) y las rutas que
- * devuelve la búsqueda local.
- *
- * <p>Todo es simulado hasta F3: la cuadrícula reemplaza a las calles, la distancia es Manhattan
- * en metros y los pesos y capacidades son supuestos de orden de magnitud, no datos de operación.
+ * Todo es simulado hasta F3: la cuadrícula reemplaza a las calles y los pesos y capacidades son
+ * supuestos de orden de magnitud, no datos de operación.
  */
 public final class DemoPlanner {
 
@@ -37,7 +33,6 @@ public final class DemoPlanner {
     private DemoPlanner() {
     }
 
-    /** Peso de un contenedor lleno, capacidad del vehículo y proporción de contenedores. */
     private record StreamProfile(String prefix, int fullBinKg, int vehicleKg, double share) {
     }
 
@@ -60,7 +55,6 @@ public final class DemoPlanner {
         SplittableRandom random = new SplittableRandom(seed);
         GridPoint depot = new GridPoint(0, ROWS / 2);
 
-        // Esquinas distintas al azar (Fisher-Yates parcial), sin el depósito
         int corners = (COLUMNS + 1) * (ROWS + 1);
         int[] order = new int[corners];
         for (int i = 0; i < corners; i++) {
@@ -89,8 +83,8 @@ public final class DemoPlanner {
         }
 
         Solver solver = new LocalSearchSolver();
-        // Holgado: la búsqueda termina en milisegundos; si el límite la cortara, el plan dejaría de
-        // depender solo de la semilla
+        // Si el límite de tiempo cortara la búsqueda, el plan dejaría de depender solo de la
+        // semilla.
         SolverSettings settings = new SolverSettings(seed, Duration.ofSeconds(30));
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (WasteStream stream : WasteStream.values()) {
@@ -105,7 +99,6 @@ public final class DemoPlanner {
                 continue;
             }
 
-            // Nodo 0: depósito; nodo i: el contenedor members.get(i - 1)
             int size = members.size() + 1;
             GridPoint[] nodes = new GridPoint[size];
             int[] demands = new int[size];
@@ -173,7 +166,6 @@ public final class DemoPlanner {
         return String.format("C%03d", container + 1);
     }
 
-    /** Recorrido por las calles de la cuadrícula: entre dos paradas, primero en x y luego en y. */
     private static List<double[]> gridPath(List<GridPoint> visits) {
         List<double[]> path = new ArrayList<>();
         path.add(toLonLat(visits.get(0)));
@@ -190,7 +182,6 @@ public final class DemoPlanner {
         return path;
     }
 
-    /** Esquina de la cuadrícula a {@code [lon, lat]}, con 6 decimales (unos 11 cm). */
     private static double[] toLonLat(GridPoint point) {
         double metersEast = (point.x() - COLUMNS / 2.0) * BLOCK_METERS;
         double metersNorth = (point.y() - ROWS / 2.0) * BLOCK_METERS;

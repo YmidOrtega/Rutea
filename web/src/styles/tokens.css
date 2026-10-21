@@ -1,4 +1,4 @@
-/* Tokens de diseño. Fuente de verdad: docs/diseno.md. Ningún componente usa colores literales. */
+/* Ningún componente usa colores literales: todos salen de aquí (docs/diseno.md). */
 :root {
   --bg: #0b0f14;
   --panel: rgb(16 22 30 / 0.82);
@@ -7,12 +7,11 @@
   --fg-muted: #8b98a8;
   --sodium: #f5a524;
 
-  /* Estado de llenado de contenedores */
   --ok: #4ade80;
   --warn: #fbbf24;
   --crit: #f87171;
 
-  /* Corrientes de residuo (Resolución 2184 de 2019), adaptadas al mapa oscuro */
+  /* Colores de la Resolución 2184 de 2019, adaptados al mapa oscuro. */
   --stream-recyclable: #f1f5f9;
   --stream-organic: #34d399;
   --stream-non-recyclable: #0a0a0a;

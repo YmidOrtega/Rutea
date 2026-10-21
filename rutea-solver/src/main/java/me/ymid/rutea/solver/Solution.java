@@ -3,13 +3,6 @@ package me.ymid.rutea.solver;
 import java.util.Arrays;
 import java.util.Objects;
 
-/**
- * Solución inmutable: una lista de rutas, cada una con los clientes en orden de visita.
- * El depósito no se escribe; toda ruta sale de él y vuelve a él.
- *
- * <p>Es el formato de intercambio (lectura de BKS, resultado de un solver), no la estructura
- * que el solver modifica durante la búsqueda.
- */
 public final class Solution {
 
     private final int[][] routes;
@@ -38,7 +31,6 @@ public final class Solution {
         return routes[route][position];
     }
 
-    /** Copia de la ruta; para recorrerla sin reservar memoria usa {@link #customer(int, int)}. */
     public int[] route(int route) {
         return routes[route].clone();
     }

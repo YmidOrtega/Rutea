@@ -17,13 +17,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import me.ymid.rutea.solver.cvrplib.CvrplibReader;
 
 /**
- * Contrato de todo solver registrado en {@link Solvers}: solución factible en cada instancia de
- * {@code data/cvrplib} y en instancias asimétricas generadas, y la misma solución con la misma
- * semilla. Las asimétricas están porque todas las de CVRPLIB son simétricas y una red vial no lo es.
+ * Las instancias asimétricas existen porque todas las de CVRPLIB son simétricas y una red vial no.
  */
 class SolverContractTest {
 
-    private static final SolverSettings SETTINGS = new SolverSettings(42, Duration.ofSeconds(5));
+    // Iteraciones, no tiempo: la reproducibilidad no puede depender de la máquina que corre las
+    // pruebas.
+    private static final SolverSettings SETTINGS = new SolverSettings(42, Duration.ofSeconds(60), 50);
 
     static Stream<Arguments> solversAndInstances() throws IOException {
         List<Path> instances;
@@ -62,7 +62,6 @@ class SolverContractTest {
         assertThat(second).isEqualTo(first);
     }
 
-    /** Distancia euclidiana más un desvío distinto en cada sentido, como un trazado con contravías. */
     private static Instance asymmetric(int customers, long seed) {
         Random random = new Random(seed);
         int size = customers + 1;

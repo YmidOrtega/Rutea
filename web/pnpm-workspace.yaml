@@ -1,11 +1,6 @@
-# Defensas contra ataques a la cadena de suministro (https://pnpm.io/settings).
-# pnpm 11 ya bloquea los scripts de instalación de dependencias (allowBuilds) y las fuentes
-# exóticas en dependencias transitivas (blockExoticSubdeps); aquí se endurece el resto.
-
-# Una versión debe llevar 7 días publicada antes de instalarse (en minutos; estricto al definirlo).
-# Dependabot usa el mismo plazo (cooldown en .github/dependabot.yml).
+# 7 días (en minutos) antes de instalar una versión nueva; Dependabot usa el mismo plazo.
 minimumReleaseAge: 10080
 
-# Falla si una versión llega con menos garantías de publicación que las anteriores
-# (p. ej. sin provenance tras publicarse con ella): la señal típica de una cuenta comprometida.
+# Falla si una versión llega con menos garantías de publicación que las anteriores,
+# la señal típica de una cuenta comprometida.
 trustPolicy: no-downgrade

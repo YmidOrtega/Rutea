@@ -3,16 +3,14 @@ package me.ymid.rutea.solver.benchmark;
 import java.time.Duration;
 import java.util.Locale;
 
-/**
- * Una fila del CSV: una corrida de un solver sobre una instancia. El costo y la factibilidad
- * vienen del {@code Evaluator}, nunca del solver.
- */
+/** El costo y la factibilidad vienen del Evaluator, nunca del solver. */
 public record BenchmarkResult(
         String instance,
         int customers,
         String solver,
         long seed,
         Duration timeLimit,
+        long iterationLimit,
         long cost,
         long bestKnownCost,
         boolean feasible,
@@ -20,9 +18,8 @@ public record BenchmarkResult(
         int vehicles) {
 
     static final String CSV_HEADER =
-            "instance,customers,solver,seed,time_limit_ms,cost,bks,gap_pct,feasible,wall_ms,vehicles,machine";
+            "instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,machine";
 
-    /** Gap frente a la BKS: {@code (costo − BKS) / BKS}. */
     public double gap() {
         return (double) (cost - bestKnownCost) / bestKnownCost;
     }
@@ -34,6 +31,7 @@ public record BenchmarkResult(
                 solver,
                 Long.toString(seed),
                 Long.toString(timeLimit.toMillis()),
+                iterationLimit == Long.MAX_VALUE ? "" : Long.toString(iterationLimit),
                 Long.toString(cost),
                 Long.toString(bestKnownCost),
                 String.format(Locale.ROOT, "%.3f", gap() * 100),

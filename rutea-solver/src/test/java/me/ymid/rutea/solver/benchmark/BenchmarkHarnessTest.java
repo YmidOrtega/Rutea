@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,12 +32,17 @@ class BenchmarkHarnessTest {
 
         BenchmarkHarness.writeCsv(csv, results, "test-machine");
 
+        long instances;
+        try (Stream<Path> files = Files.list(CvrplibData.dir())) {
+            instances = files.filter(file -> file.toString().endsWith(".vrp")).count();
+        }
         List<String> lines = Files.readAllLines(csv);
-        assertThat(lines).hasSize(23);
+        assertThat(lines).hasSize((int) instances + 1);
         assertThat(lines.get(0)).isEqualTo(BenchmarkResult.CSV_HEADER);
-        assertThat(lines.get(1)).startsWith("X-n101-k25,100,nearest-neighbor,7,1000,");
-        assertThat(lines.get(22)).startsWith("X-n200-k36,");
-        assertThat(lines.subList(1, lines.size())).allSatisfy(line -> assertThat(line.split(",")).hasSize(12));
+        assertThat(lines.get(1)).startsWith("X-n101-k25,100,nearest-neighbor,7,1000,,");
+        assertThat(lines.subList(1, lines.size())).extracting(line -> Integer.parseInt(line.split(",")[1]))
+                .isSorted();
+        assertThat(lines.subList(1, lines.size())).allSatisfy(line -> assertThat(line.split(",")).hasSize(13));
         assertThat(results).allSatisfy(result -> {
             assertThat(result.feasible()).isTrue();
             assertThat(result.cost()).isGreaterThanOrEqualTo(result.bestKnownCost());
@@ -45,11 +51,11 @@ class BenchmarkHarnessTest {
 
     @Test
     void gapIsRelativeToBestKnownCost() {
-        BenchmarkResult result = new BenchmarkResult("i", 10, "s", 1, Duration.ofSeconds(1),
+        BenchmarkResult result = new BenchmarkResult("i", 10, "s", 1, Duration.ofSeconds(1), 500,
                 110, 100, true, Duration.ofMillis(3), 2);
 
         assertThat(result.gap()).isEqualTo(0.10, within(1e-12));
-        assertThat(result.toCsv("m")).isEqualTo("i,10,s,1,1000,110,100,10.000,true,3.000,2,m");
+        assertThat(result.toCsv("m")).isEqualTo("i,10,s,1,1000,500,110,100,10.000,true,3.000,2,m");
     }
 
     @Test

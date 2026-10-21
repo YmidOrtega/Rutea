@@ -8,8 +8,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 |---|---|---|
 | F0 | Fundamentos | Completa |
 | F1 | Primer solver | Completa |
-| F2 | Metaheurística y paralelismo | **Siguiente** |
-| F3 | Mapa real | Pendiente |
+| F2 | Metaheurística y paralelismo | Completa |
+| F3 | Mapa real: Suba completa | **Siguiente** |
 | F4 | Restricciones del dominio | Pendiente |
 | F5 | Operación en tiempo real | Pendiente |
 | F6 | Producto y publicación | Pendiente |
@@ -52,9 +52,28 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 
 **Criterio de cierre:** gap promedio de 2–3 % en instancias X de hasta ~300 clientes con un límite de 60 s, y tabla comparativa publicada.
 
-## F3 — Mapa real (2–3 semanas)
+**Resultado** (2026-10-20; 43 instancias X de 101 a 301 nodos; 60 s; semilla 1; i5-14400F, 16 hilos, Java 21.0.12; las tres corridas a la vez en procesos separados). CSV completos en `docs/benchmarks/f2-60s/`.
 
-- Extracto OSM de Bogotá recortado a la zona piloto (Suba).
+| Solver | Gap promedio | n ≤ 200 | n 201–300 | Peor instancia | Llega a la BKS |
+|---|---:|---:|---:|---:|---:|
+| `alns-x4` (4 búsquedas en paralelo) | **0,19 %** | 0,10 % | 0,29 % | 0,69 % | 10 |
+| `alns` | 0,35 % | 0,26 % | 0,44 % | 2,02 % | 8 |
+| `timefold` 2.7.1, configuración por defecto | 2,01 % | 1,58 % | 2,46 % | 6,11 % | 0 |
+
+Las 129 soluciones son factibles según el `Evaluator`. Timefold no queda primero en ninguna instancia. JMH (`exec:exec@jmh`): una pasada completa de búsqueda local sobre un óptimo local tarda 166 µs en X-n101, 345 µs en X-n200 y 584 µs en X-n298, unos 5 ns por movimiento evaluado.
+
+Pendiente de F2: correr en frío y en caliente antes de publicar estas cifras fuera del repo, y comparar contra Timefold afinado (aquí va con su configuración por defecto).
+
+## F3 — Mapa real: Suba completa (3–4 semanas)
+
+Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre instancias de prueba y pasa a ser una solución que funcione en el mundo real, para tomar decisiones con base en ella. Por eso F3 cubre toda la localidad y adelanta de F4 los viajes de descarga.
+
+- Contenedores **simulados realistas** en toda Suba: unos 1.700, sobre calles residenciales reales y con densidad según la vivienda. La cifra sale de repartir por población los 10.746 contenedores que tenía Bogotá en 2022. Se reemplazan cuando aparezca un inventario oficial (UAESP o Área Limpia, operador del ASE 5).
+- Red vial: todas las calles de Suba más las vías principales de Bogotá hasta el relleno Doña Juana (Usme).
+- Operación con **viajes a Doña Juana**: el camión se llena, descarga y vuelve; turno nocturno; tiempo por contenedor. Datos de referencia: ~5.600 t/día de ordinarios en Bogotá (UAESP, 2025), unas ~900 t/día estimadas para Suba por población, compactadores de 16 y 25 yardas con 7–10 t por viaje y 40–90 min de descarga en el relleno.
+- Escala: la memoria de `Plan` (n²) y los ahorros de Clarke-Wright (todos los pares) hay que ajustarlos para ~1.700 nodos.
+- Métricas para decidir: camiones necesarios, km, horas, toneladas por viaje y CO₂, frente a un barrido ingenuo.
+- Extracto OSM con la red de Suba y el corredor a Doña Juana.
 - Grafo dirigido compacto (sentidos viales, velocidades por tipo de vía).
 - Dijkstra paralelo desde cada contenedor para construir la matriz; A* para consultas puntuales.
 - Recalcular solo lo afectado cuando se cierra una vía.
@@ -91,11 +110,11 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 - Docker Compose: un comando para levantar todo.
 - Caso escrito en ymid.me con las métricas.
 
+**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
+
 ## Más adelante (sin fase asignada)
 
 - **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá.
-
-**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
 
 ## Después (fuera de alcance por ahora)
 

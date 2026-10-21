@@ -5,13 +5,6 @@ import java.nio.file.Path;
 
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Escribe el plan de demo en JSON para el frontend. Lo invoca {@code npm run demo:data}.
- *
- * <pre>
- * DemoPlanExporter &lt;archivo.json&gt; [semilla]
- * </pre>
- */
 public final class DemoPlanExporter {
 
     static final long DEFAULT_SEED = 7;

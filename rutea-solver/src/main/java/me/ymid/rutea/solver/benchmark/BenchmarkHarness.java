@@ -27,19 +27,10 @@ import me.ymid.rutea.solver.Solvers;
 import me.ymid.rutea.solver.cvrplib.BestKnownSolution;
 import me.ymid.rutea.solver.cvrplib.CvrplibReader;
 
-/**
- * Arnés de benchmarks: corre cada solver sobre cada instancia {@code .vrp} de un directorio,
- * evalúa el resultado contra la BKS de su {@code .sol} y escribe un CSV por corrida.
- * Al final imprime una tabla en Markdown con el gap por instancia y el promedio por solver.
- *
- * <pre>
- * BenchmarkHarness &lt;dir-instancias&gt; [--out &lt;dir&gt;] [--solver &lt;nombre&gt;] [--seed &lt;n&gt;] [--time-limit &lt;s&gt;]
- * </pre>
- */
 public final class BenchmarkHarness {
 
     private static final String USAGE = "uso: BenchmarkHarness <dir-instancias> [--out <dir>]"
-            + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>]";
+            + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>] [--iterations <n>]";
     private static final Pattern NODE_COUNT = Pattern.compile("-n(\\d+)");
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
@@ -47,22 +38,30 @@ public final class BenchmarkHarness {
     }
 
     public static void main(String[] args) throws IOException {
+        main(args, Solvers.all());
+    }
+
+    /** Con {@code available} otro módulo agrega solvers que el solver no puede conocer, como Timefold. */
+    public static void main(String[] args, List<Solver> available) throws IOException {
         Path instances = null;
         Path out = Path.of("target", "benchmarks");
-        List<Solver> solvers = Solvers.all();
+        List<Solver> solvers = available;
         long seed = 1;
         Duration timeLimit = Duration.ofSeconds(60);
+        long iterationLimit = Long.MAX_VALUE;
         try {
             for (int i = 0; i < args.length; i++) {
                 switch (args[i]) {
                     case "--out" -> out = Path.of(value(args, ++i));
                     case "--seed" -> seed = Long.parseLong(value(args, ++i));
                     case "--time-limit" -> timeLimit = Duration.ofSeconds(Long.parseLong(value(args, ++i)));
+                    case "--iterations" -> iterationLimit = Long.parseLong(value(args, ++i));
                     case "--solver" -> {
                         String name = value(args, ++i);
-                        solvers = List.of(Solvers.byName(name).orElseThrow(() -> new IllegalArgumentException(
-                                "solver desconocido '" + name + "'; disponibles: "
-                                        + Solvers.all().stream().map(Solver::name).toList())));
+                        solvers = List.of(available.stream().filter(solver -> solver.name().equals(name))
+                                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                                        "solver desconocido '" + name + "'; disponibles: "
+                                                + available.stream().map(Solver::name).toList())));
                     }
                     default -> {
                         if (args[i].startsWith("--") || instances != null) {
@@ -82,7 +81,7 @@ public final class BenchmarkHarness {
             return;
         }
 
-        List<BenchmarkResult> results = run(instances, solvers, new SolverSettings(seed, timeLimit));
+        List<BenchmarkResult> results = run(instances, solvers, new SolverSettings(seed, timeLimit, iterationLimit));
         Path csv = out.resolve("run-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         writeCsv(csv, results, machine());
         printSummary(System.out, results);
@@ -97,7 +96,6 @@ public final class BenchmarkHarness {
         return args[index];
     }
 
-    /** Corre cada solver sobre cada instancia del directorio, de la más pequeña a la más grande. */
     public static List<BenchmarkResult> run(Path dir, List<Solver> solvers, SolverSettings settings)
             throws IOException {
         List<Path> files;
@@ -125,20 +123,19 @@ public final class BenchmarkHarness {
                 Duration wallTime = Duration.ofNanos(System.nanoTime() - start);
                 Evaluation evaluation = Evaluator.evaluate(instance, solution);
                 results.add(new BenchmarkResult(instance.name(), instance.customerCount(), solver.name(),
-                        settings.seed(), settings.timeLimit(), evaluation.cost(), bks.cost(),
+                        settings.seed(), settings.timeLimit(), settings.iterationLimit(), evaluation.cost(), bks.cost(),
                         evaluation.feasible(), wallTime, solution.routeCount()));
             }
         }
         return results;
     }
 
-    /** Número de nodos según el nombre CVRPLIB ({@code X-n101-k25} → 101); sin él, al final. */
     private static int nodeCount(Path file) {
         Matcher matcher = NODE_COUNT.matcher(file.getFileName().toString());
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : Integer.MAX_VALUE;
     }
 
-    /** Escribe el CSV de una corrida. Nunca pisa otra: si el archivo ya existe, falla. */
+    /** Nunca pisa una corrida anterior: si el archivo ya existe, falla. */
     static void writeCsv(Path csv, List<BenchmarkResult> results, String machine) throws IOException {
         Files.createDirectories(csv.getParent());
         try (BufferedWriter writer = Files.newBufferedWriter(csv, StandardOpenOption.CREATE_NEW)) {
@@ -172,7 +169,6 @@ public final class BenchmarkHarness {
         }
     }
 
-    /** Descripción de la máquina para el CSV, sin comas: CPU, hilos, sistema y versión de Java. */
     static String machine() {
         String cpu = "CPU desconocida";
         Path cpuinfo = Path.of("/proc/cpuinfo");
@@ -182,7 +178,6 @@ public final class BenchmarkHarness {
                         .map(line -> line.substring(line.indexOf(':') + 1).strip())
                         .findFirst().orElse(cpu);
             } catch (IOException e) {
-                // Sin /proc/cpuinfo legible se reporta la CPU como desconocida
             }
         }
         String machine = cpu + "; " + Runtime.getRuntime().availableProcessors() + " hilos; "

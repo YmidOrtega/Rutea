@@ -2,13 +2,6 @@ package me.ymid.rutea.solver;
 
 import java.util.Objects;
 
-/**
- * Instancia CVRP inmutable: un depósito (nodo {@code 0}), clientes {@code 1..size()-1} con su
- * demanda, una capacidad única por vehículo y la matriz de distancias.
- *
- * <p>No es un {@code record} porque guarda un arreglo: se copia al construir y se expone por
- * índice, sin copias, para que el código caliente del solver lo lea sin reservar memoria.
- */
 public final class Instance {
 
     private final String name;
@@ -51,7 +44,6 @@ public final class Instance {
         return capacity;
     }
 
-    /** Número de nodos, depósito incluido. */
     public int size() {
         return demands.length;
     }

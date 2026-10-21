@@ -1,9 +1,41 @@
-import { PathLayer, ScatterplotLayer } from '@deck.gl/layers'
+import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Trip } from '../demo/plan'
 import { fillColor, strokeColor, type Palette } from './colors'
+import suba from './suba.json'
 
-/** Capas que solo cambian con el plan o con las rutas visibles. */
+/** Fuente y licencia en suba.json. */
+const SUBA = suba.geometry.coordinates[0] as LonLat[]
+
+const SURROUNDINGS: LonLat[] = [
+  [-75, 4],
+  [-73, 4],
+  [-73, 5.6],
+  [-75, 5.6],
+  [-75, 4],
+]
+
+export function zoneLayers(palette: Palette) {
+  return [
+    new PolygonLayer<LonLat[][]>({
+      id: 'zone-mask',
+      data: [[SURROUNDINGS, SUBA]],
+      getPolygon: (rings) => rings,
+      getFillColor: [...palette.bg, 150],
+      stroked: false,
+    }),
+    new PathLayer<LonLat[]>({
+      id: 'zone-edge',
+      data: [SUBA],
+      getPath: (ring) => ring,
+      getColor: [...palette.fgMuted, 200],
+      getWidth: 1.5,
+      widthUnits: 'pixels',
+      jointRounded: true,
+    }),
+  ]
+}
+
 export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
   const containers = plan.containers.filter((container) => visible.has(container.route))
@@ -63,7 +95,6 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
   ]
 }
 
-/** El recorrido hecho hasta `time` por cada camión, con estela. */
 export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, palette: Palette) {
   return new TripsLayer<Trip>({
     id: 'trips',

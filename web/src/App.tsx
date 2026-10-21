@@ -2,16 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import Map from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
-import { BASEMAP_STYLE, INITIAL_VIEW_STATE } from './map/view'
+import { BASEMAP_STYLE, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
-import { staticLayers, tripsLayer } from './map/layers'
+import { staticLayers, tripsLayer, zoneLayers } from './map/layers'
 import { loadDemoPlan, STREAM_NAMES, toTrips, type Container, type DemoPlan } from './demo/plan'
 import { PlanPanel } from './panels/PlanPanel'
 import './App.css'
 
-/** Hora simulada de salida de los camiones; la recolección de no aprovechables es nocturna. */
 const SHIFT_START_SECONDS = 21 * 3600
-/** Segundos simulados por segundo real. */
 const PLAYBACK_SPEED = 60
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -23,6 +21,7 @@ export default function App() {
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(() => !prefersReducedMotion())
   const palette = useMemo(() => readPalette(), [])
+  const [initialView] = useState(initialViewState)
 
   useEffect(() => {
     loadDemoPlan()
@@ -50,9 +49,10 @@ export default function App() {
     return () => cancelAnimationFrame(frame)
   }, [playing, duration])
 
+  const zone = useMemo(() => zoneLayers(palette), [palette])
   const baseLayers = useMemo(
-    () => (plan ? staticLayers(plan, visible, palette) : []),
-    [plan, visible, palette],
+    () => [...zone, ...(plan ? staticLayers(plan, visible, palette) : [])],
+    [zone, plan, visible, palette],
   )
   // Antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
   const layers = plan && (playing || time > 0)
@@ -68,7 +68,7 @@ export default function App() {
 
   return (
     <main className="app">
-      <Map initialViewState={INITIAL_VIEW_STATE} mapStyle={BASEMAP_STYLE} attributionControl={{ compact: true }}>
+      <Map initialViewState={initialView} mapStyle={BASEMAP_STYLE} attributionControl={{ compact: true }}>
         <DeckOverlay layers={layers} getTooltip={tooltip} />
       </Map>
 
@@ -97,7 +97,7 @@ export default function App() {
           <strong>No se pudo cargar el plan de demo.</strong>
           <span className="num">{error}</span>
           <span>
-            Genéralo con <code className="num">npm run demo:data</code>.
+            Genéralo con <code className="num">pnpm demo:data</code>.
           </span>
         </div>
       )}

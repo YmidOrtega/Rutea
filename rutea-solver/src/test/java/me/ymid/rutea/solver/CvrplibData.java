@@ -4,10 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-/**
- * Acceso de los tests a las instancias CVRPLIB de {@code data/cvrplib/X}.
- * Surefire define la ruta en la propiedad {@code rutea.cvrplib.dir}.
- */
+/** Surefire pasa la ruta en la propiedad rutea.cvrplib.dir. */
 public final class CvrplibData {
 
     public static final String DIR_PROPERTY = "rutea.cvrplib.dir";

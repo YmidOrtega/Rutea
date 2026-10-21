@@ -4,17 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Solver de referencia: cada ruta sale del depósito y va siempre al cliente sin visitar más
- * cercano que todavía cabe en el vehículo; cuando ninguno cabe, vuelve y empieza otra ruta.
- *
- * <p>No busca rutas buenas: es la línea base contra la que se miden los demás y prueba el arnés
- * de punta a punta. Es determinista (los empates van al cliente de menor índice) e ignora la
- * semilla y el límite de tiempo. Costo O(n²).
- *
- * <p>Siempre termina: {@link Instance} garantiza que ninguna demanda supera la capacidad, así que
- * cada ruta nueva atiende al menos un cliente.
- */
 public final class NearestNeighborSolver implements Solver {
 
     @Override

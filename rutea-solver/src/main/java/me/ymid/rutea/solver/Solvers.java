@@ -3,15 +3,13 @@ package me.ymid.rutea.solver;
 import java.util.List;
 import java.util.Optional;
 
+import me.ymid.rutea.solver.alns.AlnsSolver;
 import me.ymid.rutea.solver.local.LocalSearchSolver;
 
-/**
- * Registro de los solvers disponibles. El arnés de benchmarks y {@code SolverContractTest} leen
- * de aquí, así que un solver nuevo queda medido y probado con solo agregarlo a la lista.
- */
+/** Agregar un solver aquí basta para que el arnés lo mida y SolverContractTest lo pruebe. */
 public final class Solvers {
 
-    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver());
+    private static final List<Solver> ALL = List.of(new NearestNeighborSolver(), new ClarkeWrightSolver(), new LocalSearchSolver(), new AlnsSolver(), new AlnsSolver(4));
 
     private Solvers() {
     }
