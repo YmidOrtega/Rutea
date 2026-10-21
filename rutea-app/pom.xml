@@ -24,6 +24,16 @@
       <artifactId>rutea-domain</artifactId>
     </dependency>
     <dependency>
+      <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-geo</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-geo</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
@@ -37,6 +47,22 @@
   <build>
     <finalName>rutea-app</finalName>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>suba-instance</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/suba</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>

@@ -1,0 +1,4 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+Suba-n807-s1,806,local-search,1,60000,,1259373,,,true,541.679,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+Suba-n807-s1,806,local-search,2,60000,,1258746,,,true,523.504,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+Suba-n807-s1,806,local-search,3,60000,,1260407,,,true,533.340,17,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1

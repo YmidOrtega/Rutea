@@ -1,0 +1,4 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+SubaBase-n807-s1,806,clarke-wright,1,60000,,1122089,,,true,73.570,18,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+SubaBase-n807-s1,806,clarke-wright,2,60000,,1122089,,,true,51.637,18,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
+SubaBase-n807-s1,806,clarke-wright,3,60000,,1122089,,,true,55.710,18,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1

@@ -10,9 +10,12 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.LongSummaryStatistics;
+import java.util.OptionalLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -24,13 +27,12 @@ import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.Solver;
 import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.Solvers;
-import me.ymid.rutea.solver.cvrplib.BestKnownSolution;
 import me.ymid.rutea.solver.cvrplib.CvrplibReader;
 
 public final class BenchmarkHarness {
 
     private static final String USAGE = "uso: BenchmarkHarness <dir-instancias> [--out <dir>]"
-            + " [--solver <nombre>] [--seed <n>] [--time-limit <segundos>] [--iterations <n>]";
+            + " [--solver <nombre>] [--seed <n>[,<n>...]] [--time-limit <segundos>] [--iterations <n>] [--warmup]";
     private static final Pattern NODE_COUNT = Pattern.compile("-n(\\d+)");
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
@@ -46,14 +48,17 @@ public final class BenchmarkHarness {
         Path instances = null;
         Path out = Path.of("target", "benchmarks");
         List<Solver> solvers = available;
-        long seed = 1;
+        List<Long> seeds = List.of(1L);
         Duration timeLimit = Duration.ofSeconds(60);
         long iterationLimit = Long.MAX_VALUE;
+        boolean warmup = false;
         try {
             for (int i = 0; i < args.length; i++) {
                 switch (args[i]) {
                     case "--out" -> out = Path.of(value(args, ++i));
-                    case "--seed" -> seed = Long.parseLong(value(args, ++i));
+                    case "--seed" -> seeds = Arrays.stream(value(args, ++i).split(",")).map(String::strip)
+                            .map(Long::parseLong).toList();
+                    case "--warmup" -> warmup = true;
                     case "--time-limit" -> timeLimit = Duration.ofSeconds(Long.parseLong(value(args, ++i)));
                     case "--iterations" -> iterationLimit = Long.parseLong(value(args, ++i));
                     case "--solver" -> {
@@ -81,7 +86,7 @@ public final class BenchmarkHarness {
             return;
         }
 
-        List<BenchmarkResult> results = run(instances, solvers, new SolverSettings(seed, timeLimit, iterationLimit));
+        List<BenchmarkResult> results = run(instances, solvers, seeds, timeLimit, iterationLimit, warmup);
         Path csv = out.resolve("run-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         writeCsv(csv, results, machine());
         printSummary(System.out, results);
@@ -98,6 +103,16 @@ public final class BenchmarkHarness {
 
     public static List<BenchmarkResult> run(Path dir, List<Solver> solvers, SolverSettings settings)
             throws IOException {
+        return run(dir, solvers, List.of(settings.seed()), settings.timeLimit(), settings.iterationLimit(), false);
+    }
+
+    /**
+     * Cada solver, en cada instancia, con cada semilla. Con {@code warmup}, antes de medir se resuelve la
+     * instancia una vez y se descarta: la corrida medida es "en caliente". Sin él, es "en frío" solo para la
+     * primera combinación de la JVM; para un número en frío de verdad, se corre una combinación por proceso.
+     */
+    public static List<BenchmarkResult> run(Path dir, List<Solver> solvers, List<Long> seeds, Duration timeLimit,
+            long iterationLimit, boolean warmup) throws IOException {
         List<Path> files;
         try (Stream<Path> listing = Files.list(dir)) {
             files = listing.filter(p -> p.getFileName().toString().endsWith(".vrp"))
@@ -111,20 +126,25 @@ public final class BenchmarkHarness {
 
         List<BenchmarkResult> results = new ArrayList<>();
         for (Path vrp : files) {
+            // Las instancias X traen su .sol (CvrplibDataTest lo exige); las de Suba no tienen BKS publicada.
             Path sol = vrp.resolveSibling(vrp.getFileName().toString().replaceFirst("\\.vrp$", ".sol"));
-            if (!Files.exists(sol)) {
-                throw new IOException("falta la BKS de " + vrp.getFileName() + ": se esperaba " + sol.getFileName());
-            }
+            OptionalLong bks = Files.exists(sol)
+                    ? OptionalLong.of(CvrplibReader.readSolution(sol).cost()) : OptionalLong.empty();
             Instance instance = CvrplibReader.readInstance(vrp);
-            BestKnownSolution bks = CvrplibReader.readSolution(sol);
             for (Solver solver : solvers) {
-                long start = System.nanoTime();
-                Solution solution = solver.solve(instance, settings);
-                Duration wallTime = Duration.ofNanos(System.nanoTime() - start);
-                Evaluation evaluation = Evaluator.evaluate(instance, solution);
-                results.add(new BenchmarkResult(instance.name(), instance.customerCount(), solver.name(),
-                        settings.seed(), settings.timeLimit(), settings.iterationLimit(), evaluation.cost(), bks.cost(),
-                        evaluation.feasible(), wallTime, solution.routeCount()));
+                for (long seed : seeds) {
+                    SolverSettings settings = new SolverSettings(seed, timeLimit, iterationLimit);
+                    if (warmup) {
+                        solver.solve(instance, settings);
+                    }
+                    long start = System.nanoTime();
+                    Solution solution = solver.solve(instance, settings);
+                    Duration wallTime = Duration.ofNanos(System.nanoTime() - start);
+                    Evaluation evaluation = Evaluator.evaluate(instance, solution);
+                    results.add(new BenchmarkResult(instance.name(), instance.customerCount(), solver.name(), seed,
+                            timeLimit, iterationLimit, evaluation.cost(), bks, evaluation.feasible(), wallTime,
+                            solution.routeCount(), warmup));
+                }
             }
         }
         return results;
@@ -149,23 +169,35 @@ public final class BenchmarkHarness {
     }
 
     static void printSummary(PrintStream out, List<BenchmarkResult> results) {
-        out.println("| Instancia | n | Solver | Costo | BKS | Gap | Tiempo | Vehículos |");
-        out.println("|---|---:|---|---:|---:|---:|---:|---:|");
+        out.println("| Instancia | n | Solver | Semilla | Costo | BKS | Gap | Tiempo | Vehículos |");
+        out.println("|---|---:|---|---:|---:|---:|---:|---:|---:|");
         for (BenchmarkResult r : results) {
-            out.printf(Locale.ROOT, "| %s | %d | %s | %d | %d | %s | %.2f ms | %d |%n",
-                    r.instance(), r.customers(), r.solver(), r.cost(), r.bestKnownCost(),
-                    r.feasible() ? String.format(Locale.ROOT, "%.2f %%", r.gap() * 100) : "infactible",
+            String gap = !r.feasible() ? "infactible" : r.gap().isPresent()
+                    ? String.format(Locale.ROOT, "%.2f %%", r.gap().getAsDouble() * 100) : "sin BKS";
+            out.printf(Locale.ROOT, "| %s | %d | %s | %d | %d | %s | %s | %.2f ms | %d |%n",
+                    r.instance(), r.customers(), r.solver(), r.seed(), r.cost(),
+                    r.bestKnownCost().isPresent() ? Long.toString(r.bestKnownCost().getAsLong()) : "—", gap,
                     r.wallTime().toNanos() / 1e6, r.vehicles());
         }
         out.println();
         for (String solver : results.stream().map(BenchmarkResult::solver).distinct().toList()) {
             List<BenchmarkResult> own = results.stream().filter(r -> r.solver().equals(solver)).toList();
             long infeasible = own.stream().filter(r -> !r.feasible()).count();
-            double meanGap = own.stream().filter(BenchmarkResult::feasible)
-                    .mapToDouble(BenchmarkResult::gap).average().orElse(Double.NaN);
-            out.printf(Locale.ROOT, "**%s**: gap promedio %.2f %% en %d instancias%s%n",
-                    solver, meanGap * 100, own.size() - infeasible,
-                    infeasible == 0 ? "" : " (" + infeasible + " infactibles excluidas)");
+            List<BenchmarkResult> withGap = own.stream().filter(BenchmarkResult::feasible)
+                    .filter(r -> r.gap().isPresent()).toList();
+            String excluded = infeasible == 0 ? "" : " (" + infeasible + " infactibles excluidas)";
+            if (!withGap.isEmpty()) {
+                double meanGap = withGap.stream().mapToDouble(r -> r.gap().getAsDouble()).average().orElseThrow();
+                out.printf(Locale.ROOT, "**%s**: gap promedio %.2f %% en %d corridas con BKS%s%n",
+                        solver, meanGap * 100, withGap.size(), excluded);
+            }
+            List<BenchmarkResult> withoutGap = own.stream().filter(BenchmarkResult::feasible)
+                    .filter(r -> r.gap().isEmpty()).toList();
+            if (!withoutGap.isEmpty()) {
+                LongSummaryStatistics costs = withoutGap.stream().mapToLong(BenchmarkResult::cost).summaryStatistics();
+                out.printf(Locale.ROOT, "**%s**: costo promedio %.1f (mín. %d, máx. %d) en %d corridas sin BKS%s%n",
+                        solver, costs.getAverage(), costs.getMin(), costs.getMax(), withoutGap.size(), excluded);
+            }
         }
     }
 

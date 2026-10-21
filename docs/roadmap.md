@@ -9,8 +9,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F0 | Fundamentos | Completa |
 | F1 | Primer solver | Completa |
 | F2 | Metaheurística y paralelismo | Completa |
-| F3 | Mapa real: Suba completa | **Siguiente** |
-| F4 | Restricciones del dominio | Pendiente |
+| F3 | Mapa real: Suba completa | Completa |
+| F4 | Restricciones del dominio | **Siguiente** |
 | F5 | Operación en tiempo real | Pendiente |
 | F6 | Producto y publicación | Pendiente |
 
@@ -69,6 +69,9 @@ Pendiente de F2: correr en frío y en caliente antes de publicar estas cifras fu
 Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre instancias de prueba y pasa a ser una solución que funcione en el mundo real, para tomar decisiones con base en ella. Por eso F3 cubre toda la localidad y adelanta de F4 los viajes de descarga.
 
 - Contenedores **simulados realistas** en toda Suba: unos 1.700, sobre calles residenciales reales y con densidad según la vivienda. La cifra sale de repartir por población los 10.746 contenedores que tenía Bogotá en 2022. Se reemplazan cuando aparezca un inventario oficial (UAESP o Área Limpia, operador del ASE 5).
+  - Fuentes verificadas (2026-10-20): la UAESP cita "los 10.746 contenedores con los que contaba la ciudad" ([Bogotá.gov.co, 9 de marzo de 2022](https://bogota.gov.co/mi-ciudad/habitat/contenedores-soterrados-mejoraran-disposicion-de-residuos-en-bogota)). Según la UAESP en 2025, la licitación exigió contenerizar "más de 12,5 millones de litros": "más de 10.700 contenedores", "la mitad para residuos no aprovechables y la mitad para promover el reciclaje", y después "se pidieron 490 contenedores más" ([Bogotá.gov.co, 26 de febrero de 2025](https://bogota.gov.co/mi-ciudad/habitat/contenedores-de-basuras-en-bogota-apoyan-prestacion-servicio-aseo-2025)).
+  - Consecuencia: solo la mitad negra (no aprovechables) va a Doña Juana. La blanca es ruta selectiva hacia una ECA (Decreto 596 de 2016).
+  - El reparto por población quedó reemplazado por el 15 % del ASE 5 en las toneladas de la ciudad (PGIRS): 10.746 × 15 % × 1/2 = 806 contenedores negros. Cifras y fuentes en `docs/datos.md`.
 - Red vial: todas las calles de Suba más las vías principales de Bogotá hasta el relleno Doña Juana (Usme).
 - Operación con **viajes a Doña Juana**: el camión se llena, descarga y vuelve; turno nocturno; tiempo por contenedor. Datos de referencia: ~5.600 t/día de ordinarios en Bogotá (UAESP, 2025), unas ~900 t/día estimadas para Suba por población, compactadores de 16 y 25 yardas con 7–10 t por viaje y 40–90 min de descarga en el relleno.
 - Escala: la memoria de `Plan` (n²) y los ahorros de Clarke-Wright (todos los pares) hay que ajustarlos para ~1.700 nodos.
@@ -79,7 +82,46 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Recalcular solo lo afectado cuando se cierra una vía.
 - El frontend reemplaza la cuadrícula simulada por las geometrías reales.
 
-**Criterio de cierre:** el solver planifica la zona piloto y las rutas se dibujan sobre calles reales.
+**Criterio de cierre:** el solver planifica la zona piloto y las rutas se dibujan sobre calles reales. **Cumplido** el 2026-10-20.
+
+**Avance** (2026-10-20; extracto `colombia-261019`; i5-14400F, 16 hilos, Java 21.0.12):
+
+- [x] Lector PBF propio: lee los 333 MB de Colombia en 0,95 s en frío y 0,64 s en caliente, y coincide con libosmium en conteos y sumas de coordenadas.
+- [x] Grafo dirigido compacto (CSR), con sentidos viales y velocidades por tipo de vía (supuestas, no medidas). Se construye en 5,4 s: 18.134 vértices (8.195 en Suba), 34.071 arcos y 2.227 km de calles. Pesa 1,86 MB en `.rgraph`. La poda a la componente fuertemente conexa quita 99 de los 8.294 vértices de Suba (1,2 %).
+- [x] Dijkstra.
+- [x] Sitios ancla en el grafo: la base de Área Limpia en Fontibón (Av. Calle 17 × Carrera 124) y la portería noreste de Doña Juana (nodo `barrier=swing_gate` sobre el borde del relleno), con sus vías privadas de acceso. El lector PBF lee ahora las etiquetas de nodo y coincide con libosmium (639.874 nodos con etiquetas). Con los sitios, el grafo tiene 18.729 vértices, 35.364 arcos y 2.287 km. Centro de Suba → portería: 30,6 km de ida y 32,9 km de vuelta. Base → centro de Suba: 18,7 km.
+- [x] Calibración: desde el centroide del ASE 5 del PGIRS, el grafo da 29,1 km hasta la portería; el PGIRS dice 32,589 km (10,7 % más). Ver `docs/datos.md`.
+- [x] Matriz de distancias y tiempos en paralelo (`TravelMatrix`): 1.701 × 1.701 sobre el grafo real en 377 ms con 16 hilos y 3,6 s con uno. Sale idéntica en los dos casos; el 97,5 % de las celdas es asimétrico.
+- [x] Contenedores negros simulados (hoy 806, ver `docs/datos.md`) (`SimulatedContainers`, semilla 1) sobre 693,9 km de calle local de Suba (terciaria, sin clasificar, residencial y `living_street`), repartidos según la longitud de calle porque los edificios de OSM en Suba están incompletos. Separación mínima de 50 m; la mediana al vecino más cercano es de 116 m. La matriz con el relleno (851 × 851) sale en 230 ms; la corrida se hizo con 850.
+- [x] Demanda: 160 kg de media por contenedor y recolección (110.760 kg/día en contenedores × 7/6 ÷ 806), con fuentes en `docs/datos.md`.
+- [x] Escala del solver: con 807 nodos no hace falta ajustar nada (la búsqueda local termina en 0,7 s; ningún solver pasa de ~300 MB). El ajuste previsto era para ~1.700 nodos.
+- [x] Benchmark de Suba (`data/suba/Suba-n807-s1.vrp`, sin BKS): 806 contenedores, 128.454 kg y compactadores de 8 t, con la portería de Doña Juana como depósito. 60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.12; hasta 7 procesos a la vez. CSV en `docs/benchmarks/f3-suba-60s/`.
+
+  | Solver | En frío (prom.; mín.–máx.) | En caliente (prom.; mín.–máx.) | Viajes |
+  |---|---:|---:|---:|
+  | `nearest-neighbor` | 1.400,1 km | 1.400,1 km | 17 |
+  | `clarke-wright` | 1.295,2 km | 1.295,2 km | 17 |
+  | `local-search` | 1.259,5 km; 1.258,7–1.260,4 | igual | 17 |
+  | `alns` | 1.242,7 km; 1.237,0–1.247,7 | 1.240,5 km; 1.239,6–1.241,0 | 17 |
+  | `alns-x4` | **1.237,5 km**; 1.234,0–1.243,7 | **1.237,8 km**; 1.233,2–1.241,8 | 17 |
+  | `timefold` 2.7.1, configuración por defecto | 1.675,0 km; 1.644,3–1.693,6 | 1.605,2 km; 1.596,9–1.614,8 | 17 |
+
+  Las 36 soluciones son factibles según el `Evaluator`, y todas usan el mínimo de 17 viajes. Al menos 788,5 km son inevitables: 17 viajes × (24,1 + 22,3) km hasta el contenedor más cercano al relleno, ida y vuelta. Con límite de tiempo, el resultado depende de la carga de la máquina: `alns` con semilla 1, solo en la máquina, dio 1.231,8 km; aquí, con 7 procesos a la vez, 1.247,7 km.
+- [x] Frontend sobre las geometrías reales: `pnpm demo:data` resuelve Suba con ALNS (semilla 7, 2.000 iteraciones, ~16 s) y dibuja los 17 viajes calle por calle (37.374 puntos, 1.224,1 km). Las horas de paso salen de las velocidades del grafo. El planificador verifica que cada tramo dibujado mida lo mismo que la matriz que optimizó el solver.
+- [x] Turno completo de cada compactador: base de Fontibón → contenedores → portería de Doña Juana → base. La instancia (`SubaBase-n807-s1`) usa el nodo 0 como dos lugares gracias a la matriz asimétrica: su fila sale de la base y su columna llega a la portería. El regreso es fijo por camión y no cambia la optimización. El benchmark de arriba es del modelo anterior (`Suba-n807-s1`, con la portería como depósito en los dos sentidos).
+- [x] Parada de 60 s en cada contenedor (`PENDIENTE_VERIFICAR`; ver `docs/datos.md`). Plan de demo (semilla 7): 1.400,2 km con los regresos; turnos de 2,57 a 4,57 h (3,28 h en promedio) y de 31 a 55 contenedores. Saliendo a las 18:00, el último vuelve a la base a las 22:34, dentro del turno de 18:00 a 02:00 sin contar la descarga. Hay margen para un segundo viaje por turno (F4).
+- [x] Benchmark del modelo con base (`SubaBase-n807-s1`, sin BKS), en las mismas condiciones que el anterior: 60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.12; hasta 7 procesos a la vez. El costo es el del solver: base → contenedores → portería, sin el regreso fijo a la base. CSV en `docs/benchmarks/f3-suba-base-60s/`.
+
+  | Solver | En frío (prom.; mín.–máx.) | En caliente (prom.; mín.–máx.) | Viajes |
+  |---|---:|---:|---:|
+  | `nearest-neighbor` | 1.177,0 km | 1.177,0 km | 17 |
+  | `clarke-wright` | 1.122,1 km | 1.122,1 km | 18 |
+  | `local-search` | 1.071,9 km; 1.064,7–1.077,5 | igual | 17–18 |
+  | `alns` | 1.019,7 km; 1.013,8–1.023,8 | 1.021,5 km; 1.021,0–1.021,9 | 17 |
+  | `alns-x4` | **1.017,7 km**; 1.013,0–1.020,0 | **1.021,3 km**; 1.019,7–1.022,5 | 17 |
+  | `timefold` 2.7.1, configuración por defecto | 1.376,3 km; 1.366,6–1.383,1 | 1.355,6 km; 1.338,1–1.364,5 | 17 |
+
+  Las 36 soluciones son factibles según el `Evaluator`. Clarke-Wright no minimiza la cantidad de viajes y aquí usa uno de más; ALNS siempre llega al mínimo de 17. Timefold queda un 35 % por encima de `alns-x4` en frío. Entre `alns` y `alns-x4`, y entre frío y caliente, las diferencias (≤ 0,4 %) están dentro de la dispersión entre semillas.
 
 ## F4 — Restricciones del dominio (3 semanas)
 

@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -42,20 +43,63 @@ class BenchmarkHarnessTest {
         assertThat(lines.get(1)).startsWith("X-n101-k25,100,nearest-neighbor,7,1000,,");
         assertThat(lines.subList(1, lines.size())).extracting(line -> Integer.parseInt(line.split(",")[1]))
                 .isSorted();
-        assertThat(lines.subList(1, lines.size())).allSatisfy(line -> assertThat(line.split(",")).hasSize(13));
+        assertThat(lines.subList(1, lines.size())).allSatisfy(line -> assertThat(line.split(",")).hasSize(14));
         assertThat(results).allSatisfy(result -> {
             assertThat(result.feasible()).isTrue();
-            assertThat(result.cost()).isGreaterThanOrEqualTo(result.bestKnownCost());
+            assertThat(result.cost()).isGreaterThanOrEqualTo(result.bestKnownCost().orElseThrow());
         });
     }
 
     @Test
     void gapIsRelativeToBestKnownCost() {
         BenchmarkResult result = new BenchmarkResult("i", 10, "s", 1, Duration.ofSeconds(1), 500,
-                110, 100, true, Duration.ofMillis(3), 2);
+                110, OptionalLong.of(100), true, Duration.ofMillis(3), 2, false);
 
-        assertThat(result.gap()).isEqualTo(0.10, within(1e-12));
-        assertThat(result.toCsv("m")).isEqualTo("i,10,s,1,1000,500,110,100,10.000,true,3.000,2,m");
+        assertThat(result.gap().getAsDouble()).isEqualTo(0.10, within(1e-12));
+        assertThat(result.toCsv("m")).isEqualTo("i,10,s,1,1000,500,110,100,10.000,true,3.000,2,false,m");
+    }
+
+    @Test
+    void leavesBksAndGapEmptyWhenThereIsNoPublishedBks() {
+        BenchmarkResult result = new BenchmarkResult("suba", 806, "s", 2, Duration.ofSeconds(60), Long.MAX_VALUE,
+                1_231_800, OptionalLong.empty(), true, Duration.ofSeconds(60), 17, true);
+
+        assertThat(result.gap()).isEmpty();
+        assertThat(result.toCsv("m")).isEqualTo("suba,806,s,2,60000,,1231800,,,true,60000.000,17,true,m");
+    }
+
+    @Test
+    void runsEverySeedAndAcceptsInstancesWithoutBks(@TempDir Path instances) throws IOException {
+        Files.writeString(instances.resolve("asym.vrp"), """
+                NAME : asym
+                TYPE : CVRP
+                DIMENSION : 3
+                EDGE_WEIGHT_TYPE : EXPLICIT
+                EDGE_WEIGHT_FORMAT : FULL_MATRIX
+                CAPACITY : 10
+                EDGE_WEIGHT_SECTION
+                0 4 6
+                3 0 5
+                9 7 0
+                DEMAND_SECTION
+                1 0
+                2 4
+                3 6
+                DEPOT_SECTION
+                1
+                -1
+                EOF
+                """);
+
+        List<BenchmarkResult> results = BenchmarkHarness.run(instances, List.of(new NearestNeighborSolver()),
+                List.of(1L, 2L, 3L), Duration.ofSeconds(1), Long.MAX_VALUE, true);
+
+        assertThat(results).extracting(BenchmarkResult::seed).containsExactly(1L, 2L, 3L);
+        assertThat(results).allSatisfy(result -> {
+            assertThat(result.bestKnownCost()).isEmpty();
+            assertThat(result.warm()).isTrue();
+            assertThat(result.feasible()).isTrue();
+        });
     }
 
     @Test

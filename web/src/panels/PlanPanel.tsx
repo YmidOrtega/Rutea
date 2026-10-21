@@ -11,6 +11,10 @@ interface Props {
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 
 const km = (meters: number) => (meters / 1000).toFixed(1)
+const hours = (seconds: number) => {
+  const minutes = Math.round(seconds / 60)
+  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
+}
 const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 
 export function PlanPanel({ plan, visible, onToggle }: Props) {
@@ -31,7 +35,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
             <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
-            <Kpi value={String(plan.routes.length)} label="Rutas" />
+            <Kpi value={String(plan.routes.length)} label="Viajes" />
           </dl>
 
           {STREAMS.map((stream) => {
@@ -73,6 +77,10 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                             {km(route.distanceMeters)}
                             <span className="unit">km</span>
                           </span>
+                          <span className="num route-stat" title="Duración del turno, con las paradas y sin la descarga">
+                            {hours(route.durationSeconds)}
+                            <span className="unit">h</span>
+                          </span>
                         </button>
                       </li>
                     )
@@ -83,10 +91,14 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
           })}
 
           <p className="note">
-            Rutas del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
-            <span className="num">{plan.meta.seed}</span>) sobre una cuadrícula de{' '}
-            <span className="num">{plan.meta.blockMeters} m</span>, no sobre calles reales. Contenedores,
-            pesos y capacidades simulados.
+            Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
+            <span className="num">{plan.meta.seed}</span>,{' '}
+            <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
+            calles reales de OpenStreetMap. Cada compactador de <span className="num">8 t</span> sale de la base de
+            Fontibón, recoge hasta llenarse, descarga en Doña Juana y vuelve a la base. Los contenedores y sus
+            cargas son simulados con cifras oficiales. Las velocidades y la parada de{' '}
+            <span className="num">{plan.meta.serviceSeconds} s</span> por contenedor son supuestas; aún no se
+            cuenta el tiempo de descarga en el relleno.
           </p>
         </div>
       )}
