@@ -89,4 +89,11 @@ class CollectionRulesTest {
         assertThat(CollectionRules.MAX_BREAKDOWN_RECOVERY).isEqualTo(Duration.ofHours(3));
         assertThat(CollectionRules.BREAKDOWN_RECOVERY.citation()).isEqualTo("R05 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.34");
     }
+
+    @Test
+    @DisplayName("R05 · D. 1077/2015 art. 2.3.2.2.2.3.34: cambios de ruta avisados con 3 días, salvo caso fortuito o fuerza mayor")
+    void routeChangesAnnouncedThreeDaysAhead() {
+        assertThat(CollectionRules.MIN_ROUTE_CHANGE_NOTICE).isEqualTo(Duration.ofDays(3));
+        assertThat(CollectionRules.ROUTE_CHANGE_NOTICE.citation()).isEqualTo("R05 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.34");
+    }
 }

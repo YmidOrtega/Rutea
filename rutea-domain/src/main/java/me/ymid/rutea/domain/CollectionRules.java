@@ -41,6 +41,12 @@ public final class CollectionRules {
 
     public static final Duration MAX_BREAKDOWN_RECOVERY = Duration.ofHours(3);
 
+    /** Todo cambio de rutas, horarios o frecuencias se avisa con tres días, salvo caso fortuito o fuerza mayor. */
+    public static final NormRef ROUTE_CHANGE_NOTICE = new NormRef("R05", Norms.DECREE_1077_2015,
+            "art. 2.3.2.2.2.3.34", Norms.DECREE_1077_2015_SOURCE, Verification.VERIFICADA);
+
+    public static final Duration MIN_ROUTE_CHANGE_NOTICE = Duration.ofDays(3);
+
     public static final NightWindow NIGHT_WINDOW = new NightWindow(LocalTime.of(21, 0), LocalTime.of(6, 0));
 
     static final int MINIMUM_WEEKLY_NON_RECYCLABLE = 2;
