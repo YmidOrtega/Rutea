@@ -29,7 +29,7 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
     }
 
     /**
-     * Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto.
+     * Sin estado de llenado: todavía no hay sensores, y un porcentaje inventado no sería honesto.
      *
      * @param visitSeconds segundos desde el inicio del turno hasta que el camión llega
      * @param rules lo que la norma exige en esta parada (R02, R07), en texto
