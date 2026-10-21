@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Map from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
-import { BASEMAP_STYLE, initialViewState } from './map/view'
+import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
 import { staticLayers, tripsLayer, zoneLayers } from './map/layers'
-import { loadDemoPlan, STREAM_NAMES, toTrips, type Container, type DemoPlan } from './demo/plan'
+import { loadDemoPlan, secondsOfDay, STREAM_NAMES, toTrips, type Container, type DemoPlan, type Site } from './demo/plan'
 import { PlanPanel } from './panels/PlanPanel'
 import './App.css'
 
-const SHIFT_START_SECONDS = 21 * 3600
 const PLAYBACK_SPEED = 60
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -68,7 +67,11 @@ export default function App() {
 
   return (
     <main className="app">
-      <Map initialViewState={initialView} mapStyle={BASEMAP_STYLE} attributionControl={{ compact: true }}>
+      <Map
+        initialViewState={initialView}
+        mapStyle={BASEMAP_STYLE}
+        attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
+      >
         <DeckOverlay layers={layers} getTooltip={tooltip} />
       </Map>
 
@@ -78,7 +81,7 @@ export default function App() {
         <span className="tag">Simulado</span>
         {plan && (
           <>
-            <span className="num clock" aria-label="Hora simulada">{clock(SHIFT_START_SECONDS + time)}</span>
+            <span className="num clock" aria-label="Hora simulada">{clock(secondsOfDay(plan.meta.shiftStart) + time)}</span>
             <button
               className="play"
               onClick={() => setPlaying(!playing)}
@@ -113,8 +116,7 @@ function clock(seconds: number): string {
 }
 
 function tooltip({ object, layer }: PickingInfo) {
-  if (layer?.id !== 'containers' || !object) return null
-  const container = object as Container
+  if (!object || (layer?.id !== 'containers' && layer?.id !== 'sites')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
     className: 'tooltip',
@@ -128,9 +130,18 @@ function tooltip({ object, layer }: PickingInfo) {
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },
-    html: `<strong class="num">${container.id}</strong>
-      <span>${STREAM_NAMES[container.stream]}</span>
-      <span class="num">${Math.round(container.fill * 100)} % lleno · ${container.kg} kg</span>
-      <span class="num">Ruta ${container.route}</span>`,
+    html: layer.id === 'sites' ? siteHtml(object as Site) : containerHtml(object as Container),
   }
+}
+
+function containerHtml(container: Container): string {
+  return `<strong class="num">${container.id}</strong>
+    <span>${STREAM_NAMES[container.stream]} · simulado</span>
+    <span class="num">${container.kg} kg por recolección</span>
+    <span class="num">Viaje ${container.route}</span>`
+}
+
+function siteHtml(site: Site): string {
+  return `<strong>${site.label}</strong>
+    <span>${site.id === 'relleno' ? 'Cada viaje termina aquí a descargar' : 'Base de los compactadores'}</span>`
 }

@@ -35,15 +35,6 @@ export function readPalette() {
 
 export type Palette = ReturnType<typeof readPalette>
 
-export const FILL_WARN = 0.6
-export const FILL_CRIT = 0.85
-
-export function fillColor(palette: Palette, fill: number): RGB {
-  if (fill >= FILL_CRIT) return palette.crit
-  if (fill >= FILL_WARN) return palette.warn
-  return palette.ok
-}
-
 /** El negro oficial no se ve sobre el mapa oscuro: su trazo usa el borde claro. */
 export function strokeColor(palette: Palette, stream: WasteStream): RGB {
   return stream === 'NON_RECYCLABLE' ? palette.nonRecyclableEdge : palette.stream[stream]

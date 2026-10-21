@@ -4,23 +4,32 @@ export type WasteStream = 'RECYCLABLE' | 'ORGANIC' | 'NON_RECYCLABLE'
 /** [lon, lat], el orden de MapLibre y deck.gl. */
 export type LonLat = [number, number]
 
+/** Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. */
 export interface Container {
   id: string
   stream: WasteStream
   position: LonLat
-  fill: number
   kg: number
   route: string
 }
 
+/** Un viaje: sale del relleno, recoge y vuelve a descargar. `times[i]`: segundos hasta `path[i]`. */
 export interface Route {
   id: string
   stream: WasteStream
   capacityKg: number
   loadKg: number
   distanceMeters: number
+  durationSeconds: number
   stops: string[]
   path: LonLat[]
+  times: number[]
+}
+
+export interface Site {
+  id: 'relleno' | 'base'
+  label: string
+  position: LonLat
 }
 
 export interface DemoPlan {
@@ -28,11 +37,13 @@ export interface DemoPlan {
     zone: string
     simulated: boolean
     network: string
-    blockMeters: number
     solver: string
     seed: number
+    iterations: number
+    shiftStart: string
+    attribution: string
   }
-  depot: LonLat
+  sites: Site[]
   containers: Container[]
   routes: Route[]
 }
@@ -48,11 +59,6 @@ export const STREAM_NAMES: Record<WasteStream, string> = {
   NON_RECYCLABLE: 'No aprovechables',
 }
 
-/** Sin tiempos de servicio en las paradas. */
-export const SPEED_MPS = 18 / 3.6
-
-const METERS_PER_DEGREE = 111_320
-
 export async function loadDemoPlan(url = '/demo/plan-suba.json'): Promise<DemoPlan> {
   const response = await fetch(url)
   if (!response.ok) {
@@ -61,18 +67,13 @@ export async function loadDemoPlan(url = '/demo/plan-suba.json'): Promise<DemoPl
   return (await response.json()) as DemoPlan
 }
 
-function meters([lon1, lat1]: LonLat, [lon2, lat2]: LonLat): number {
-  const x = (lon2 - lon1) * Math.cos((((lat1 + lat2) / 2) * Math.PI) / 180)
-  const y = lat2 - lat1
-  return Math.hypot(x, y) * METERS_PER_DEGREE
+/** Los tiempos salen de las velocidades por tipo de vía del grafo; aún sin tiempo de servicio por contenedor. */
+export function toTrips(routes: Route[]): Trip[] {
+  return routes.map((route) => ({ route, timestamps: route.times }))
 }
 
-export function toTrips(routes: Route[]): Trip[] {
-  return routes.map((route) => {
-    const timestamps = [0]
-    for (let i = 1; i < route.path.length; i++) {
-      timestamps.push(timestamps[i - 1] + meters(route.path[i - 1], route.path[i]) / SPEED_MPS)
-    }
-    return { route, timestamps }
-  })
+/** "18:00" → segundos desde la medianoche. */
+export function secondsOfDay(hhmm: string): number {
+  const [hours, minutes] = hhmm.split(':').map(Number)
+  return hours * 3600 + minutes * 60
 }

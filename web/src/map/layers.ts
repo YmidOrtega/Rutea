@@ -1,8 +1,15 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
-import type { Container, DemoPlan, LonLat, Route, Trip } from '../demo/plan'
-import { fillColor, strokeColor, type Palette } from './colors'
+import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
+import { strokeColor, type Palette } from './colors'
 import suba from './suba.json'
+
+/**
+ * Las rutas son líneas planas sobre el suelo y muchas comparten el corredor al relleno. Con el mapa inclinado,
+ * la prueba de profundidad las hace pelear pixel a pixel (z-fighting) y el corredor se ve punteado: se dibujan
+ * en el orden de las capas.
+ */
+const FLAT = { depthCompare: 'always', depthWriteEnabled: false } as const
 
 /** Fuente y licencia en suba.json. */
 const SUBA = suba.geometry.coordinates[0] as LonLat[]
@@ -53,6 +60,7 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       opacity: 0.35,
       jointRounded: true,
       capRounded: true,
+      parameters: FLAT,
     }),
     new PathLayer<Route>({
       id: 'routes',
@@ -64,13 +72,14 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       opacity: 0.35,
       jointRounded: true,
       capRounded: true,
+      parameters: FLAT,
     }),
     new ScatterplotLayer<Container>({
       id: 'containers',
       data: containers,
       getPosition: (container) => container.position,
       getFillColor: (container) => palette.stream[container.stream],
-      getLineColor: (container) => fillColor(palette, container.fill),
+      getLineColor: (container) => strokeColor(palette, container.stream),
       getRadius: 14,
       radiusMinPixels: 3,
       radiusMaxPixels: 9,
@@ -80,17 +89,19 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       pickable: true,
       autoHighlight: true,
     }),
-    new ScatterplotLayer<LonLat>({
-      id: 'depot',
-      data: [plan.depot],
-      getPosition: (position) => position,
-      getFillColor: palette.fg,
-      getLineColor: palette.fgMuted,
-      getRadius: 40,
+    // Relleno: punto lleno, donde termina cada viaje. Base: anillo, de donde salen los camiones.
+    new ScatterplotLayer<Site>({
+      id: 'sites',
+      data: plan.sites,
+      getPosition: (site) => site.position,
+      getFillColor: (site) => (site.id === 'relleno' ? palette.fg : palette.bg),
+      getLineColor: palette.fg,
+      getRadius: 60,
       radiusMinPixels: 6,
       stroked: true,
       lineWidthUnits: 'pixels',
-      getLineWidth: 3,
+      getLineWidth: 2.5,
+      pickable: true,
     }),
   ]
 }
@@ -107,6 +118,7 @@ export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, pa
     jointRounded: true,
     capRounded: true,
     fadeTrail: true,
+    parameters: FLAT,
     trailLength: 900,
     currentTime: time,
   })
