@@ -23,6 +23,13 @@ Las cifras de la Superservicios salen del [informe de inspección a Área Limpia
 
 La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 71 Sur y la Carrera 3J Este no se cruzan (sus nodos más cercanos están a 2,2 km) y quedan a 3,8 km del polígono del relleno.
 
+### Emisiones
+
+| Dato | Valor | Fuente | Uso en Rutea |
+|---|---|---|---|
+| Factor de emisión del gas/diésel oil en transporte por carretera | 74.100 kg CO₂/TJ (rango 72.600–74.800) | [IPCC 2006, vol. 2, cap. 3, Tabla 3.2.1](https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/2_Volume2/V2_3_Ch3_Mobile_Combustion.pdf) | `DieselEmissions` |
+| Poder calorífico neto del gas/diésel oil | 43,0 TJ/Gg (rango 41,4–43,3) | [IPCC 2006, vol. 2, cap. 1, Tabla 1.2](https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/2_Volume2/V2_1_Ch1_Introduction.pdf) | `DieselEmissions` |
+
 ## Cifras derivadas
 
 | Dato | Cálculo | Valor |
@@ -30,6 +37,7 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 | Contenedores negros en Suba | 10.746 × 15 % × 1/2 | **806** |
 | Kilos por día en contenedores de Suba | 5.680 t × 15 % × 13 % | **110.760 kg** |
 | Carga media por contenedor y recolección | 110.760 × 7/6 ÷ 806 | **160 kg** |
+| CO₂ por litro de diésel | 0,84 kg/L × 43,0 TJ/Gg × 74.100 kg/TJ | **2,68 kg** |
 
 ## Supuestos (no son datos)
 
@@ -39,6 +47,9 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Velocidades por tipo de vía (`RoadClass`): de 10 km/h en `living_street` a 60 km/h en autopista, para un compactador de noche.
 - Las vías privadas solo entran al grafo cerca de un sitio: las del relleno son privadas para el público, no para los compactadores.
 - `PENDIENTE_VERIFICAR`: **60 s detenido en cada contenedor**. No hay estudio publicado para Bogotá. Los fabricantes anuncian de 6 a 10 s por ciclo del brazo de cargue lateral ([Heil](https://www.trucknews.com/transportation/heil-takes-out-the-trash/1003117152), [Bucher](https://prod.buchermunicipal.com/int/node/111)), pero eso es solo una cota inferior: la parada incluye también acercarse, alinearse y revisar.
+- Densidad del diésel: 0,84 kg/L, el valor típico; no es un dato verificado del ACPM colombiano.
+- `PENDIENTE_VERIFICAR`: **0,8 L de diésel por km** para un compactador en recolección. No hay cifra publicada para Bogotá. Como el CO₂ sale proporcional a los km, el porcentaje de ahorro entre dos planes no depende de este valor; las toneladas absolutas sí.
+- Todo el ACPM se cuenta como diésel fósil: su fracción de biodiésel no se descuenta (`PENDIENTE_VERIFICAR`: porcentaje de mezcla vigente). Esto sobreestima un poco el CO₂ fósil.
 - Cada compactador hace un solo viaje por turno: sale de la base a las 18:00, recoge, descarga en Doña Juana y vuelve a la base. El tiempo de descarga en el relleno todavía no se cuenta.
 
 ## Calibración del grafo

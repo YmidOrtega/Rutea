@@ -134,6 +134,25 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 **Criterio de cierre:** comparación contra un barrido ingenuo por cuadrantes en la zona piloto, con ahorro en km y CO₂.
 
+**Avance** (2026-10-20; i5-14400F, Java 21.0.12):
+
+- [x] Línea base `QuadrantSweep`: cuadrantes recorridos en serpentina de norte a sur, franjas de 200 m dentro de cada uno, y llenado secuencial hasta 8 t. Se prueba con varios tamaños de cuadrante y se compara contra el mejor.
+- [x] Reporte por turno y por plan (`PlanReport`): km con el regreso a la base, horas, toneladas, litros y CO₂. Usa el factor del IPCC 2006 (2,68 kg CO₂/L) y un consumo supuesto de 0,8 L/km (`PENDIENTE_VERIFICAR`). El panel del mapa muestra las horas de camión y el CO₂ estimado.
+- [x] Comparación (`mvn -pl rutea-app exec:java@baseline`; `SubaBase-n807-s1`; ALNS con semilla 1 y 2.000 iteraciones, determinista). CSV en `docs/benchmarks/f4-baseline/`.
+
+  | Método | Turnos | km | Horas | t CO₂ |
+  |---|---:|---:|---:|---:|
+  | Barrido, cuadrantes de 500 m | 17 | 1.816,7 | 70,9 | 3,89 |
+  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 69,9 | 3,82 |
+  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 69,8 | 3,80 |
+  | Barrido, cuadrantes de 4 km | 17 | 1.858,6 | 72,0 | 3,98 |
+  | **Rutea (`alns`)** | 17 | **1.410,9** | **56,0** | **3,02** |
+
+  Frente al mejor barrido: **20,5 % menos km, 19,8 % menos horas y 20,5 % menos CO₂**, unas 0,78 t de CO₂ menos por día de recolección con el consumo supuesto. Las horas bajan menos que los km porque las 806 paradas de 60 s son iguales en los dos planes. El barrido es una línea base ingenua, no las microrrutas reales de Área Limpia, que no son públicas.
+- [ ] Varios viajes por turno, con el tiempo de descarga en el relleno.
+- [ ] Turnos y ventanas horarias (R02), frecuencias (R03) y paradas sin compactación (R07).
+- [ ] Flota heterogénea (R06, R10).
+
 ## F5 — Operación en tiempo real (3 semanas)
 
 - Reloj de simulación acelerable.
