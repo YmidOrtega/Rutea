@@ -5,7 +5,7 @@ export type WasteStream = 'RECYCLABLE' | 'ORGANIC' | 'NON_RECYCLABLE'
 export type LonLat = [number, number]
 
 /**
- * Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. `rules` dice, en
+ * Sin estado de llenado: todavía no hay sensores, y un porcentaje inventado no sería honesto. `rules` dice, en
  * texto, lo que la norma exige en esta parada (R02, R07).
  */
 export interface Container {

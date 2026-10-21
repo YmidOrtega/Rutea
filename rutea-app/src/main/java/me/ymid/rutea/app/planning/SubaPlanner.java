@@ -262,7 +262,6 @@ public final class SubaPlanner {
         return new double[] {Math.round(lonE7 / 100.0) / 1e5, Math.round(latE7 / 100.0) / 1e5};
     }
 
-    /** Recorrido de un viaje punto por punto, con la hora de paso según las velocidades del grafo. */
     private static final class Geometry {
 
         private final RoadGraph graph;
@@ -278,7 +277,6 @@ public final class SubaPlanner {
             add(graph.latE7(vertex), graph.lonE7(vertex));
         }
 
-        /** Agrega los arcos en orden y devuelve sus metros. */
         long follow(int[] edges) {
             long meters = 0;
             for (int edge : edges) {

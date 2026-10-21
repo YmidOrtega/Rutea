@@ -149,7 +149,6 @@ public final class SubaFigures {
         return Math.round(BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * ASE5_SHARE * SIDE_LOADING_SHARE);
     }
 
-    /** Carga media de un contenedor en cada recolección, en kg. */
     public static double meanKgPerCollection(int containers) {
         return containerKgPerDay() * 7.0 / COLLECTIONS_PER_WEEK / containers;
     }

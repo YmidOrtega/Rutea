@@ -23,7 +23,7 @@ export interface LoadedPlan {
   events: BreakdownEvent[]
 }
 
-/** La API tarda unos 25 s en armar el plan la primera vez después de arrancar. */
+/** Recién arrancada, la API tarda unos 27 s en armar el plan. */
 const API_TIMEOUT_MS = 60_000
 
 export async function loadPlan(): Promise<LoadedPlan> {

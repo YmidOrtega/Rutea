@@ -11,7 +11,7 @@ import me.ymid.rutea.app.planning.DemoPlan;
  * @param orphans ids de los contenedores que el camión averiado no alcanzó a recoger
  * @param reserve rutas de los camiones de reserva (R-01, R-02…)
  * @param latencyMs tiempo real de replanificar
- * @param meetsRecoveryRule si la reserva llega al primer huérfano en máximo tres horas (R05)
+ * @param meetsRecoveryRule si el primer huérfano se recoge en máximo tres horas (R05)
  */
 public record BreakdownEvent(String truck, long atSeconds, long dispatchSeconds, double latencyMs,
         List<String> orphans, List<DemoPlan.Route> reserve, long firstPickupSeconds, long lastPickupSeconds,

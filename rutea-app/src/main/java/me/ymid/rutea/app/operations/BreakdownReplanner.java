@@ -15,9 +15,9 @@ import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.alns.AlnsSolver;
 
 /**
- * Replanifica cuando un camión se avería (ADR 0005, R05): se congela lo recorrido, los contenedores que el camión
- * no alcanzó a visitar quedan huérfanos y los cubren camiones de reserva que salen de la base. ALNS arranca desde
- * los huérfanos en el orden que tenían en el plan.
+ * Replanifica cuando un camión se avería (ADR 0005, R05): se congela lo recorrido y los contenedores que el camión
+ * no alcanzó a recoger quedan huérfanos. Según la {@link Strategy}, los absorben camiones en servicio con margen o
+ * camiones de reserva que salen de la base; para la reserva, ALNS arranca desde los huérfanos en el orden que tenían.
  */
 public final class BreakdownReplanner {
 
@@ -29,7 +29,8 @@ public final class BreakdownReplanner {
      * @param trips viajes nuevos sobre los nodos originales; sin rutas si no había huérfanos
      * @param reserve camiones de reserva con sus viajes; sin camiones si no había huérfanos
      * @param latencyNanos tiempo real de replanificar: de la avería al plan nuevo
-     * @param firstPickupSeconds hora (desde el inicio del turno) en que la reserva llega al primer huérfano
+     * @param firstPickupSeconds hora (desde el inicio del turno) en que se recoge el primer huérfano, por la reserva o
+     *     por un camión en servicio
      * @param lastPickupSeconds hora en que recoge el último
      */
     public record Replan(int truck, long breakdownSeconds, int[] orphans, Solution trips,
@@ -45,7 +46,7 @@ public final class BreakdownReplanner {
             return reserve.meters() + reassigned.stream().mapToLong(Reassignment::extraMeters).sum();
         }
 
-        /** R05: el servicio se restablece en máximo tres horas, contado hasta que la reserva llega. */
+        /** R05: el servicio se restablece en máximo tres horas, contado hasta que se recoge el primer huérfano. */
         public boolean meetsRecoveryRule() {
             return orphans.length == 0 || Duration.ofSeconds(firstPickupSeconds - breakdownSeconds)
                     .compareTo(CollectionRules.MAX_BREAKDOWN_RECOVERY) <= 0;
@@ -63,7 +64,6 @@ public final class BreakdownReplanner {
     private BreakdownReplanner() {
     }
 
-    /** Cómo se cubren los huérfanos. */
     public enum Strategy {
         /** Solo camiones de reserva: ningún camión en servicio cambia de ruta (ADR 0005). */
         RESERVE_ONLY,
@@ -108,7 +108,6 @@ public final class BreakdownReplanner {
                 pending = left;
             }
         }
-        // Lo que no absorbieron los camiones en servicio va a la reserva.
         int[] forReserve = pending.stream().mapToInt(Integer::intValue).toArray();
         long firstAbsorbed = reassigned.stream().mapToLong(Reassignment::pickupSeconds).min().orElse(Long.MAX_VALUE);
         long lastAbsorbed = reassigned.stream().mapToLong(Reassignment::pickupSeconds).max().orElse(breakdownSeconds);

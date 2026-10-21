@@ -15,7 +15,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.geo.geometry.Haversine;
 
-/** Construye {@link SampleTown} y revisa el recorte, la compactación y la poda. */
 class RoadGraphBuilderTest {
 
     private static final Map<Long, int[]> NODES = SampleTown.nodes();

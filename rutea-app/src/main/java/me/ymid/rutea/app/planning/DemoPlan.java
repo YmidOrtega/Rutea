@@ -12,9 +12,7 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
         List<Compliance.Check> compliance) {
 
     /**
-     * @param network de dónde salen las calles
      * @param shiftStart hora a la que los camiones salen de la base, "HH:mm"
-     * @param shiftSeconds duración máxima del turno
      * @param serviceSeconds segundos detenido en cada contenedor (supuesto, ver SubaFigures)
      * @param unloadSeconds segundos de cada descarga en el relleno (supuesto, ver SubaFigures)
      * @param litersPerKm consumo supuesto de diésel (ver SubaFigures)
@@ -27,7 +25,6 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
             double kgCo2PerLiter, String attribution, List<String> assumptions) {
     }
 
-    /** Lugar fijo de la operación: la base de los camiones o el sitio de disposición. */
     public record Site(String id, String label, double[] position) {
     }
 

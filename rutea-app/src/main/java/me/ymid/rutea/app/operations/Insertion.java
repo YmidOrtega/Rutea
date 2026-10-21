@@ -49,8 +49,6 @@ final class Insertion {
                 for (int i = 0; i < live.tripCount(t); i++) {
                     int room = capacity - live.tripLoad(t, i);
                     int[] trip = live.trip(t, i);
-                    // Posiciones futuras: después de una parada a la que el camión aún no llega, o antes de la primera
-                    // si el viaje no empezó.
                     for (int p = 0; p <= trip.length; p++) {
                         // Futura: después de una parada a la que el camión aún no llega, o antes de la primera si
                         // tampoco llegó a ella.

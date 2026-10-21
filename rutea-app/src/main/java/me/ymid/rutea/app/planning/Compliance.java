@@ -34,7 +34,6 @@ public final class Compliance {
         OK,
         /** Se cumple si el conductor hace algo en esas paradas (no compactar, mitigar el ruido). */
         ACTION,
-        /** El plan no cumple. */
         FAIL
     }
 

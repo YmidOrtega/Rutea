@@ -188,13 +188,13 @@
   color: var(--fg-muted);
 }
 
-/* La avería es una alerta: lleva el acento solo cuando el foco o el puntero están encima. */
 .routes li {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
+/* La avería es una alerta: lleva el acento solo cuando el foco o el puntero están encima. */
 .breakdown {
   flex: none;
   width: 22px;

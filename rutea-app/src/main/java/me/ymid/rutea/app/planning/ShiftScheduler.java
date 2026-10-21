@@ -120,7 +120,6 @@ public final class ShiftScheduler {
         return new Schedule(trucks, unloadSeconds, shiftSeconds);
     }
 
-    /** Una parada en la línea de tiempo: el nodo, el viaje del camión y la hora de llegada desde el inicio. */
     public record Visit(int node, int trip, long arriveSeconds) {
     }
 
@@ -158,7 +157,6 @@ public final class ShiftScheduler {
         return bits;
     }
 
-    /** Metros y segundos de cada viaje, saliendo de la base o de la portería, en cada sentido. */
     private static final class Trips {
 
         private final TravelMatrix travel;

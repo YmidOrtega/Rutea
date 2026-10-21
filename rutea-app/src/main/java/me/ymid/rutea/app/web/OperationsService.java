@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import me.ymid.rutea.app.operations.BreakdownReplanner;
 import me.ymid.rutea.app.planning.DemoPlan;
-import me.ymid.rutea.app.planning.ShiftScheduler;
 import me.ymid.rutea.app.planning.SubaPlanner;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SubaFigures;
@@ -170,11 +169,5 @@ public class OperationsService {
         } catch (IOException e) {
             throw new DataMissingException("No se pudo leer el grafo o los sitios: " + e.getMessage());
         }
-    }
-
-    /** Para los tests: el plan de compactadores con su asignación de turnos. */
-    ShiftScheduler.Schedule wasteSchedule() {
-        plan();
-        return waste.schedule();
     }
 }
