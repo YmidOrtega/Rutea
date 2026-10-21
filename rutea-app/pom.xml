@@ -73,6 +73,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>breakdowns</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-breakdowns</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>suba-instance</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>

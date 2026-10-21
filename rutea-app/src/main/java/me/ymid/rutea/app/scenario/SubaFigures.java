@@ -80,6 +80,12 @@ public final class SubaFigures {
      */
     public static final double RECOVERED_SHARE = 0.16;
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: segundos desde la avería hasta que un camión de reserva sale de la base
+     * (avisar, alistar tripulación y vehículo). Sin dato del operador.
+     */
+    public static final int RESERVE_DISPATCH_SECONDS = 15 * 60;
+
     /** Supuesto: vehículo sin compactación de una organización de recicladores (R06, R10), en kg. */
     public static final int RECYCLABLE_VEHICLE_KG = 1_500;
 
