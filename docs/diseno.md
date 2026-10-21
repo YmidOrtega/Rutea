@@ -49,7 +49,7 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
   - `ScatterplotLayer`: contenedores. Relleno por corriente. El borde por estado de llenado llega con los sensores (F5); hasta entonces el borde es el de la corriente.
   - `ScatterplotLayer`: sitios. El relleno (punto de descarga) va como punto lleno y la base de operaciones como anillo.
   - Las capas de rutas y viajes no usan prueba de profundidad: muchas comparten el corredor al relleno y, con el mapa inclinado, pelearían pixel a pixel (z-fighting).
-- Vista inicial: Suba, inclinación 45°, rumbo −15°.
+- Vista inicial: Suba y la base de Fontibón, de donde sale cada turno, a la derecha del panel; en pantallas angostas, solo Suba. Inclinación 45°, rumbo −15°.
 
 ## Componentes
 

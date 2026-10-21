@@ -108,7 +108,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
   Las 36 soluciones son factibles según el `Evaluator`, y todas usan el mínimo de 17 viajes. Al menos 788,5 km son inevitables: 17 viajes × (24,1 + 22,3) km hasta el contenedor más cercano al relleno, ida y vuelta. Con límite de tiempo, el resultado depende de la carga de la máquina: `alns` con semilla 1, solo en la máquina, dio 1.231,8 km; aquí, con 7 procesos a la vez, 1.247,7 km.
 - [x] Frontend sobre las geometrías reales: `pnpm demo:data` resuelve Suba con ALNS (semilla 7, 2.000 iteraciones, ~16 s) y dibuja los 17 viajes calle por calle (37.374 puntos, 1.224,1 km). Las horas de paso salen de las velocidades del grafo. El planificador verifica que cada tramo dibujado mida lo mismo que la matriz que optimizó el solver.
-- [ ] Tramo desde y hacia la base de Fontibón, y tiempo de servicio por contenedor.
+- [x] Turno completo de cada compactador: base de Fontibón → contenedores → portería de Doña Juana → base. La instancia (`SubaBase-n807-s1`) usa el nodo 0 como dos lugares gracias a la matriz asimétrica: su fila sale de la base y su columna llega a la portería. El regreso es fijo por camión y no cambia la optimización. El benchmark de arriba es del modelo anterior (`Suba-n807-s1`, con la portería como depósito en los dos sentidos).
+- [x] Parada de 60 s en cada contenedor (`PENDIENTE_VERIFICAR`; ver `docs/datos.md`). Plan de demo (semilla 7): 1.400,2 km con los regresos; turnos de 2,57 a 4,57 h (3,28 h en promedio) y de 31 a 55 contenedores. Saliendo a las 18:00, el último vuelve a la base a las 22:34, dentro del turno de 18:00 a 02:00 sin contar la descarga. Hay margen para un segundo viaje por turno (F4).
 
 ## F4 — Restricciones del dominio (3 semanas)
 

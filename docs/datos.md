@@ -38,6 +38,8 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - La carga de cada contenedor varía de forma uniforme entre 0,5 y 1,5 veces la media.
 - Velocidades por tipo de vía (`RoadClass`): de 10 km/h en `living_street` a 60 km/h en autopista, para un compactador de noche.
 - Las vías privadas solo entran al grafo cerca de un sitio: las del relleno son privadas para el público, no para los compactadores.
+- `PENDIENTE_VERIFICAR`: **60 s detenido en cada contenedor**. No hay estudio publicado para Bogotá. Los fabricantes anuncian de 6 a 10 s por ciclo del brazo de cargue lateral ([Heil](https://www.trucknews.com/transportation/heil-takes-out-the-trash/1003117152), [Bucher](https://prod.buchermunicipal.com/int/node/111)), pero eso es solo una cota inferior: la parada incluye también acercarse, alinearse y revisar.
+- Cada compactador hace un solo viaje por turno: sale de la base a las 18:00, recoge, descarga en Doña Juana y vuelve a la base. El tiempo de descarga en el relleno todavía no se cuenta.
 
 ## Calibración del grafo
 
