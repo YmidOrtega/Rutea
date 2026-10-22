@@ -1,0 +1,81 @@
+.container-card {
+  position: absolute;
+  right: 16px;
+  bottom: 48px;
+  width: 300px;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  font-size: var(--text-13);
+}
+
+.container-card header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.container-card p {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.card-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-18);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-close:hover {
+  color: var(--fg);
+}
+
+.container-card .card-overflow,
+.container-card .card-error {
+  color: var(--crit);
+}
+
+/* El reporte es una alerta: lleva el acento, como el botón de avería cuando se activa. */
+.card-report {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--sodium);
+  border-radius: 6px;
+  background: none;
+  color: var(--sodium);
+  font: inherit;
+  cursor: pointer;
+}
+
+.card-report:hover:not(:disabled) {
+  background: var(--line);
+}
+
+.card-report:disabled {
+  border-color: var(--line);
+  color: var(--fg-muted);
+  cursor: progress;
+}
+
+.card-fill.fill-warn {
+  color: var(--warn);
+}
+
+.card-fill.fill-crit {
+  color: var(--crit);
+}
+
+.card-note {
+  font-size: var(--text-12);
+}
+
+@media (max-width: 640px) {
+  .container-card {
+    left: 16px;
+    width: auto;
+  }
+}

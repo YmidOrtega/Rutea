@@ -29,6 +29,10 @@
     </dependency>
     <dependency>
       <groupId>me.ymid.rutea</groupId>
+      <artifactId>rutea-sim</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>me.ymid.rutea</groupId>
       <artifactId>rutea-geo</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
@@ -36,6 +40,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -69,6 +77,46 @@
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/suba-sitios-sensibles.csv</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>breakdowns</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-breakdowns</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>overflows</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.OverflowBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-overflows</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>closures</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.ClosureBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-closures</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sensors</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.SensorBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-sensors</argument>
               </arguments>
             </configuration>
           </execution>

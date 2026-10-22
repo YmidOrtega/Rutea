@@ -120,6 +120,35 @@ public final class ShiftScheduler {
         return new Schedule(trucks, unloadSeconds, shiftSeconds);
     }
 
+    public record Visit(int node, int trip, long arriveSeconds) {
+    }
+
+    /**
+     * A qué hora llega el camión a cada contenedor, con la misma cuenta que {@link #schedule}: manejo por la
+     * matriz, paradas y descargas. La última hora es la del regreso a la base.
+     */
+    public static List<Visit> timeline(SubaScenario scenario, Solution solution, Truck truck, int serviceSeconds,
+            int unloadSeconds, long startSeconds) {
+        TravelMatrix travel = scenario.travel();
+        int gate = scenario.gate();
+        List<Visit> visits = new ArrayList<>();
+        long clock = startSeconds;
+        for (int i = 0; i < truck.trips().length; i++) {
+            int k = truck.trips()[i];
+            int previous = i == 0 ? 0 : gate;
+            int length = solution.routeLength(k);
+            for (int p = 0; p < length; p++) {
+                int node = solution.customer(k, truck.reversed()[i] ? length - 1 - p : p);
+                clock += travel.seconds(previous, node);
+                visits.add(new Visit(node, i, clock));
+                clock += serviceSeconds;
+                previous = node;
+            }
+            clock += travel.seconds(previous, gate) + unloadSeconds;
+        }
+        return visits;
+    }
+
     private static int bits(int[] trips) {
         int bits = 0;
         for (int t : trips) {
@@ -128,7 +157,6 @@ public final class ShiftScheduler {
         return bits;
     }
 
-    /** Metros y segundos de cada viaje, saliendo de la base o de la portería, en cada sentido. */
     private static final class Trips {
 
         private final TravelMatrix travel;

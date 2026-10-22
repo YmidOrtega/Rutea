@@ -11,8 +11,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F2 | Metaheurística y paralelismo | Completa |
 | F3 | Mapa real: Suba completa | Completa |
 | F4 | Restricciones del dominio | Completa |
-| F5 | Operación en tiempo real | **Siguiente** |
-| F6 | Producto y publicación | Pendiente |
+| F5 | Operación en tiempo real | Completa |
+| F6 | Producto y publicación | **Siguiente** |
 
 ## F0 — Fundamentos (1–2 semanas)
 
@@ -145,10 +145,12 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
   | Método | Turnos | km | Horas | t CO₂ | Turnos de más de 8 h |
   |---|---:|---:|---:|---:|---:|
   | Barrido, cuadrantes de 500 m | 17 | 1.816,7 | 96,4 | 3,89 | 1 |
-  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 95,4 | 3,82 | 0 |
-  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 95,3 | 3,80 | 0 |
+  | Barrido, cuadrantes de 1 km | 17 | 1.783,9 | 95,3 | 3,82 | 0 |
+  | **Barrido, cuadrantes de 2 km (mejor)** | 17 | 1.775,3 | 95,2 | 3,80 | 0 |
   | Barrido, cuadrantes de 4 km | 17 | 1.858,6 | 97,5 | 3,98 | 1 |
-  | **Rutea (`alns`)** | 17 | **1.410,9** | **81,5** | **3,02** | 0 |
+  | **Rutea (`alns`)** | 17 | **1.410,9** | **81,4** | **3,02** | 0 |
+
+  Horas medidas de nuevo el 2026-10-21: entre caminos igual de cortos, la matriz ahora toma el más rápido (ADR 0007). Los km no cambian.
 
   Frente al mejor barrido: **20,5 % menos km, 14,5 % menos horas y 20,5 % menos CO₂**, unas 0,78 t de CO₂ menos por día de recolección con el consumo supuesto. Las horas bajan menos que los km porque las paradas y las descargas son iguales en los dos planes. Si además se encadenan viajes (abajo), Rutea baja a 1.326,5 km: 25,3 % menos que el mejor barrido. El barrido es una línea base ingenua, no las microrrutas reales de Área Limpia, que no son públicas.
 - [x] Varios viajes por turno (`ShiftScheduler`): los viajes de ALNS se reparten entre camiones con programación dinámica exacta sobre los subconjuntos de viajes. Minimiza primero los camiones y después los km, con hasta 3 viajes por camión en un turno de 8 h que cuenta paradas, descargas y regreso. Un viaje que ni solo cabe queda marcado como horas extra. Para que distancia y tiempo hablen del mismo recorrido, `TravelMatrix` ahora da los segundos del camino más corto en metros, no los del más rápido (y hace la mitad de los Dijkstra).
@@ -157,12 +159,12 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
   | Reparto | Camiones | km | Horas de camión | Último regreso |
   |---|---:|---:|---:|---:|
-  | Un viaje por camión | 17 | 1.410,9 | 81,5 | 23:54 |
-  | Mínimo de camiones, descarga de 40 min | **9** (8 con 2 viajes) | **1.326,5** | **64,6** | 01:56 |
-  | Mínimo de camiones, descarga de 90 min | 16 (1 con 2 viajes) | 1.398,7 | 81,1 | 01:47 |
+  | Un viaje por camión | 17 | 1.410,9 | 81,4 | 23:54 |
+  | Mínimo de camiones, descarga de 40 min | **9** (8 con 2 viajes) | **1.326,5** | **64,5** | 01:55 |
+  | Mínimo de camiones, descarga de 90 min | 16 (1 con 2 viajes) | 1.398,7 | 81,0 | 01:46 |
 
   Encadenar viajes ahorra km, porque el segundo viaje sale de la portería y se ahorra la salida desde la base y un regreso. Y el tiempo de descarga en Doña Juana define el tamaño de la flota: con 40 min bastan 9 camiones; con 90, hacen falta 16. En el barrido ingenuo, algunos viajes ni solos caben en el turno (cuadrantes de 500 m y de 4 km).
-- [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:50 h.
+- [x] Plan de demo con camiones de varios viajes (semilla 7, descarga de 40 min): 9 camiones para 17 viajes, 1.310,6 km y turnos de 5:14 a 7:49 h (7:50 antes del desempate del ADR 0007).
 - [x] Normativa en el plan (`Compliance`): R02, R03 y R07, verificadas en el texto oficial, se revisan sobre cada parada con la hora de paso del planificador y 644 sitios sensibles de OSM. Plan de demo: **79 contenedores sin compactación** (R07, a 50 m o menos de un colegio o centro de salud), **335 paradas nocturnas** que requieren medidas contra el ruido (R02) y frecuencia de 6 veces por semana, que cumple el mínimo de 2 (R03). Con salida a las 18:00, 383 de las 806 paradas caen entre las 21:00 y las 06:00. Con las mismas horas de paso y salida a las 06:00, ninguna: irían de las 06:22 a las 11:53.
 - [ ] Calendario semanal por zona (R03, VRP periódico) y efecto de R07 sobre la capacidad.
 - [x] Flota heterogénea (R06, R10), con supuestos. R10 se reverificó: el capítulo que el Decreto 596 de 2016 agregó al Decreto 1077 aparece derogado y lo sustituyó el Decreto 1381 de 2024 (exclusividad de las organizaciones de recicladores por 15 años y transporte selectivo hasta la ECA). Los aprovechables van en vehículos sin compactación de una organización de recicladores, que salen de una ECA y vuelven a ella; R07 no aplica a esos vehículos. Plan de demo: 9 compactadores (17 viajes, 1.310,6 km) y 6 vehículos de aprovechables (17 viajes, 429,9 km, 24,7 t). Las cifras de aprovechables descansan en supuestos sin dato público (ECA, toneladas, vehículos; ver `docs/datos.md`) y el panel los lista.
@@ -176,7 +178,27 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - Replanificación incremental: se congela lo recorrido y ALNS arranca desde el plan vigente con límite de tiempo.
 - Posiciones y eventos por WebSocket (R08).
 
-**Criterio de cierre:** una avería produce un plan nuevo con latencia P99 medida y reportada.
+**Criterio de cierre:** una avería produce un plan nuevo con latencia P99 medida y reportada. **Cumplido** el 2026-10-20: P99 de 144,3 ms (124,6 ms medido de nuevo el 2026-10-21, con la matriz desempatada del ADR 0007).
+
+**Avance** (2026-10-20; i5-14400F, 16 hilos, Java 21.0.12):
+
+- [x] Replanificación ante averías (ADR 0005, R05). Se congela lo recorrido; los contenedores que el camión averiado no alcanzó a recoger los cubren camiones de reserva desde la base. ALNS arranca en caliente desde el plan vigente (`AlnsSolver.solveFrom`; los costos del arnés en el set X son idénticos antes y después) con 300 iteraciones.
+- [x] Latencia medida (`mvn -pl rutea-app exec:java@breakdowns`): 500 averías con camión y hora al azar (semilla 1) sobre el plan de 9 camiones de Suba, más 20 de calentamiento. CSV en `docs/benchmarks/f5-breakdowns/`.
+
+  | Medida | P50 | P95 | P99 | Máx. |
+  |---|---:|---:|---:|---:|
+  | Latencia, arranque en caliente | 33,9 ms | 102,3 ms | **124,6 ms** | 143,0 ms |
+  | Latencia, ALNS desde cero | 36,4 ms | 108,8 ms | 128,7 ms | 138,4 ms |
+  | Contenedores huérfanos | 38 | 96 | 102 | 103 |
+  | Avería → reserva en el primer huérfano | 39,9 min | 54,7 min | 67,3 min | 76,4 min |
+
+  Medido de nuevo el 2026-10-21, con la matriz desempatada (ADR 0007); la primera medición dio un P99 de 144,3 ms. En frío (la primera avería, con la JVM sin calentar): 5,6 ms. R05 se cumple en las 500 averías: la reserva llega en 76 min en el peor caso, con un despacho supuesto de 15 min (`PENDIENTE_VERIFICAR`). Con 300 iteraciones, arrancar en caliente o desde cero da casi lo mismo (+0,06 % de km): en problemas de este tamaño ALNS converge rápido de cualquier forma. Lo que gana el arranque en caliente es que el plan nuevo conserva el orden que ya conocían los conductores.
+- [x] Operación en vivo (R05, R08). `rutea-app` sirve el plan (`GET /api/plan`, armado en segundo plano al arrancar), simula averías (`POST /api/breakdowns`) y las difunde por WebSocket (`/ws/events`) a todos los clientes; `GET /api/events` da el historial a quien llega tarde. En el mapa, cada compactador tiene un botón para averiarlo a la hora del reloj: el camión se detiene, sus contenedores huérfanos se marcan en rojo, la reserva aparece en el acento y el panel registra el evento con su latencia y R05. Sin la API, el mapa usa el plan estático y no ofrece averías.
+- [x] Reasignar huérfanos a camiones en servicio con margen (`LivePlan`, `Insertion`), medido frente a la reserva en las mismas 500 averías (ADR 0005, actualización). Reasignar primero recoge el primer huérfano a los 13,2 min (P50) en vez de 39,9, pero suma un 19,3 % de km. Reasignar solo si así se evita la reserva ahorra un 1,9 % de km y 12 camiones de reserva, pero aplica en 12 de 500 averías: el plan de menos camiones deja poco margen. (Cifras de la remedición del 2026-10-21.)
+- [x] Contenedor desbordado (ADR 0006). Un clic en un contenedor negro lo reporta a la hora del reloj (`POST /api/overflows`). Se queda con su visita del plan si ningún desvío llega antes; si no, se desvía el compactador que llega primero, con cupo y turno; si ninguno puede, sale una reserva. Medido con 500 desbordes (`mvn -pl rutea-app exec:java@overflows`, CSV en `docs/benchmarks/f5-overflows/`): despachar tarda 41,9 µs (P50) y 163,3 µs (P99); del reporte a la recogida pasan 31,7 min (P50) y 99,6 min (P95). Una reserva sale en el 28,0 % de los casos. Desviar el camión que menos se desvía ahorra un 11,9 % de km, pero duplica el P95 de espera (207,3 min). (Cifras de la remedición del 2026-10-21.)
+- [x] Vía cerrada (ADR 0007). "Cerrar una vía", en el panel, y un clic en el mapa cierran la calle más cercana a la hora del reloj (`POST /api/closures`). La matriz se repara en vez de recalcularse: solo las filas y columnas cuyos caminos pasaban por la vía, con un resultado idéntico al de calcularla de cero. Cada tramo usa la red vigente cuando el camión arranca; si la vía se cierra con el camión en camino, este gira. Los contenedores sin acceso salen del plan, y los camiones afectados reordenan lo que les falta. Medido con 500 cierres sobre calles que un compactador tenía por delante (`mvn -pl rutea-app exec:java@closures`, CSV en `docs/benchmarks/f5-closures/`): reparar la matriz tarda 9,2 ms (P50) y 41,7 ms (P99), frente a 87,8 y 106,0 ms de calcularla de cero, y la matriz es idéntica en los 500. Reparar y replanificar tarda 13,1 ms (P50) y 46,3 ms (P99). Reordenar agrega un 20,5 % menos de km que solo desviar (294,1 frente a 370,1 km en total). 57 cierres dejan contenedores sin acceso y en 15 un camión termina fuera de turno.
+- [x] Reloj y posiciones transmitidos por el servidor (ADR 0008, R08). El reloj de la simulación es el del servidor (`rutea-sim`): corre a 15, 60 o 240×, es el mismo para todos los clientes y marca la hora de cada evento. Cuatro veces por segundo, el servidor reporta por WebSocket cada vehículo que se movió, con su estado y lo recorrido desde el reporte anterior. El mapa dibuja esos reportes, no el plan. A 60× con 15 vehículos son 8,4 KB/s (2,1 KB por reporte de media, 3,5 KB en P95).
+- [x] Sensores de llenado simulados (ADR 0009). Cada contenedor de no aprovechables tiene un sensor que transmite su llenado en pasos de 5 %. Si llega al 100 % antes de que un camión llegue a él, el servidor lo despacha solo, como un desborde. El modelo usa la carga simulada, los tamaños que declara el operador y 150 kg/m³ de densidad (`PENDIENTE_VERIFICAR`). El patrón por día sale de la frecuencia: el lunes se acumulan dos días. No hay patrón por zona, porque no se encontró la producción por estrato. Medido con `mvn -pl rutea-app exec:java@sensors`: un día cualquiera se desborda el 8,6 % de los contenedores (29,5 % de los de 1.100 L); un lunes, el 34,5 %. Con turno nocturno, los sensores no acortan el desborde (P50 de 3:28 a 3:26), porque casi la mitad ocurre antes de las 18:00. Lo que decide es el tamaño del contenedor y la recolección del domingo.
 
 ## F6 — Producto y publicación (2–3 semanas)
 

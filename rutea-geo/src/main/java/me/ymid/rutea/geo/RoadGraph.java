@@ -29,6 +29,7 @@ public final class RoadGraph {
     private final int[] shapeLatE7;
     private final int[] shapeLonE7;
     private final boolean[] shapeInLocality;
+    private volatile RoadGraph reversed;
 
     RoadGraph(long[] osmNodeIds, int[] latE7, int[] lonE7, int[] firstEdge, int[] edgeTarget, int[] edgeMeters,
             int[] edgeSeconds, byte[] edgeRoadClass, int[] edgeShape, int[] firstShapePoint, int[] shapeLatE7,
@@ -42,6 +43,11 @@ public final class RoadGraph {
                 || firstShapePoint[firstShapePoint.length - 1] != shapeLatE7.length
                 || shapeInLocality.length != firstShapePoint.length - 1) {
             throw new IllegalArgumentException("arreglos del grafo con longitudes incoherentes");
+        }
+        for (int e = 0; e < edges; e++) {
+            if (edgeMeters[e] < 1) {
+                throw new IllegalArgumentException("el arco " + e + " mide " + edgeMeters[e] + " m; el mínimo es 1");
+            }
         }
         this.osmNodeIds = osmNodeIds;
         this.latE7 = latE7;
@@ -166,6 +172,110 @@ public final class RoadGraph {
             }
         }
         return best;
+    }
+
+    public int nearestShape(int latE7, int lonE7) {
+        double cosLat = Math.cos(Math.toRadians(latE7 / 1e7));
+        int best = -1;
+        double bestSquared = Double.POSITIVE_INFINITY;
+        for (int shape = 0; shape < shapeCount(); shape++) {
+            for (int p = firstShapePoint[shape] + 1; p < firstShapePoint[shape + 1]; p++) {
+                double ax = (shapeLonE7[p - 1] - lonE7) * cosLat;
+                double ay = shapeLatE7[p - 1] - latE7;
+                double bx = (shapeLonE7[p] - lonE7) * cosLat;
+                double by = shapeLatE7[p] - latE7;
+                double dx = bx - ax;
+                double dy = by - ay;
+                double length = dx * dx + dy * dy;
+                double t = length == 0 ? 0 : Math.clamp(-(ax * dx + ay * dy) / length, 0, 1);
+                double x = ax + t * dx;
+                double y = ay + t * dy;
+                if (x * x + y * y < bestSquared) {
+                    bestSquared = x * x + y * y;
+                    best = shape;
+                }
+            }
+        }
+        return best;
+    }
+
+    public int[] edgesOn(int shape) {
+        IntList edges = new IntList(2);
+        for (int e = 0; e < edgeCount(); e++) {
+            if (edgeShape[e] == shape || edgeShape[e] == ~shape) {
+                edges.add(e);
+            }
+        }
+        return edges.toArray();
+    }
+
+    /** Vértices y trazos conservan sus índices; los arcos, no. */
+    public RoadGraph closing(int... shapes) {
+        boolean[] closed = new boolean[shapeCount()];
+        for (int shape : shapes) {
+            closed[shape] = true;
+        }
+        int[] newFirstEdge = new int[firstEdge.length];
+        IntList kept = new IntList(edgeCount());
+        for (int v = 0; v < vertexCount(); v++) {
+            newFirstEdge[v] = kept.size();
+            for (int e = firstEdge[v]; e < firstEdge[v + 1]; e++) {
+                int shape = edgeShape[e];
+                if (!closed[shape < 0 ? ~shape : shape]) {
+                    kept.add(e);
+                }
+            }
+        }
+        newFirstEdge[vertexCount()] = kept.size();
+        return withEdges(newFirstEdge, kept.toArray(), null);
+    }
+
+    public RoadGraph reversed() {
+        RoadGraph result = reversed;
+        if (result == null) {
+            int[] newFirstEdge = new int[firstEdge.length];
+            for (int e = 0; e < edgeCount(); e++) {
+                newFirstEdge[edgeTarget[e] + 1]++;
+            }
+            for (int v = 0; v < vertexCount(); v++) {
+                newFirstEdge[v + 1] += newFirstEdge[v];
+            }
+            int[] next = Arrays.copyOf(newFirstEdge, vertexCount());
+            int[] order = new int[edgeCount()];
+            int[] sources = new int[edgeCount()];
+            for (int v = 0; v < vertexCount(); v++) {
+                for (int e = firstEdge[v]; e < firstEdge[v + 1]; e++) {
+                    int slot = next[edgeTarget[e]]++;
+                    order[slot] = e;
+                    sources[slot] = v;
+                }
+            }
+            result = withEdges(newFirstEdge, order, sources);
+            result.reversed = this;
+            reversed = result;
+        }
+        return result;
+    }
+
+    /** Con {@code sources}, cada arco se invierte hacia su origen; con {@code null}, se copia. */
+    private RoadGraph withEdges(int[] newFirstEdge, int[] original, int[] sources) {
+        boolean flip = sources != null;
+        int count = original.length;
+        int[] target = new int[count];
+        int[] meters = new int[count];
+        int[] seconds = new int[count];
+        byte[] roadClass = new byte[count];
+        int[] shape = new int[count];
+        for (int i = 0; i < count; i++) {
+            int e = original[i];
+            target[i] = flip ? sources[i] : edgeTarget[e];
+            meters[i] = edgeMeters[e];
+            seconds[i] = edgeSeconds[e];
+            roadClass[i] = edgeRoadClass[e];
+            shape[i] = flip ? ~edgeShape[e] : edgeShape[e];
+        }
+        return new RoadGraph(osmNodeIds, latE7, lonE7, newFirstEdge, target, meters, seconds, roadClass, shape,
+                firstShapePoint, shapeLatE7, shapeLonE7, shapeInLocality);
     }
 
     long[] osmNodeIds() {

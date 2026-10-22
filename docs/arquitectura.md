@@ -64,11 +64,11 @@ Comparación externa y microbenchmarks, fuera del solver para que este siga sin 
 
 ### rutea-geo (F3)
 
-Grafo vial en arreglos compactos (CSR), Dijkstra y A*, y construcción de la matriz de distancias y tiempos. Lee OpenStreetMap con un lector PBF propio y guarda el grafo compilado en un binario versionado ([ADR 0004](adr/0004-grafo-vial-pbf-propio.md)).
+Grafo vial en arreglos compactos (CSR), Dijkstra y A*, y construcción de la matriz de distancias y tiempos. Lee OpenStreetMap con un lector PBF propio y guarda el grafo compilado en un binario versionado ([ADR 0004](adr/0004-grafo-vial-pbf-propio.md)). Al cerrar una vía, la matriz se repara sin recalcularla entera: solo las filas y columnas cuyos caminos pasaban por la vía ([ADR 0007](adr/0007-vias-cerradas.md)).
 
 ### rutea-sim (F5)
 
-Reloj acelerable, sensores de llenado y generador de eventos. Publica en un bus interno que consume `rutea-app`.
+Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de paso por cada punto (`Track`), en Java puro. `rutea-app` los usa para transmitir la posición de cada vehículo por WebSocket ([ADR 0008](adr/0008-reloj-y-posiciones-del-servidor.md)). También el modelo de los sensores de llenado (`FillSensor`, [ADR 0009](adr/0009-sensores-de-llenado.md)).
 
 ### rutea-app
 

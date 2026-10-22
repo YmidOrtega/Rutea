@@ -1,11 +1,28 @@
 import { useState } from 'react'
 import { STREAM_NAMES, type DemoPlan, type WasteStream } from '../demo/plan'
+import {
+  overflowPickup,
+  roadClassName,
+  type BreakdownEvent,
+  type ClosureEvent,
+  type OperationEvent,
+  type OverflowEvent,
+} from '../operations/live'
 import './PlanPanel.css'
 
 interface Props {
   plan: DemoPlan
   visible: Set<string>
   onToggle: (routeId: string) => void
+  /** Con la API detrás, cada compactador puede averiarse a la hora del reloj. */
+  live: boolean
+  events: OperationEvent[]
+  pending: string | null
+  eventError: string | null
+  onBreakdown: (truck: string) => void
+  closing: boolean
+  onClosing: (closing: boolean) => void
+  clock: (secondsFromShiftStart: number) => string
 }
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
@@ -16,8 +33,22 @@ const hours = (seconds: number) => {
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
 }
 const tonnes = (kg: number) => (kg / 1000).toFixed(1)
+const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
-export function PlanPanel({ plan, visible, onToggle }: Props) {
+export function PlanPanel({
+  plan,
+  visible,
+  onToggle,
+  live,
+  events,
+  pending,
+  eventError,
+  onBreakdown,
+  closing,
+  onClosing,
+  clock,
+}: Props) {
+  const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
@@ -36,7 +67,7 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
         <div className="plan-body">
           <dl className="kpis">
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
-            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas de vehículo" />
+            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas" />
             <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
             <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
@@ -95,6 +126,17 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
                             <span className="unit">h</span>
                           </span>
                         </button>
+                        {live && route.id.startsWith('C-') && (
+                          <button
+                            className="breakdown"
+                            disabled={pending !== null || broken.has(route.id)}
+                            onClick={() => onBreakdown(route.id)}
+                            aria-label={`Simular avería de ${route.id} a la hora del reloj`}
+                            title={broken.has(route.id) ? `${route.id} ya está averiado` : 'Simular avería ahora'}
+                          >
+                            {pending === route.id ? '…' : '!'}
+                          </button>
+                        )}
                       </li>
                     )
                   })}
@@ -102,6 +144,38 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
               </section>
             )
           })}
+
+          {live && (
+            <section className="road-closure">
+              <button
+                className="road-closure-toggle"
+                aria-pressed={closing}
+                disabled={pending !== null}
+                onClick={() => onClosing(!closing)}
+              >
+                {pending === 'closure' ? 'Cerrando…' : closing ? 'Cancelar cierre' : 'Cerrar una vía'}
+              </button>
+              {closing && <p className="road-closure-hint">Haz clic en una calle del mapa. Esc cancela.</p>}
+            </section>
+          )}
+
+          {(events.length > 0 || eventError) && (
+            <section className="events" aria-label="Eventos" aria-live="polite">
+              <h2 className="label">Eventos</h2>
+              {eventError && <p className="event-error">{eventError}</p>}
+              <ul>
+                {events.map((event) =>
+                  event.type === 'breakdown' ? (
+                    <Breakdown key={event.seq} event={event} clock={clock} />
+                  ) : event.type === 'closure' ? (
+                    <Closure key={event.seq} event={event} clock={clock} />
+                  ) : (
+                    <Overflow key={event.seq} event={event} clock={clock} />
+                  ),
+                )}
+              </ul>
+            </section>
+          )}
 
           <section className="compliance" aria-label="Normativa">
             <h2 className="label">Normativa</h2>
@@ -136,6 +210,94 @@ export function PlanPanel({ plan, visible, onToggle }: Props) {
         </div>
       )}
     </aside>
+  )
+}
+
+function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['clock'] }) {
+  return (
+    <li>
+      <strong className="num">
+        {clock(event.atSeconds)} · {event.truck} averiado
+      </strong>
+      <span>
+        <span className="num">{event.orphans.length}</span> contenedores sin recoger. Sale{' '}
+        {event.reserve.map((route) => route.id).join(', ')} a las{' '}
+        <span className="num">{clock(event.dispatchSeconds)}</span> y llega al primero a las{' '}
+        <span className="num">{clock(event.firstPickupSeconds)}</span>.
+      </span>
+      <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
+        R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
+        <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span> (máximo 3
+        h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+      </span>
+    </li>
+  )
+}
+
+function Overflow({ event, clock }: { event: OverflowEvent; clock: Props['clock'] }) {
+  const what =
+    event.cause === 'reporte'
+      ? 'desbordado'
+      : event.cause === 'sensor'
+        ? 'lleno según su sensor'
+        : `sin recoger tras la ${event.cause}`
+  return (
+    <li>
+      <strong className="num">
+        {clock(event.atSeconds)} · {event.container} {what}
+      </strong>
+      <span className="num">{capitalized(overflowPickup(event, clock))}.</span>
+      <span>
+        Decidido en{' '}
+        <span className="num">
+          {event.latencyMs < 1 ? `${(event.latencyMs * 1000).toFixed(0)} µs` : `${event.latencyMs.toFixed(1)} ms`}
+        </span>
+      </span>
+    </li>
+  )
+}
+
+const sign = (value: number) => (value < 0 ? '−' : '+')
+const signedDistance = (meters: number) =>
+  Math.abs(meters) < 1000 ? `${sign(meters)}${Math.abs(meters)} m` : `${sign(meters)}${km(Math.abs(meters))} km`
+const signedDuration = (seconds: number) =>
+  Math.abs(seconds) < 60 ? `${sign(seconds)}${Math.abs(seconds)} s` : `${sign(seconds)}${Math.round(Math.abs(seconds) / 60)} min`
+
+function Closure({ event, clock }: { event: ClosureEvent; clock: Props['clock'] }) {
+  return (
+    <li>
+      <strong className="num">
+        {clock(event.atSeconds)} · {capitalized(roadClassName(event.roadClass))} cerrada
+      </strong>
+      {event.changes.length === 0 ? (
+        <span>Ningún compactador pasaba por ahí en lo que le queda de turno.</span>
+      ) : (
+        event.changes.map((change) => (
+          <span key={change.truck} className="num">
+            {change.truck} {change.rerouted ? 'iba en camino y gira' : 'se desvía'}: {signedDistance(change.extraMeters)},{' '}
+            {signedDuration(change.extraSeconds)}
+            {change.late && <span className="rule-FAIL"> · termina fuera de turno</span>}
+          </span>
+        ))
+      )}
+      {event.isolated.length > 0 && (
+        <span className="rule-FAIL">
+          <span className="num">{event.isolated.length}</span> contenedores sin acceso
+          {event.dropped.length > 0 && (
+            <>
+              ; <span className="num">{event.dropped.length}</span> visitas pendientes salen del plan
+            </>
+          )}
+        </span>
+      )}
+      <span title={event.citation}>
+        R05 cambio de ruta por caso fortuito, sin el aviso de 3 días · matriz reparada con{' '}
+        <span className="num">
+          {event.recomputed} de {event.matrixSize}
+        </span>{' '}
+        filas y columnas en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+      </span>
+    </li>
   )
 }
 

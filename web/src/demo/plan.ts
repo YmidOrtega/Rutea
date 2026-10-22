@@ -5,7 +5,7 @@ export type WasteStream = 'RECYCLABLE' | 'ORGANIC' | 'NON_RECYCLABLE'
 export type LonLat = [number, number]
 
 /**
- * Sin estado de llenado: no hay sensores hasta F5, y un porcentaje inventado no sería honesto. `rules` dice, en
+ * Sin estado de llenado: todavía no hay sensores, y un porcentaje inventado no sería honesto. `rules` dice, en
  * texto, lo que la norma exige en esta parada (R02, R07).
  */
 export interface Container {
@@ -83,7 +83,9 @@ export interface DemoPlan {
 }
 
 export interface Trip {
-  route: Route
+  id: string
+  stream: WasteStream
+  path: LonLat[]
   timestamps: number[]
 }
 
@@ -103,11 +105,19 @@ export async function loadDemoPlan(url = '/demo/plan-suba.json'): Promise<DemoPl
 
 /** Los tiempos salen de las velocidades por tipo de vía del grafo y de la parada en cada contenedor. */
 export function toTrips(routes: Route[]): Trip[] {
-  return routes.map((route) => ({ route, timestamps: route.times }))
+  return routes.map((route) => ({ id: route.id, stream: route.stream, path: route.path, timestamps: route.times }))
 }
 
 /** "18:00" → segundos desde la medianoche. */
 export function secondsOfDay(hhmm: string): number {
   const [hours, minutes] = hhmm.split(':').map(Number)
   return hours * 3600 + minutes * 60
+}
+
+/** Segundos desde la medianoche (o más de un día) → "HH:MM". */
+export function clock(seconds: number): string {
+  const day = ((Math.floor(seconds) % 86_400) + 86_400) % 86_400
+  const hours = Math.floor(day / 3600)
+  const minutes = Math.floor((day % 3600) / 60)
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }

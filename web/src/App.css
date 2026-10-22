@@ -45,8 +45,20 @@
   cursor: pointer;
 }
 
-.play:hover {
+.play:hover,
+.speed:hover {
   background: var(--line);
+}
+
+.speed {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: none;
+  color: var(--fg-muted);
+  font-size: var(--text-12);
+  cursor: pointer;
 }
 
 .tooltip strong,
@@ -56,6 +68,19 @@
 
 .tooltip span {
   color: var(--fg-muted);
+}
+
+.tooltip .fill-warn {
+  color: var(--warn);
+}
+
+.tooltip .fill-crit {
+  color: var(--crit);
+}
+
+.tooltip .orphan {
+  margin-top: 4px;
+  color: var(--crit);
 }
 
 /* Lo que exige la norma en la parada: con el color de advertencia, porque cambia lo que hace el conductor */

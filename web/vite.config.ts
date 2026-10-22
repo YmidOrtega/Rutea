@@ -1,7 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   worker: {
@@ -10,6 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:8080',
+      '/ws': { target: 'ws://localhost:8080', ws: true },
     },
   },
 })

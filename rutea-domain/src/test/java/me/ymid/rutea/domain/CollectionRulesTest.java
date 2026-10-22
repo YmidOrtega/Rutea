@@ -3,6 +3,7 @@ package me.ymid.rutea.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.LocalTime;
 
 import org.junit.jupiter.api.DisplayName;
@@ -80,5 +81,19 @@ class CollectionRulesTest {
     void compactionEquipmentCitesItsVerifiedArticle() {
         assertThat(CollectionRules.COMPACTION_EQUIPMENT.citation())
                 .isEqualTo("R06 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.36, num. 3");
+    }
+
+    @Test
+    @DisplayName("R05 · D. 1077/2015 art. 2.3.2.2.2.3.34: ante una avería, servicio restablecido en máximo 3 horas")
+    void breakdownRecoveryWithinThreeHours() {
+        assertThat(CollectionRules.MAX_BREAKDOWN_RECOVERY).isEqualTo(Duration.ofHours(3));
+        assertThat(CollectionRules.BREAKDOWN_RECOVERY.citation()).isEqualTo("R05 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.34");
+    }
+
+    @Test
+    @DisplayName("R05 · D. 1077/2015 art. 2.3.2.2.2.3.34: cambios de ruta avisados con 3 días, salvo caso fortuito o fuerza mayor")
+    void routeChangesAnnouncedThreeDaysAhead() {
+        assertThat(CollectionRules.MIN_ROUTE_CHANGE_NOTICE).isEqualTo(Duration.ofDays(3));
+        assertThat(CollectionRules.ROUTE_CHANGE_NOTICE.citation()).isEqualTo("R05 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.34");
     }
 }

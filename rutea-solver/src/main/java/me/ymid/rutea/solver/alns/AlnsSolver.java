@@ -9,6 +9,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import me.ymid.rutea.solver.Evaluation;
+import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.Solver;
@@ -68,7 +70,27 @@ public final class AlnsSolver implements Solver {
     public Solution solve(Instance instance, SolverSettings settings) {
         long start = System.nanoTime();
         long deadline = settings.deadlineFromNow();
-        Solution initial = new LocalSearchSolver().solve(instance, settings);
+        return run(instance, settings, start, deadline, new LocalSearchSolver().solve(instance, settings));
+    }
+
+    /**
+     * Arranque en caliente: ALNS parte de {@code initial} en vez de construir su propia solución. Sirve para
+     * replanificar desde el plan vigente; nunca devuelve algo peor que {@code initial}, porque guarda la mejor
+     * solución vista y {@code initial} es la primera.
+     *
+     * @throws IllegalArgumentException si {@code initial} no es factible para {@code instance}
+     */
+    public Solution solveFrom(Instance instance, SolverSettings settings, Solution initial) {
+        long start = System.nanoTime();
+        long deadline = settings.deadlineFromNow();
+        Evaluation evaluation = Evaluator.evaluate(instance, initial);
+        if (!evaluation.feasible()) {
+            throw new IllegalArgumentException("la solución inicial no es factible: " + evaluation.violations());
+        }
+        return run(instance, settings, start, deadline, initial);
+    }
+
+    private Solution run(Instance instance, SolverSettings settings, long start, long deadline, Solution initial) {
         if (instance.customerCount() < 2) {
             return initial;
         }

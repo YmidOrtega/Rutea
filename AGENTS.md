@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-app/`, `rutea-bench/` y `web/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-sim/`, `rutea-app/`, `rutea-bench/` y `web/`.
 
 ```
 rutea/
@@ -29,7 +29,7 @@ rutea/
 ├── rutea-solver/             CVRP: modelo, lector CVRPLIB, evaluador, solvers, benchmarks (Java puro)
 ├── rutea-domain/             dominio de residuos: corrientes, vehículos, contenedores, reglas normativas
 ├── rutea-geo/                grafo vial desde OpenStreetMap, Dijkstra/A*, matriz de distancias (F3)
-├── rutea-sim/                reloj de simulación, sensores de llenado, eventos de operación (F5)
+├── rutea-sim/                reloj de simulación acelerable, recorridos con hora y sensores de llenado (F5)
 ├── rutea-app/                Spring Boot: API REST, WebSocket, persistencia; une todos los módulos
 ├── rutea-bench/              comparación contra Timefold y microbenchmarks JMH; nunca entra al solver
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
@@ -68,11 +68,15 @@ mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/s
 mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/SubaBase-n807-s1.vrp (ver data/suba/README.md)
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
-mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080
+mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
+mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
+mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
+mvn -pl rutea-app exec:java@sensors          # desbordes según densidad, tamaño y día, con y sin sensores → docs/benchmarks/f5-sensors/*.csv
+mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan, reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm)
 
 # Frontend
 cd web && pnpm install
-pnpm dev                                     # http://localhost:5173 (proxy /api → :8080)
+pnpm dev                                     # http://localhost:5173 (proxy /api y /ws → :8080); sin la API reproduce el plan estático
 pnpm build
 pnpm demo:data                               # regenera web/public/demo/plan-suba.json
 ```
@@ -136,4 +140,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F5 — Operación en tiempo real.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F6 — Producto y publicación.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.

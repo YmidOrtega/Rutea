@@ -1,5 +1,7 @@
 package me.ymid.rutea.app.scenario;
 
+import java.util.List;
+
 import me.ymid.rutea.geo.RoadGraph;
 
 /**
@@ -80,6 +82,22 @@ public final class SubaFigures {
      */
     public static final double RECOVERED_SHARE = 0.16;
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: segundos desde la avería hasta que un camión de reserva sale de la base
+     * (avisar, alistar tripulación y vehículo). Sin dato del operador.
+     */
+    public static final int RESERVE_DISPATCH_SECONDS = 15 * 60;
+
+    /** Contenedores de no aprovechables en vía pública: de 3.200, 2.400 y 1.100 L (operador, Superservicios, 2026). */
+    public static final List<Integer> CONTAINER_LITERS = List.of(3_200, 2_400, 1_100);
+
+    /**
+     * {@code PENDIENTE_VERIFICAR}: densidad de los residuos sueltos en un contenedor. No hay cifra publicada para
+     * Bogotá; 150 kg/m³ es la de manual para "basura suelta en recipientes" (Tchobanoglous, 1993, citado por el
+     * estudio de caracterización de CONAMA RM y la PUCV, 2006).
+     */
+    public static final double LOOSE_WASTE_KG_PER_M3 = 150;
+
     /** Supuesto: vehículo sin compactación de una organización de recicladores (R06, R10), en kg. */
     public static final int RECYCLABLE_VEHICLE_KG = 1_500;
 
@@ -143,7 +161,6 @@ public final class SubaFigures {
         return Math.round(BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * ASE5_SHARE * SIDE_LOADING_SHARE);
     }
 
-    /** Carga media de un contenedor en cada recolección, en kg. */
     public static double meanKgPerCollection(int containers) {
         return containerKgPerDay() * 7.0 / COLLECTIONS_PER_WEEK / containers;
     }
