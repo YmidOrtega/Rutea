@@ -23,6 +23,8 @@ interface Props {
   closing: boolean
   onClosing: (closing: boolean) => void
   clock: (secondsFromShiftStart: number) => string
+  /** Lo que recogen las visitas del plan vigente, con las reservas: la misma cifra de la línea de tiempo. */
+  collectedKg: number
 }
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
@@ -47,11 +49,11 @@ export function PlanPanel({
   closing,
   onClosing,
   clock,
+  collectedKg,
 }: Props) {
   const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
-  const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
   const totalSeconds = plan.routes.reduce((sum, route) => sum + route.durationSeconds, 0)
   const co2Kg = (totalMeters / 1000) * plan.meta.litersPerKm * plan.meta.kgCo2PerLiter
   const trips = plan.routes.reduce((sum, route) => sum + route.tripLoadsKg.length, 0)
@@ -68,7 +70,7 @@ export function PlanPanel({
           <dl className="kpis">
             <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
             <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas" />
-            <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
+            <Kpi value={tonnes(collectedKg)} unit="t" label="Recolectado" />
             <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
             <Kpi value={String(plan.containers.length)} label="Contenedores" />
             <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Vehículos" />

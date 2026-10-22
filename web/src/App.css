@@ -61,6 +61,28 @@
   cursor: pointer;
 }
 
+/* Abajo, la línea de tiempo y encima la tarjeta del contenedor; deja libre la atribución de CARTO y OSM */
+.dock {
+  position: absolute;
+  left: 332px;
+  right: 16px;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.dock > * {
+  align-self: stretch;
+  pointer-events: auto;
+}
+
+.dock > .container-card {
+  align-self: flex-end;
+}
+
 .tooltip strong,
 .tooltip span {
   display: block;
@@ -115,7 +137,11 @@
     display: none;
   }
 
-  .topbar .play {
+  .topbar .clock {
     margin-left: auto;
+  }
+
+  .dock {
+    left: 16px;
   }
 }

@@ -22,6 +22,7 @@ import {
   type DemoPlan,
   type LonLat,
   type Site,
+  type WasteStream,
 } from './demo/plan'
 import {
   currentPlan,
@@ -54,9 +55,12 @@ import {
   fillState,
   type Feed,
   type Sensors,
+  type VehicleState,
 } from './operations/telemetry'
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
+import { Timeline } from './panels/Timeline'
+import { progressOf } from './operations/progress'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
@@ -178,6 +182,11 @@ export default function App() {
     [current],
   )
   const selectedContainer = current?.plan.containers.find((container) => container.id === selected) ?? null
+  const progress = useMemo(() => (current ? progressOf(current, events) : null), [current, events])
+  const streams = useMemo(
+    () => STREAM_ORDER.filter((stream) => plan?.routes.some((route) => route.stream === stream)),
+    [plan],
+  )
 
   // Con la API, el mapa dibuja lo que transmiten los vehículos; sin ella, reproduce el plan estático por su cuenta.
   const animated = feed !== null && feed.clock.running && !reducedMotion
@@ -247,6 +256,8 @@ export default function App() {
       : baseLayers
   const sim = feed?.clock
   const finished = sim !== undefined && !sim.running && sim.seconds >= sim.endSeconds
+  const end = Math.max(plan?.meta.shiftSeconds ?? 0, sim?.endSeconds ?? duration, progress?.lastSeconds ?? 0)
+  const at = (seconds: number) => clock(secondsOfDay(plan?.meta.shiftStart ?? '00:00') + seconds)
 
   const toggleRoute = (routeId: string) =>
     setVisible((current) => {
@@ -281,8 +292,68 @@ export default function App() {
         <span className="label">{plan?.meta.zone ?? 'Suba'} · Bogotá</span>
         <span className="tag">Simulado</span>
         {plan && (
-          <>
-            <span className="num clock" aria-label="Hora simulada">{clock(secondsOfDay(plan.meta.shiftStart) + time)}</span>
+          <span className="num clock" aria-label="Hora simulada">
+            {at(time)}
+          </span>
+        )}
+      </header>
+
+      {current && progress && (
+        <PlanPanel
+          collectedKg={progress.kgBefore[progress.kgBefore.length - 1]}
+          plan={current.plan}
+          visible={visible}
+          onToggle={toggleRoute}
+          live={live}
+          events={events}
+          pending={pending}
+          eventError={eventError}
+          onBreakdown={breakdown}
+          closing={closing}
+          onClosing={setClosing}
+          clock={at}
+        />
+      )}
+
+      <div className="dock">
+        {current && selectedContainer && (
+          <ContainerCard
+            container={selectedContainer}
+            fill={sensors.readings.get(selectedContainer.id)}
+            liters={sensors.liters.get(selectedContainer.id)}
+            overflow={current.overflows.get(selectedContainer.id)}
+            now={time}
+            pending={pending !== null}
+            error={pending === null && eventError !== null ? eventError : null}
+            onReport={() => overflow(selectedContainer.id)}
+            onClose={() => setSelected(null)}
+            clock={at}
+          />
+        )}
+
+        {current && progress && (
+          <Timeline
+            shiftStart={current.plan.meta.shiftStart}
+            end={end}
+            time={time}
+            progress={progress}
+            streams={streams}
+            totalContainers={current.plan.containers.length}
+            events={events}
+            night={current.plan.compliance.find((check) => check.id === 'R02')}
+            clock={at}
+            onSeek={
+              sim
+                ? undefined
+                : (seconds) => {
+                    setPlaying(false)
+                    setTime(seconds)
+                  }
+            }
+            onStreet={
+              feed ? [...feed.vehicles.values()].filter((vehicle) => ON_STREET.includes(vehicle.state)).length : undefined
+            }
+          >
             {sim ? (
               <>
                 <button
@@ -302,48 +373,13 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button
-                className="play"
-                onClick={() => setPlaying(!playing)}
-                aria-label={playing ? 'Pausar' : 'Reproducir'}
-              >
+              <button className="play" onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pausar' : 'Reproducir'}>
                 {playing ? '❚❚' : '▶'}
               </button>
             )}
-          </>
+          </Timeline>
         )}
-      </header>
-
-      {current && (
-        <PlanPanel
-          plan={current.plan}
-          visible={visible}
-          onToggle={toggleRoute}
-          live={live}
-          events={events}
-          pending={pending}
-          eventError={eventError}
-          onBreakdown={breakdown}
-          closing={closing}
-          onClosing={setClosing}
-          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
-        />
-      )}
-
-      {current && selectedContainer && (
-        <ContainerCard
-          container={selectedContainer}
-          fill={sensors.readings.get(selectedContainer.id)}
-          liters={sensors.liters.get(selectedContainer.id)}
-          overflow={current.overflows.get(selectedContainer.id)}
-          now={time}
-          pending={pending !== null}
-          error={pending === null && eventError !== null ? eventError : null}
-          onReport={() => overflow(selectedContainer.id)}
-          onClose={() => setSelected(null)}
-          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
-        />
-      )}
+      </div>
 
       {error && (
         <div className="status panel" role="alert">
@@ -358,6 +394,8 @@ export default function App() {
   )
 }
 
+const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
+const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
 const CLOSURE_LAYERS = ['closures', 'closure-marks']
 

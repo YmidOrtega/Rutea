@@ -291,11 +291,8 @@
 }
 
 @media (max-width: 640px) {
+  /* Abajo va la línea de tiempo: el plan baja desde la barra superior */
   .plan {
-    top: auto;
-    /* Deja libre la atribución de CARTO y OpenStreetMap */
-    bottom: 48px;
-    left: 16px;
     right: 16px;
     width: auto;
     max-height: 45%;
