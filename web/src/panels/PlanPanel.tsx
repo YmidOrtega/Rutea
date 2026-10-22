@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { STREAM_NAMES, type DemoPlan, type WasteStream } from '../demo/plan'
+import { scheduleCsv, windows } from '../demo/schedule'
 import {
   overflowPickup,
   roadClassName,
@@ -8,6 +9,7 @@ import {
   type OperationEvent,
   type OverflowEvent,
 } from '../operations/live'
+import { decimal, km } from '../format'
 import './PlanPanel.css'
 
 interface Props {
@@ -23,16 +25,17 @@ interface Props {
   closing: boolean
   onClosing: (closing: boolean) => void
   clock: (secondsFromShiftStart: number) => string
+  /** La UPZ elegida en los horarios de paso: su borde se marca en el mapa. */
+  sector: string | null
+  onSector: (ref: string | null) => void
 }
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 
-const km = (meters: number) => (meters / 1000).toFixed(1)
 const hours = (seconds: number) => {
   const minutes = Math.round(seconds / 60)
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
 }
-const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function PlanPanel({
@@ -47,11 +50,12 @@ export function PlanPanel({
   closing,
   onClosing,
   clock,
+  sector,
+  onSector,
 }: Props) {
   const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
-  const totalKg = plan.routes.reduce((sum, route) => sum + route.loadKg, 0)
   const totalSeconds = plan.routes.reduce((sum, route) => sum + route.durationSeconds, 0)
   const co2Kg = (totalMeters / 1000) * plan.meta.litersPerKm * plan.meta.kgCo2PerLiter
   const trips = plan.routes.reduce((sum, route) => sum + route.tripLoadsKg.length, 0)
@@ -59,19 +63,18 @@ export function PlanPanel({
   return (
     <aside className="plan panel" aria-label="Plan de recolección">
       <button className="plan-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="label">Plan simulado</span>
+        <span className="label">Ficha del plan</span>
         <span className="plan-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
       </button>
 
       {open && (
         <div className="plan-body">
-          <dl className="kpis">
-            <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
-            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas" />
-            <Kpi value={tonnes(totalKg)} unit="t" label="Recolectado" />
-            <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
-            <Kpi value={String(plan.containers.length)} label="Contenedores" />
-            <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Vehículos" />
+          <dl className="spec">
+            <Spec label="Recorrido" value={km(totalMeters)} unit="km" />
+            <Spec label="Horas de vehículo" value={decimal(totalSeconds / 3600, 1)} unit="h" />
+            <Spec label="CO₂ estimado" value={decimal(co2Kg / 1000, 1)} unit="t" />
+            <Spec label="Vehículos" value={decimal(plan.routes.length)} unit={`· ${trips} viajes`} />
+            <Spec label="Contenedores" value={decimal(plan.containers.length)} />
           </dl>
 
           {STREAMS.map((stream) => {
@@ -128,13 +131,13 @@ export function PlanPanel({
                         </button>
                         {live && route.id.startsWith('C-') && (
                           <button
-                            className="breakdown"
+                            className={`breakdown${broken.has(route.id) ? ' is-broken' : ''}`}
                             disabled={pending !== null || broken.has(route.id)}
                             onClick={() => onBreakdown(route.id)}
                             aria-label={`Simular avería de ${route.id} a la hora del reloj`}
                             title={broken.has(route.id) ? `${route.id} ya está averiado` : 'Simular avería ahora'}
                           >
-                            {pending === route.id ? '…' : '!'}
+                            {pending === route.id ? '…' : <HazardIcon />}
                           </button>
                         )}
                       </li>
@@ -191,10 +194,62 @@ export function PlanPanel({
             </ul>
           </section>
 
+          {plan.sectors.length > 0 && (
+            <details className="schedule">
+              <summary className="label">Horarios de paso por UPZ · R04</summary>
+              <p className="schedule-note" title={plan.compliance.find((check) => check.id === 'R04')?.citation}>
+                Lo que se publicaría: de la primera a la última llegada planeada de cada corriente, en cuartos de
+                hora hacia afuera. Elige una UPZ para verla en el mapa.
+              </p>
+              <ul>
+                {plan.sectors.map((s) => {
+                  const content = (
+                    <>
+                      <span className="sector-name">
+                        {s.name}
+                        {s.ref !== 'rural' && <span className="num unit">UPZ {s.ref}</span>}
+                      </span>
+                      {[...windows(s)]
+                        .sort(([a], [b]) => STREAMS.indexOf(a) - STREAMS.indexOf(b))
+                        .map(([stream, list]) => (
+                          <span key={stream} className="sector-stream" title={STREAM_NAMES[stream]}>
+                            <span className={`swatch swatch-${stream}`} aria-label={STREAM_NAMES[stream]} />
+                            <span className="num">
+                              {list.map(([from, to]) => `${clock(from)}–${clock(to)}`).join(' · ')}
+                            </span>
+                          </span>
+                        ))}
+                    </>
+                  )
+                  return (
+                    <li key={s.ref}>
+                      {s.outline.length > 0 ? (
+                        <button
+                          className="sector"
+                          aria-pressed={sector === s.ref}
+                          onClick={() => onSector(sector === s.ref ? null : s.ref)}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div className="sector" title="El suelo rural no se divide en UPZ: no tiene borde que marcar">
+                          {content}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              <button className="schedule-download" onClick={() => download(scheduleCsv(plan, clock))}>
+                Descargar por vehículo (CSV)
+              </button>
+            </details>
+          )}
+
           <p className="note">
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
-            <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
+            <span className="num">{decimal(plan.meta.iterations)}</span> iteraciones) sobre las
             calles reales de OpenStreetMap, con el menor número de vehículos en turnos de{' '}
             <span className="num">{plan.meta.shiftSeconds / 3600} h</span>. Los compactadores de{' '}
             <span className="num">8 t</span> salen de la base de Fontibón y descargan en Doña Juana en{' '}
@@ -213,6 +268,13 @@ export function PlanPanel({
   )
 }
 
+function download(csv: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = Object.assign(document.createElement('a'), { href: url, download: 'rutea-horarios-suba.csv' })
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['clock'] }) {
   return (
     <li>
@@ -228,7 +290,7 @@ function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['cloc
       <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
         R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
         <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span> (máximo 3
-        h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+        h) · replanificado en <span className="num">{decimal(event.latencyMs)} ms</span>
       </span>
     </li>
   )
@@ -250,7 +312,7 @@ function Overflow({ event, clock }: { event: OverflowEvent; clock: Props['clock'
       <span>
         Decidido en{' '}
         <span className="num">
-          {event.latencyMs < 1 ? `${(event.latencyMs * 1000).toFixed(0)} µs` : `${event.latencyMs.toFixed(1)} ms`}
+          {event.latencyMs < 1 ? `${decimal(event.latencyMs * 1000)} µs` : `${decimal(event.latencyMs, 1)} ms`}
         </span>
       </span>
     </li>
@@ -295,20 +357,31 @@ function Closure({ event, clock }: { event: ClosureEvent; clock: Props['clock'] 
         <span className="num">
           {event.recomputed} de {event.matrixSize}
         </span>{' '}
-        filas y columnas en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+        filas y columnas en <span className="num">{decimal(event.latencyMs)} ms</span>
       </span>
     </li>
   )
 }
 
-function Kpi({ value, unit, label }: { value: string; unit?: string; label: string }) {
+/** Una línea de la ficha técnica: la etiqueta a la izquierda y la cifra alineada a la derecha. */
+function Spec({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
-    <div className="kpi">
-      <dt className="label">{label}</dt>
-      <dd className="num kpi-value">
+    <div className="spec-row">
+      <dt>{label}</dt>
+      <dd className="num">
         {value}
         {unit && <span className="unit">{unit}</span>}
       </dd>
     </div>
+  )
+}
+
+/** El triángulo de emergencia de los vehículos: averiar este compactador ahora. */
+function HazardIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M6 1 11.2 10.5H.8z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M5.4 4.4h1.2v3H5.4zM5.4 8.2h1.2v1.2H5.4z" fill="currentColor" />
+    </svg>
   )
 }

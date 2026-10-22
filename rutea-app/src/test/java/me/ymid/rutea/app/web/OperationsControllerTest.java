@@ -1,9 +1,11 @@
 package me.ymid.rutea.app.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,13 +40,16 @@ class OperationsControllerTest {
     void planWithoutOsmDataSaysWhatIsMissingAndHowToBuildIt() throws Exception {
         mvc.perform(get("/api/plan"))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error", Matchers.containsString("suba.rgraph")))
-                .andExpect(jsonPath("$.error", Matchers.containsString("mvn -pl rutea-geo compile exec:java")));
+                .andExpect(jsonPath("$.detail", Matchers.containsString("suba.rgraph")))
+                .andExpect(jsonPath("$.detail", Matchers.containsString("mvn -pl rutea-geo compile exec:java")));
     }
 
     @Test
     void eventHistoryStartsEmptyEvenWithoutData() throws Exception {
-        mvc.perform(get("/api/events")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/events"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shift").isNumber())
+                .andExpect(jsonPath("$.events.length()").value(0));
     }
 
     @Test
@@ -73,6 +78,43 @@ class OperationsControllerTest {
         mvc.perform(put("/api/clock").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"running\":true,\"speed\":60}"))
                 .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void everyErrorIsAProblemDetailThatSaysWhatWasExpected() throws Exception {
+        mvc.perform(post("/api/breakdowns").contentType(MediaType.APPLICATION_JSON).content("{truck"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("el cuerpo no es JSON válido"));
+        mvc.perform(post("/api/closures").contentType(MediaType.APPLICATION_JSON).content("{\"lat\":4.7}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("falta el campo lon o no tiene el tipo esperado"));
+        mvc.perform(post("/api/overflows").contentType(MediaType.TEXT_PLAIN).content("N0001"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.detail", Matchers.startsWith("el cuerpo va en JSON")));
+        mvc.perform(delete("/api/plan"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.detail").value("/api/plan no admite DELETE; admite GET"));
+        mvc.perform(get("/api/nada"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("no hay nada en /api/nada"));
+    }
+
+    @Test
+    void theClockRefusesASpeedThatWouldSkipTheShiftInOneReport() throws Exception {
+        mvc.perform(put("/api/clock").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"running\":true,\"speed\":1e9}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("la velocidad va hasta 3600×; llegó 1000000000×"));
+    }
+
+    @Test
+    void eventsAfterASeqMustNotBeNegative() throws Exception {
+        mvc.perform(get("/api/events").param("after", "-1")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/events").param("after", "uno"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("after no admite el valor uno"));
     }
 
     @Test

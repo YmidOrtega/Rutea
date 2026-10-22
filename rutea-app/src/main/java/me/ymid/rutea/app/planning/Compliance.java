@@ -129,6 +129,15 @@ public final class Compliance {
                         Status.OK));
     }
 
+    static Check scheduleCheck(List<DemoPlan.Sector> sectors) {
+        long passes = sectors.stream().mapToLong(sector -> sector.passes().size()).sum();
+        long upz = sectors.stream().filter(sector -> !sector.ref().equals(Sectors.RURAL)).count();
+        boolean rural = upz < sectors.size();
+        return new Check("R04", CollectionRules.SCHEDULE_DISCLOSURE.citation(), sectors.size(), "Horario estimado de"
+                + " paso en " + upz + " UPZ" + (rural ? " y la zona rural" : "") + ", " + passes + " pasadas de"
+                + " vehículo: se publica por sector", Status.OK);
+    }
+
     static Check nightNoiseCheck(int stops) {
         return new Check("R02", CollectionRules.NIGHT_NOISE.citation(), stops, stops + " paradas entre las 21:00 y"
                 + " las 06:00 en calle residencial o frente a hotel, hospital, clínica o centro asistencial: requieren"

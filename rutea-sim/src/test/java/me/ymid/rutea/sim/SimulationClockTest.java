@@ -76,6 +76,18 @@ class SimulationClockTest {
     }
 
     @Test
+    void resumesASavedShiftPausedWhereItWas() {
+        clock.play();
+        clock.seek(1_800);
+        advance(10);
+
+        assertThat(clock.seconds()).isEqualTo(1_800);
+        clock.play();
+        advance(1);
+        assertThat(clock.seconds()).isEqualTo(1_860);
+    }
+
+    @Test
     void refusesANonPositiveSpeed() {
         assertThatThrownBy(() -> clock.speed(0)).hasMessageContaining("positiva");
     }

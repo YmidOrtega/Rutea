@@ -2,10 +2,13 @@ package me.ymid.rutea.geo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
+
+import me.ymid.rutea.geo.geometry.Haversine;
 
 class RoadGraphTest {
 
@@ -54,6 +57,16 @@ class RoadGraphTest {
         int latE7 = (LINE.latE7(2) + LINE.latE7(3)) / 2;
 
         assertThat(LINE.nearestShape(latE7, LINE.lonE7(2) + 2_000)).isEqualTo(2);
+    }
+
+    @Test
+    void distanceToAShapeIsMeasuredToItsNearestSegment() {
+        int latE7 = (LINE.latE7(2) + LINE.latE7(3)) / 2;
+        int lonE7 = LINE.lonE7(2) + 2_000;
+
+        assertThat(LINE.metersToShape(2, latE7, lonE7))
+                .isCloseTo(Haversine.meters(latE7, LINE.lonE7(2), latE7, lonE7), within(0.05));
+        assertThat(LINE.metersToShape(0, latE7, lonE7)).isGreaterThan(100);
     }
 
     @Test

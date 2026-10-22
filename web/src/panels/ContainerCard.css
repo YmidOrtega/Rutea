@@ -1,7 +1,4 @@
 .container-card {
-  position: absolute;
-  right: 16px;
-  bottom: 48px;
   width: 300px;
   display: grid;
   gap: 6px;
@@ -44,7 +41,6 @@
   margin-top: 4px;
   padding: 8px 10px;
   border: 1px solid var(--sodium);
-  border-radius: 6px;
   background: none;
   color: var(--sodium);
   font: inherit;
@@ -74,8 +70,8 @@
 }
 
 @media (max-width: 640px) {
-  .container-card {
-    left: 16px;
+  .dock > .container-card {
+    align-self: stretch;
     width: auto;
   }
 }

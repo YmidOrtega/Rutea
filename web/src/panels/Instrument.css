@@ -1,0 +1,129 @@
+.instrument {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 12px;
+}
+
+.instrument-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand {
+  font-size: var(--text-15);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Un sello, no una píldora: dice que los datos son simulados con la misma seriedad que una norma */
+.stamp {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  font-size: var(--text-11);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.instrument-reading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* La hora es lo que pasa ahora: la única cifra en el acento, ancha como la de un tablero */
+.instrument-clock {
+  font-size: var(--text-40);
+  font-weight: 300;
+  font-stretch: 112.5%;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--sodium);
+}
+
+.instrument-shift {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-size: var(--text-12);
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+
+/* Escala grabada: una marca cada décimo del turno, más alta en la mitad */
+.instrument-scale {
+  position: relative;
+  height: 9px;
+  background:
+    linear-gradient(var(--line-strong), var(--line-strong)) bottom / 100% 1px no-repeat,
+    linear-gradient(var(--fg-muted), var(--fg-muted)) 50% 100% / 1px 9px no-repeat,
+    repeating-linear-gradient(
+      to right,
+      var(--line-strong) 0 1px,
+      transparent 1px 10%
+    ) bottom / calc(100% + 1px) 5px no-repeat;
+}
+
+.instrument-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--fg);
+  box-shadow: 1px 0 0 0 var(--sodium);
+}
+
+.instrument-figures {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.instrument-figures dd {
+  margin: 2px 0 0;
+  font-size: var(--text-15);
+}
+
+.instrument-figures strong {
+  font-weight: 500;
+}
+
+.instrument-figures .of {
+  color: var(--fg-muted);
+  font-size: var(--text-12);
+}
+
+@media (max-width: 640px) {
+  .instrument {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .instrument-clock {
+    font-size: var(--text-24);
+  }
+
+  .instrument-reading {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+  }
+
+  .instrument-shift {
+    display: none;
+  }
+
+  .instrument-head .label {
+    display: none;
+  }
+
+  .stamp {
+    margin-left: 0;
+  }
+}

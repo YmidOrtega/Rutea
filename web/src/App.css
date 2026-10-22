@@ -3,62 +3,48 @@
   height: 100%;
 }
 
-.topbar {
+/* Arriba a la izquierda, el instrumento y debajo la ficha del plan: la ficha toma lo que quede de alto */
+.console {
   position: absolute;
   top: 16px;
   left: 16px;
+  bottom: 16px;
+  width: 320px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
 }
 
-.brand {
-  font-size: var(--text-18);
-  font-weight: 700;
-}
-
-.tag {
-  font-size: var(--text-12);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sodium);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
-/* La hora actual es lo único que lleva el acento (docs/diseno.md, principio 2) */
-.clock {
-  font-size: var(--text-18);
-  color: var(--sodium);
+.console > * {
+  pointer-events: auto;
 }
 
 .play {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: none;
-  color: var(--fg);
-  font-size: var(--text-12);
-  cursor: pointer;
+  width: 30px;
+  padding: 0;
 }
 
-.play:hover,
-.speed:hover {
-  background: var(--line);
+/* Abajo, la línea de tiempo y encima la tarjeta del contenedor; deja libre la atribución de CARTO y OSM */
+.dock {
+  position: absolute;
+  left: 352px;
+  right: 16px;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
 }
 
-.speed {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: none;
-  color: var(--fg-muted);
-  font-size: var(--text-12);
-  cursor: pointer;
+.dock > * {
+  align-self: stretch;
+  pointer-events: auto;
+}
+
+.dock > .container-card {
+  align-self: flex-end;
 }
 
 .tooltip strong,
@@ -91,7 +77,7 @@
 
 .status {
   position: absolute;
-  top: 72px;
+  top: 200px;
   left: 16px;
   max-width: 360px;
   display: flex;
@@ -106,16 +92,49 @@
 }
 
 @media (max-width: 640px) {
-  .topbar {
+  /* Abajo va la línea de tiempo: el plan baja colapsado desde el instrumento y no la alcanza */
+  .console {
     right: 16px;
-    gap: 8px;
+    bottom: auto;
+    width: auto;
+    max-height: 55%;
   }
 
-  .topbar .label {
-    display: none;
+  .dock {
+    left: 16px;
   }
+}
 
-  .topbar .play {
-    margin-left: auto;
-  }
+/* El crédito del mapa es obligatorio, no decorativo: va en el tablero, con su línea fina y sin píldora */
+.app .maplibregl-ctrl-attrib.maplibregl-compact,
+.app .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--fg-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-11);
+  line-height: 18px;
+}
+
+.app .maplibregl-ctrl-attrib a {
+  color: var(--fg-muted);
+}
+
+.app .maplibregl-ctrl-attrib a:hover {
+  color: var(--fg);
+}
+
+.app .maplibregl-ctrl-attrib-button,
+.app .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button {
+  border-radius: 0;
+  background-color: transparent;
+  filter: invert(0.55);
+  opacity: 0.7;
+}
+
+.app .maplibregl-ctrl-attrib-button:focus {
+  box-shadow: none;
+  outline: 1px solid var(--sodium);
+  outline-offset: -2px;
 }

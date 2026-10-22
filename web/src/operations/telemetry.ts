@@ -130,11 +130,14 @@ export async function setClock(running: boolean, speed: number): Promise<Telemet
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ running, speed }),
   })
-  const body = (await response.json()) as TelemetryMessage | { error: string }
-  if (!response.ok || 'error' in body) {
-    throw new Error('error' in body ? body.error : `la API respondió ${response.status}`)
-  }
-  return body
+  if (!response.ok) throw await apiError(response)
+  return (await response.json()) as TelemetryMessage
+}
+
+/** Los errores de la API llegan en RFC 9457: detail dice qué falló y qué se esperaba. */
+export async function apiError(response: Response): Promise<Error> {
+  const problem = (await response.json().catch(() => null)) as { detail?: string } | null
+  return new Error(problem?.detail ?? `la API respondió ${response.status}`)
 }
 
 export const VEHICLE_STATES: Record<VehicleState, string> = {

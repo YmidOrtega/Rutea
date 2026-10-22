@@ -20,10 +20,10 @@ importers:
       '@deck.gl/maplibre':
         specifier: ^9.4.0
         version: 9.4.0(@deck.gl/core@9.4.0(@luma.gl/webgpu@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(maplibre-gl@6.14.0)
-      '@fontsource-variable/schibsted-grotesk':
-        specifier: ^5.3.0
+      '@fontsource-variable/martian-mono':
+        specifier: 5.3.0
         version: 5.3.0
-      '@fontsource/ibm-plex-mono':
+      '@fontsource-variable/schibsted-grotesk':
         specifier: ^5.3.0
         version: 5.3.0
       maplibre-gl:
@@ -108,11 +108,11 @@ packages:
       '@luma.gl/gltf': ~9.4.0
       '@luma.gl/shadertools': ~9.4.0
 
+  '@fontsource-variable/martian-mono@5.3.0':
+    resolution: {integrity: sha512-0wVODx9ILwNnaYC4XCuSaFRYtj1Prd89MRVaSuv2ng6zLiQkS4SepaWEPefs7vqCZS8sbEOA8jb/4F5KNMnGdg==}
+
   '@fontsource-variable/schibsted-grotesk@5.3.0':
     resolution: {integrity: sha512-ndS6H/KICWANchlHF3q4UdZD+xrZ3Ji0rUobIuXlgvDUzDfqZDsVuXPXZb636nJZMHE9zZ9Fmwgqazm8hMB50Q==}
-
-  '@fontsource/ibm-plex-mono@5.3.0':
-    resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
 
   '@loaders.gl/3d-tiles@4.5.2':
     resolution: {integrity: sha512-JBD9lfWDYsUakMiWkXkCHjNXFthEVBCHxkgSvDQ/WdYE973M1EJWQFyRIJ3DL6m/sxpxfyjYxmBzvcinTLgi7w==}
@@ -1338,9 +1338,9 @@ snapshots:
       - '@loaders.gl/core'
       - texture-compressor
 
-  '@fontsource-variable/schibsted-grotesk@5.3.0': {}
+  '@fontsource-variable/martian-mono@5.3.0': {}
 
-  '@fontsource/ibm-plex-mono@5.3.0': {}
+  '@fontsource-variable/schibsted-grotesk@5.3.0': {}
 
   '@loaders.gl/3d-tiles@4.5.2(@loaders.gl/core@4.5.2)(texture-compressor@1.0.2)':
     dependencies:

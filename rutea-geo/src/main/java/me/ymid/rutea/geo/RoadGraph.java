@@ -179,24 +179,39 @@ public final class RoadGraph {
         int best = -1;
         double bestSquared = Double.POSITIVE_INFINITY;
         for (int shape = 0; shape < shapeCount(); shape++) {
-            for (int p = firstShapePoint[shape] + 1; p < firstShapePoint[shape + 1]; p++) {
-                double ax = (shapeLonE7[p - 1] - lonE7) * cosLat;
-                double ay = shapeLatE7[p - 1] - latE7;
-                double bx = (shapeLonE7[p] - lonE7) * cosLat;
-                double by = shapeLatE7[p] - latE7;
-                double dx = bx - ax;
-                double dy = by - ay;
-                double length = dx * dx + dy * dy;
-                double t = length == 0 ? 0 : Math.clamp(-(ax * dx + ay * dy) / length, 0, 1);
-                double x = ax + t * dx;
-                double y = ay + t * dy;
-                if (x * x + y * y < bestSquared) {
-                    bestSquared = x * x + y * y;
-                    best = shape;
-                }
+            double squared = squaredE7ToShape(shape, latE7, lonE7, cosLat);
+            if (squared < bestSquared) {
+                bestSquared = squared;
+                best = shape;
             }
         }
         return best;
+    }
+
+    /** Metros en línea recta desde un punto hasta el tramo más cercano de un trazo. */
+    public double metersToShape(int shape, int latE7, int lonE7) {
+        double cosLat = Math.cos(Math.toRadians(latE7 / 1e7));
+        return Math.sqrt(squaredE7ToShape(shape, latE7, lonE7, cosLat)) / 1e7 * Math.toRadians(1)
+                * Haversine.EARTH_RADIUS_METERS;
+    }
+
+    /** En el plano local del punto, con la longitud escalada por {@code cosLat}: unidades de 1e-7 grados de latitud. */
+    private double squaredE7ToShape(int shape, int latE7, int lonE7, double cosLat) {
+        double bestSquared = Double.POSITIVE_INFINITY;
+        for (int p = firstShapePoint[shape] + 1; p < firstShapePoint[shape + 1]; p++) {
+            double ax = (shapeLonE7[p - 1] - lonE7) * cosLat;
+            double ay = shapeLatE7[p - 1] - latE7;
+            double bx = (shapeLonE7[p] - lonE7) * cosLat;
+            double by = shapeLatE7[p] - latE7;
+            double dx = bx - ax;
+            double dy = by - ay;
+            double length = dx * dx + dy * dy;
+            double t = length == 0 ? 0 : Math.clamp(-(ax * dx + ay * dy) / length, 0, 1);
+            double x = ax + t * dx;
+            double y = ay + t * dy;
+            bestSquared = Math.min(bestSquared, x * x + y * y);
+        }
+        return bestSquared;
     }
 
     public int[] edgesOn(int shape) {

@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-sim/`, `rutea-app/`, `rutea-bench/` y `web/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `docker/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-sim/`, `rutea-app/`, `rutea-bench/` y `web/`.
 
 ```
 rutea/
@@ -36,7 +36,7 @@ rutea/
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
 ├── data/osm/                 extracto de OpenStreetMap fijo, se descarga (ver data/osm/README.md)
 ├── data/suba/                instancias CVRP reales de Suba, se generan (ver data/suba/README.md)
-└── docs/                     normativa, arquitectura, roadmap, diseño, ADRs
+└── docs/                     normativa, arquitectura, contrato de la API, roadmap, diseño, ADRs
 ```
 
 ### Dirección de dependencias (obligatoria)
@@ -57,6 +57,8 @@ La traducción "problema de residuos → instancia CVRP" vive en `rutea-app` (pa
 Comandos previstos; se activan cuando exista cada módulo. Actualiza esta sección si cambian.
 
 ```bash
+docker compose up                            # todo: datos de OSM, PostGIS y la app con el mapa en http://localhost:8080
+
 # Backend
 mvn verify                                   # compila y corre todos los tests
 mvn -pl rutea-solver test                    # solo el solver
@@ -68,6 +70,7 @@ mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/s
 mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/SubaBase-n807-s1.vrp (ver data/suba/README.md)
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
+mvn -pl rutea-app exec:java@sectors          # las 12 UPZ de Suba de OSM (R04) → rutea-app/src/main/resources/sectors/suba-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv

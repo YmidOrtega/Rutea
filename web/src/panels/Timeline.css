@@ -1,0 +1,209 @@
+.timeline {
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px 8px;
+}
+
+.timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline-title {
+  margin-left: 4px;
+}
+
+.timeline-legend {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.timeline-legend .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-key {
+  width: 8px;
+  height: 8px;
+}
+
+.timeline-key.lane-RECYCLABLE {
+  background: var(--stream-recyclable);
+}
+
+.timeline-key.lane-ORGANIC {
+  background: var(--stream-organic);
+}
+
+.timeline-key.lane-NON_RECYCLABLE {
+  background: var(--stream-non-recyclable);
+  box-shadow: inset 0 0 0 1.5px var(--stream-non-recyclable-edge);
+}
+
+/* Arriba, la etiqueta de la franja nocturna; abajo, los desbordes y las horas */
+.timeline-track {
+  position: relative;
+  padding: 16px 0 24px;
+}
+
+.timeline-track.seekable {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.timeline-track.seekable:focus-visible {
+  outline-offset: 4px;
+  border-radius: 0;
+}
+
+.timeline-lanes {
+  display: block;
+  width: 100%;
+}
+
+.lane-RECYCLABLE rect {
+  fill: var(--stream-recyclable);
+}
+
+.lane-ORGANIC rect {
+  fill: var(--stream-organic);
+}
+
+/* El negro oficial no se ve sobre el panel: se dibuja con su borde claro, como en el mapa */
+.lane-NON_RECYCLABLE rect {
+  fill: var(--stream-non-recyclable-edge);
+}
+
+.timeline-ahead {
+  opacity: 0.22;
+}
+
+.timeline-night {
+  position: absolute;
+  top: 0;
+  bottom: 24px;
+  border-left: 1px solid var(--warn);
+  /* Rayado fino: la franja es una condición de la norma, no un dato */
+  background: repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 6px);
+}
+
+.timeline-night span {
+  position: absolute;
+  top: 1px;
+  left: 6px;
+  font-size: var(--text-12);
+  line-height: 14px;
+  color: var(--warn);
+  white-space: nowrap;
+}
+
+.timeline-events {
+  position: absolute;
+  inset: 16px 0 24px;
+  pointer-events: none;
+}
+
+/*
+ * Averías y cierres cambian el plan: cruzan la línea, pero punteados y con un rombo, para no confundirse con la
+ * aguja de la hora. Los desbordes, que pueden ser decenas, van debajo.
+ */
+.timeline-event {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--crit) 0 2px, transparent 2px 4px);
+}
+
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2.5px;
+  width: 6px;
+  height: 6px;
+  background: var(--crit);
+  transform: rotate(45deg);
+}
+
+.timeline-event-overflow {
+  top: auto;
+  bottom: -7px;
+  height: 5px;
+  background: var(--warn);
+}
+
+.timeline-event-overflow::before {
+  content: none;
+}
+
+.timeline-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  font-size: var(--text-12);
+  line-height: 14px;
+  color: var(--fg-muted);
+}
+
+/* Una marca grabada por hora, más larga cada dos, donde va la hora */
+.timeline-axis span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.timeline-axis span::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 1px;
+  height: 3px;
+  background: var(--line-strong);
+}
+
+.timeline-axis span.major::before {
+  height: 5px;
+  background: var(--fg-muted);
+}
+
+.timeline-axis span:first-child {
+  transform: none;
+}
+
+.timeline-axis span:first-child::before {
+  left: 0;
+}
+
+/* La hora actual: lo único con el acento. Una aguja con su remate, como la de un instrumento */
+.timeline-now {
+  position: absolute;
+  top: 10px;
+  bottom: 18px;
+  width: 1px;
+  background: var(--sodium);
+  pointer-events: none;
+}
+
+.timeline-now::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -3px;
+  border: 3.5px solid transparent;
+  border-top: 5px solid var(--sodium);
+}
+
+@media (max-width: 640px) {
+  .timeline-title,
+  .timeline-legend {
+    display: none;
+  }
+}

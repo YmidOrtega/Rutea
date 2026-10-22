@@ -1,6 +1,11 @@
 spring:
   application:
     name: rutea
+  autoconfigure:
+    # Sin base de datos la operación vive en memoria; el perfil postgres la guarda.
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
 
 server:
   port: 8080

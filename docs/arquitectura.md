@@ -75,8 +75,23 @@ Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de 
 Spring Boot. Paquetes:
 
 - `planning`: traduce el problema de residuos a instancias CVRP y las rutas de vuelta a geometrías.
-- `api`: REST (`/api/...`) y WebSocket.
-- `persistence`: PostgreSQL + PostGIS (desde F6).
+- `web`: REST (`/api/...`) y WebSocket (`/ws/events`). El contrato está en [`api.md`](api.md) ([ADR 0011](adr/0011-api-estable.md)).
+- `persistence`: PostgreSQL + PostGIS ([ADR 0010](adr/0010-un-comando-y-persistencia.md)). Guarda las órdenes de cada turno, que se repiten al arrancar, y cada posición transmitida como punto. Por ejemplo, kilómetros y minutos detenidos por vehículo en el último turno:
+
+  ```sql
+  WITH track AS (
+    SELECT vehicle, at_seconds, position,
+           lag(position) OVER w AS previous, lag(at_seconds) OVER w AS previous_at
+    FROM vehicle_position WHERE shift_id = (SELECT max(id) FROM shift)
+    WINDOW w AS (PARTITION BY vehicle ORDER BY at_seconds)
+  )
+  SELECT vehicle,
+         round((sum(ST_Distance(position::geography, previous::geography)) / 1000)::numeric, 1) AS km,
+         round((sum(at_seconds - previous_at) FILTER (WHERE ST_Equals(position, previous)) / 60)::numeric) AS min_stopped
+  FROM track WHERE previous IS NOT NULL GROUP BY vehicle ORDER BY vehicle;
+  ```
+
+  Y qué vehículos pasaron a menos de 50 m de un punto: `ST_DWithin(position::geography, ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, 50)`. Se corren con `docker compose exec db psql -U rutea`.
 
 ## Flujo de una replanificación (F5)
 
@@ -90,6 +105,6 @@ sequenceDiagram
   APP->>APP: Congela lo recorrido y arma una sub-instancia
   APP->>SOL: solve(instancia, plan vigente, límite 2 s)
   SOL-->>APP: Nuevo plan
-  APP-->>WEB: plan.updated (WebSocket)
+  APP-->>WEB: breakdown (WebSocket)
   WEB->>WEB: Anima el cambio de rutas
 ```

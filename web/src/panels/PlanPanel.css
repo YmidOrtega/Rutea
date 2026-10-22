@@ -1,9 +1,6 @@
 .plan {
-  position: absolute;
-  top: 72px;
-  left: 16px;
-  width: 300px;
-  max-height: calc(100% - 136px);
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -30,26 +27,43 @@
 .plan-body {
   overflow-y: auto;
   padding: 0 14px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
-.kpis {
+/* Ficha técnica: etiqueta, línea de puntos y la cifra a la derecha, como la de un catálogo de motores */
+.spec {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0 0 16px;
+  gap: 5px;
+  margin: 0 0 14px;
+  font-size: var(--text-13);
 }
 
-.kpi dd {
-  margin: 2px 0 0;
+.spec-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.kpi-value {
-  font-size: var(--text-24);
+.spec-row dt {
+  color: var(--fg-muted);
+}
+
+.spec-row::after {
+  content: '';
+  order: 1;
+  flex: 1;
+  border-bottom: 1px dotted var(--line-strong);
+}
+
+.spec-row dd {
+  order: 2;
+  margin: 0;
 }
 
 .unit {
   margin-left: 3px;
-  font-size: var(--text-12);
+  font-size: var(--text-11);
   color: var(--fg-muted);
 }
 
@@ -68,9 +82,8 @@
 }
 
 .swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
 }
 
 .swatch-RECYCLABLE {
@@ -103,7 +116,6 @@
   margin: 0 -6px;
   background: none;
   border: 0;
-  border-radius: 6px;
   color: inherit;
   font: inherit;
   font-size: var(--text-13);
@@ -119,10 +131,11 @@
   opacity: 0.4;
 }
 
+/* La carga contra la capacidad: una barra fina sobre su riel, que termina en la marca del 100 % */
 .load {
-  height: 4px;
-  border-radius: 2px;
+  height: 3px;
   background: var(--line);
+  box-shadow: 1px 0 0 0 var(--fg-muted);
   overflow: hidden;
 }
 
@@ -173,6 +186,85 @@
   color: var(--crit);
 }
 
+.schedule {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.schedule summary {
+  cursor: pointer;
+}
+
+.schedule-note {
+  margin: 6px 0 8px;
+  font-size: var(--text-12);
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+
+.schedule ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sector {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 5px 6px;
+  margin: 0 -6px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+button.sector {
+  cursor: pointer;
+}
+
+button.sector:hover {
+  background: var(--line);
+}
+
+/* La UPZ elegida lleva el acento, como su borde en el mapa */
+.sector[aria-pressed='true'] .sector-name {
+  color: var(--sodium);
+}
+
+.sector-stream {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-12);
+  color: var(--fg-muted);
+}
+
+.sector-stream .swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-download {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.schedule-download:hover {
+  background: var(--line);
+}
+
 .note {
   margin: 12px 0 0;
   font-size: var(--text-12);
@@ -197,10 +289,12 @@
 /* La avería es una alerta: lleva el acento solo cuando el foco o el puntero están encima. */
 .breakdown {
   flex: none;
+  display: grid;
+  place-items: center;
   width: 22px;
   height: 22px;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 50%;
   background: none;
   color: var(--fg-muted);
   font-family: var(--font-mono);
@@ -217,6 +311,20 @@
 .breakdown:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* Quince triángulos de emergencia dicen que todo está mal: aparece solo en la fila que se mira */
+@media (hover: hover) {
+  .routes li:not(:hover, :focus-within) .breakdown:not(.is-broken) {
+    opacity: 0;
+  }
+}
+
+/* El que ya se averió lo sigue diciendo: es un estado, no una acción */
+.breakdown.is-broken:disabled {
+  opacity: 1;
+  color: var(--crit);
+  border-color: var(--crit);
 }
 
 .events {
@@ -243,10 +351,11 @@
 .events li {
   display: grid;
   gap: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line-strong);
 }
 
 .events strong {
-  color: var(--sodium);
   font-weight: 500;
 }
 
@@ -259,8 +368,7 @@
 .road-closure-toggle {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 1px solid var(--line-strong);
   background: none;
   color: var(--fg);
   font: inherit;
@@ -288,16 +396,4 @@
   margin: 0 0 6px;
   font-size: var(--text-12);
   color: var(--crit);
-}
-
-@media (max-width: 640px) {
-  .plan {
-    top: auto;
-    /* Deja libre la atribución de CARTO y OpenStreetMap */
-    bottom: 48px;
-    left: 16px;
-    right: 16px;
-    width: auto;
-    max-height: 45%;
-  }
 }

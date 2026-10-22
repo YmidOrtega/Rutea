@@ -1,9 +1,9 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
-import { isReserveId, type ClosureEvent } from '../operations/live'
+import { isReserveId, type ClosureEvent, type OverflowEvent } from '../operations/live'
 import { fillState, type VehicleTrack } from '../operations/telemetry'
-import { strokeColor, type Palette } from './colors'
+import { strokeColor, type Palette, type RGB } from './colors'
 import suba from './suba.json'
 
 /**
@@ -30,7 +30,7 @@ export function zoneLayers(palette: Palette) {
       id: 'zone-mask',
       data: [[SURROUNDINGS, SUBA]],
       getPolygon: (rings) => rings,
-      getFillColor: [...palette.bg, 150],
+      getFillColor: [...palette.bg, 170],
       stroked: false,
     }),
     new PathLayer<LonLat[]>({
@@ -45,52 +45,43 @@ export function zoneLayers(palette: Palette) {
   ]
 }
 
+/** El borde de la UPZ elegida en los horarios de paso: es una selección, va en el acento. */
+export function sectorLayer(outline: LonLat[], palette: Palette) {
+  return new PathLayer<LonLat[]>({
+    id: 'sector',
+    data: [outline],
+    getPath: (ring) => ring,
+    getColor: palette.sodium,
+    getWidth: 2,
+    widthUnits: 'pixels',
+    jointRounded: true,
+    parameters: FLAT,
+  })
+}
+
+/**
+ * El plan es el fondo: lo que ya se recorrió, la estela, es lo que brilla. Opaco y no transparente, porque una
+ * docena de recorridos comparten cada avenida y con transparencia se suman hasta volverse blancos.
+ */
+const PLANNED = 0.22
+
+const mix = (from: RGB, to: RGB, t: number): RGB =>
+  [0, 1, 2].map((i) => Math.round(from[i] + (to[i] - from[i]) * t)) as RGB
+
 export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
-  const containers = plan.containers.filter((container) => visible.has(container.route))
-  const nonRecyclable = routes.filter((route) => route.stream === 'NON_RECYCLABLE')
 
   return [
-    // Borde claro bajo las rutas de no aprovechables, para que su núcleo negro se lea
-    new PathLayer<Route>({
-      id: 'routes-edge',
-      data: nonRecyclable,
-      getPath: (route) => route.path,
-      getColor: palette.nonRecyclableEdge,
-      getWidth: 6,
-      widthUnits: 'pixels',
-      opacity: 0.35,
-      jointRounded: true,
-      capRounded: true,
-      parameters: FLAT,
-    }),
     new PathLayer<Route>({
       id: 'routes',
       data: routes,
       getPath: (route) => route.path,
-      getColor: (route) => palette.stream[route.stream],
-      getWidth: 3,
+      getColor: (route) => mix(palette.bg, strokeColor(palette, route.stream), PLANNED),
+      getWidth: 1.5,
       widthUnits: 'pixels',
-      opacity: 0.35,
       jointRounded: true,
       capRounded: true,
       parameters: FLAT,
-    }),
-    new ScatterplotLayer<Container>({
-      id: 'containers',
-      data: containers,
-      getPosition: (container) => container.position,
-      getFillColor: (container) => palette.stream[container.stream],
-      // Ámbar si ahí no se puede compactar (R07): es lo único que el conductor tiene que hacer distinto.
-      getLineColor: (container) => (container.noCompaction ? palette.warn : strokeColor(palette, container.stream)),
-      getRadius: 14,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: true,
-      lineWidthUnits: 'pixels',
-      getLineWidth: 1.5,
-      pickable: true,
-      autoHighlight: true,
     }),
     // Relleno: punto lleno. Base: anillo. ECA: punto del color de los aprovechables, que terminan ahí.
     new ScatterplotLayer<Site>({
@@ -111,23 +102,77 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
 }
 
 /**
+ * Lo que falta por recoger es apenas un punto: como la línea de tiempo, el mapa se enciende a medida que pasa el
+ * turno, y Suba no arranca como una mancha de 1.612 puntos.
+ */
+const PENDING = 55
+
+export function containersLayer(
+  containers: Container[],
+  firstVisit: Map<string, number>,
+  seconds: number,
+  palette: Palette,
+) {
+  // Al minuto: recalcular el color de cada contenedor en cada cuadro no cambia nada que se vea
+  const minute = Math.floor(seconds / 60)
+  const collected = (container: Container) => collectedBy(firstVisit, container, minute * 60)
+  return new ScatterplotLayer<Container>({
+    id: 'containers',
+    data: containers,
+    getPosition: (container) => container.position,
+    getFillColor: (container) => [...palette.stream[container.stream], collected(container) ? 255 : PENDING],
+    // Advertencia si ahí no se puede compactar (R07): es lo único que el conductor tiene que hacer distinto.
+    getLineColor: (container) =>
+      container.noCompaction
+        ? palette.warn
+        : [...strokeColor(palette, container.stream), collected(container) ? 255 : PENDING],
+    getRadius: (container) => (collected(container) ? 10 : 5),
+    radiusMinPixels: 1,
+    radiusMaxPixels: 6,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: (container) => (collected(container) || container.noCompaction ? 1 : 0),
+    pickable: true,
+    autoHighlight: true,
+    updateTriggers: { getFillColor: minute, getLineColor: minute, getRadius: minute, getLineWidth: minute },
+  })
+}
+
+const collectedBy = (firstVisit: Map<string, number>, container: Container, seconds: number) =>
+  (firstVisit.get(container.id) ?? Infinity) <= seconds
+
+/**
  * Lo que dejaron los eventos: los contenedores huérfanos con borde crítico, los desbordados con un anillo crítico
  * más amplio, el contenedor seleccionado con un anillo en el acento y las rutas de reserva en el acento. Se dibuja
- * encima del plan.
+ * encima del plan. Un huérfano deja de serlo cuando la reserva lo recoge, y un desborde cuando alguien pasa por él:
+ * desde ahí el rojo sería una alarma que ya no pide nada.
  */
 export function operationLayers(
   reserve: Route[],
   orphans: Container[],
   overflowed: Container[],
+  overflows: Map<string, OverflowEvent>,
+  firstVisit: Map<string, number>,
   selected: Container | null,
   closures: ClosureEvent[],
+  seconds: number,
   palette: Palette,
 ) {
+  const minute = Math.floor(seconds / 60)
+  const now = minute * 60
+  // Al repetir el turno desde antes, lo que todavía no pasa no se dibuja
+  const happened = closures.filter((closure) => closure.atSeconds <= now)
+  const pending = orphans.filter((container) => !collectedBy(firstVisit, container, now))
+  const spilled = overflowed.filter((container) => {
+    const overflow = overflows.get(container.id)
+    return overflow !== undefined && overflow.atSeconds <= now && overflow.pickupSeconds > now
+  })
+  const running = (route: Route) => (route.times.at(-1) ?? 0) > now
   return [
     // Una barrera: núcleo crítico sobre un borde del fondo, para que se lea encima de cualquier ruta.
     new PathLayer<ClosureEvent>({
       id: 'closures-edge',
-      data: closures,
+      data: happened,
       getPath: (closure) => closure.path,
       getColor: palette.bg,
       getWidth: 9,
@@ -137,7 +182,7 @@ export function operationLayers(
     }),
     new PathLayer<ClosureEvent>({
       id: 'closures',
-      data: closures,
+      data: happened,
       getPath: (closure) => closure.path,
       getColor: palette.crit,
       getWidth: 5,
@@ -149,7 +194,7 @@ export function operationLayers(
     // A la escala de la localidad, una cuadra cerrada mide un par de píxeles: el anillo la hace visible.
     new ScatterplotLayer<ClosureEvent>({
       id: 'closure-marks',
-      data: closures,
+      data: happened,
       getPosition: (closure) => closure.path[Math.floor(closure.path.length / 2)],
       getFillColor: palette.bg,
       getLineColor: palette.crit,
@@ -164,19 +209,19 @@ export function operationLayers(
     }),
     new PathLayer<Route>({
       id: 'reserve-routes',
-      data: reserve,
+      data: reserve.filter((route) => (route.times[0] ?? 0) <= now),
       getPath: (route) => route.path,
-      getColor: palette.sodium,
-      getWidth: 3,
+      getColor: (route) => (running(route) ? [...palette.sodium, 150] : [...palette.fgMuted, 45]),
+      getWidth: (route) => (running(route) ? 2 : 1),
       widthUnits: 'pixels',
-      opacity: 0.7,
+      updateTriggers: { getColor: minute, getWidth: minute },
       jointRounded: true,
       capRounded: true,
       parameters: FLAT,
     }),
     new ScatterplotLayer<Container>({
       id: 'orphans',
-      data: orphans,
+      data: pending,
       getPosition: (container) => container.position,
       getFillColor: (container) => palette.stream[container.stream],
       getLineColor: palette.crit,
@@ -190,16 +235,16 @@ export function operationLayers(
     }),
     new ScatterplotLayer<Container>({
       id: 'overflows',
-      data: overflowed,
+      data: spilled,
       getPosition: (container) => container.position,
       getLineColor: palette.crit,
-      getRadius: 40,
-      radiusMinPixels: 9,
-      radiusMaxPixels: 16,
+      getRadius: 30,
+      radiusMinPixels: 6,
+      radiusMaxPixels: 11,
       filled: false,
       stroked: true,
       lineWidthUnits: 'pixels',
-      getLineWidth: 2,
+      getLineWidth: 1.5,
       pickable: true,
     }),
     new ScatterplotLayer<Container>({
@@ -226,7 +271,7 @@ export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, pa
     getPath: (trip) => trip.path,
     getTimestamps: (trip) => trip.timestamps,
     getColor: (trip) => (isReserveId(trip.id) ? palette.sodium : strokeColor(palette, trip.stream)),
-    getWidth: 4,
+    getWidth: 3,
     widthUnits: 'pixels',
     jointRounded: true,
     capRounded: true,

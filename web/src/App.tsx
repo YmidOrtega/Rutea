@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
-import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
+import { DATA_ATTRIBUTION, initialViewState } from './map/view'
+import { sodiumBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
+  containersLayer,
   fillLayer,
   operationLayers,
+  sectorLayer,
   staticLayers,
   tripsLayer,
   vehiclesLayer,
@@ -21,10 +24,13 @@ import {
   type Container,
   type DemoPlan,
   type LonLat,
+  type Sector,
   type Site,
+  type WasteStream,
 } from './demo/plan'
 import {
   currentPlan,
+  fetchEvents,
   isReserveId,
   listen,
   loadPlan,
@@ -36,6 +42,7 @@ import {
   type ClosureEvent,
   type CurrentPlan,
   type OperationEvent,
+  type ShiftMessage,
 } from './operations/live'
 import {
   applySensors,
@@ -43,6 +50,8 @@ import {
   emptyFeed,
   emptySensors,
   feedTime,
+  fetchSensors,
+  fetchTelemetry,
   feedTrips,
   positionAt,
   setClock,
@@ -50,9 +59,14 @@ import {
   fillState,
   type Feed,
   type Sensors,
+  type VehicleState,
 } from './operations/telemetry'
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
+import { Timeline } from './panels/Timeline'
+import { Instrument } from './panels/Instrument'
+import { collectedBy, firstVisit, progressOf } from './operations/progress'
+import { windowAt } from './demo/schedule'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
@@ -66,6 +80,7 @@ export default function App() {
   const [live, setLive] = useState(false)
   const [events, setEvents] = useState<OperationEvent[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const [sector, setSector] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const [eventError, setEventError] = useState<string | null>(null)
@@ -78,9 +93,18 @@ export default function App() {
   const [sensors, setSensors] = useState<Sensors>(emptySensors)
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
+  const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof sodiumBasemap>> | null>(null)
+
+  useEffect(() => {
+    void sodiumBasemap(palette).then(setBasemap)
+  }, [palette])
+
+  const shift = useRef<number | null>(null)
+  const lastSeq = useRef(0)
 
   // Cada evento llega una vez por WebSocket y, a quien lo pidió, también en la respuesta: se cuenta una sola vez.
   const addEvent = useCallback((event: OperationEvent) => {
+    lastSeq.current = Math.max(lastSeq.current, event.seq)
     setEvents((current) => (current.some((e) => e.seq === event.seq) ? current : [...current, event]))
     const reserve = event.type === 'breakdown' ? event.reserve : event.routes.filter((route) => isReserveId(route.id))
     setVisible((current) => new Set([...current, ...reserve.map((route) => route.id)]))
@@ -92,7 +116,8 @@ export default function App() {
         setPlan(loaded.plan)
         setLive(loaded.live)
         setVisible(new Set(loaded.plan.routes.map((route) => route.id)))
-        loaded.events.forEach(addEvent)
+        shift.current = loaded.events?.shift ?? null
+        loaded.events?.events.forEach(addEvent)
         if (loaded.telemetry) setFeed(applyTelemetry(emptyFeed(loaded.telemetry.clock), loaded.telemetry))
         if (loaded.sensors) setSensors(applySensors(emptySensors(), loaded.sensors))
       })
@@ -105,10 +130,25 @@ export default function App() {
       event: addEvent,
       telemetry: (message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)),
       sensors: (message) => setSensors((current) => applySensors(current, message)),
-      reset: () => {
-        setEvents([])
-        setFeed((current) => current && { ...current, vehicles: new Map() })
-        setVisible(new Set(plan.routes.map((route) => route.id)))
+      shift: (message: ShiftMessage, reconnected: boolean) => {
+        const newShift = message.shift !== shift.current
+        if (newShift) {
+          shift.current = message.shift
+          lastSeq.current = 0
+          setEvents([])
+          setVisible(new Set(plan.routes.map((route) => route.id)))
+        }
+        // Los reportes de telemetría y sensores traen solo lo que cambió: tras un corte o un turno nuevo, se rehacen.
+        const snapshots = newShift || reconnected
+        void Promise.all([
+          message.seq > lastSeq.current ? fetchEvents(lastSeq.current) : null,
+          snapshots ? fetchTelemetry() : null,
+          snapshots ? fetchSensors() : null,
+        ]).then(([page, telemetry, readings]) => {
+          if (page?.shift === shift.current) page.events.forEach(addEvent)
+          if (telemetry) setFeed(applyTelemetry(emptyFeed(telemetry.clock), telemetry))
+          if (readings) setSensors(applySensors(emptySensors(), readings))
+        })
       },
     })
   }, [live, plan, addEvent])
@@ -154,6 +194,15 @@ export default function App() {
     [current],
   )
   const selectedContainer = current?.plan.containers.find((container) => container.id === selected) ?? null
+  const progress = useMemo(() => (current ? progressOf(current, events) : null), [current, events])
+  const selectedSector = plan?.sectors.find((s) => s.ref === sector) ?? null
+  // El horario publicado sale del plan original: un evento cambia la llegada de hoy, no lo que se publicó (R05).
+  const planned = plan?.containers.find((container) => container.id === selected)
+  const containerSector = plan?.sectors.find((s) => s.ref === planned?.sector)
+  const streams = useMemo(
+    () => STREAM_ORDER.filter((stream) => plan?.routes.some((route) => route.stream === stream)),
+    [plan],
+  )
 
   // Con la API, el mapa dibuja lo que transmiten los vehículos; sin ella, reproduce el plan estático por su cuenta.
   const animated = feed !== null && feed.clock.running && !reducedMotion
@@ -187,29 +236,43 @@ export default function App() {
     return () => cancelAnimationFrame(frame)
   }, [feed, playing, duration])
 
+  const firstAt = useMemo(() => {
+    const first = new Map<string, number>()
+    for (const visit of progress?.visits ?? []) if (!first.has(visit.container)) first.set(visit.container, visit.seconds)
+    return first
+  }, [progress])
+  const shown = useMemo(() => current?.plan.containers.filter((c) => visible.has(c.route)) ?? [], [current, visible])
   const zone = useMemo(() => zoneLayers(palette), [palette])
-  const baseLayers = useMemo(
+  const planLayers = useMemo(
+    () => [...zone, ...(current ? staticLayers(current.plan, visible, palette) : [])],
+    [zone, current, visible, palette],
+  )
+  const minute = Math.floor(time / 60)
+  const eventLayers = useMemo(
     () => [
-      ...zone,
-      ...(current ? staticLayers(current.plan, visible, palette) : []),
       ...operationLayers(
         current?.reserve.filter((route) => visible.has(route.id)) ?? [],
         orphans,
         overflowed,
+        current?.overflows ?? new Map(),
+        firstAt,
         selectedContainer,
         current?.closures ?? [],
+        minute * 60,
         palette,
       ),
+      ...(selectedSector && selectedSector.outline.length > 0 ? [sectorLayer(selectedSector.outline, palette)] : []),
     ],
-    [zone, current, visible, palette, orphans, overflowed, selectedContainer],
+    [current, visible, palette, orphans, overflowed, firstAt, selectedContainer, minute, selectedSector],
   )
+  const baseLayers = [...planLayers, containersLayer(shown, firstAt, time, palette), ...eventLayers]
   const marks: VehicleMark[] = feed
     ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
     : []
   // Sin API y antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
   const filled = useMemo(
-    () => (current ? fillLayer(current.plan.containers.filter((c) => visible.has(c.route)), sensors.readings, palette) : null),
-    [current, visible, sensors, palette],
+    () => (current ? fillLayer(shown, sensors.readings, palette) : null),
+    [current, shown, sensors, palette],
   )
   const layers = feed
     ? [
@@ -223,6 +286,11 @@ export default function App() {
       : baseLayers
   const sim = feed?.clock
   const finished = sim !== undefined && !sim.running && sim.seconds >= sim.endSeconds
+  const end = Math.max(plan?.meta.shiftSeconds ?? 0, sim?.endSeconds ?? duration, progress?.lastSeconds ?? 0)
+  const at = (seconds: number) => clock(secondsOfDay(plan?.meta.shiftStart ?? '00:00') + seconds)
+  const onStreet = feed
+    ? [...feed.vehicles.values()].filter((vehicle) => ON_STREET.includes(vehicle.state)).length
+    : undefined
 
   const toggleRoute = (routeId: string) =>
     setVisible((current) => {
@@ -233,44 +301,107 @@ export default function App() {
 
   return (
     <main className="app">
-      <MapGL
-        initialViewState={initialView}
-        mapStyle={BASEMAP_STYLE}
-        attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
-      >
-        <DeckOverlay
-          layers={layers}
-          getTooltip={tooltipFor(current, live, sensors)}
-          getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
-          onClick={(info) => {
-            if (closing) {
-              if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
-              return
-            }
-            setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
-          }}
-        />
-      </MapGL>
+      {basemap && (
+        <MapGL
+          initialViewState={initialView}
+          mapStyle={basemap}
+          attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
+        >
+          <DeckOverlay
+            layers={layers}
+            getTooltip={tooltipFor(current, live, sensors)}
+            getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
+            onClick={(info) => {
+              if (closing) {
+                if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
+                return
+              }
+              setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
+            }}
+          />
+        </MapGL>
+      )}
 
-      <header className="topbar panel">
-        <strong className="brand">Rutea</strong>
-        <span className="label">{plan?.meta.zone ?? 'Suba'} · Bogotá</span>
-        <span className="tag">Simulado</span>
-        {plan && (
-          <>
-            <span className="num clock" aria-label="Hora simulada">{clock(secondsOfDay(plan.meta.shiftStart) + time)}</span>
+      <div className="console">
+        <Instrument
+          zone={plan?.meta.zone ?? 'Suba'}
+          time={plan ? at(time) : null}
+          shift={plan ? `${at(0)}–${at(plan.meta.shiftSeconds)}` : null}
+          done={progress ? collectedBy(progress, time) : null}
+          totalContainers={current?.plan.containers.length ?? 0}
+          totalKg={progress?.kgBefore[progress.kgBefore.length - 1] ?? 0}
+          onStreet={onStreet}
+        />
+
+        {current && progress && (
+          <PlanPanel
+            sector={sector}
+            onSector={setSector}
+            plan={current.plan}
+            visible={visible}
+            onToggle={toggleRoute}
+            live={live}
+            events={events}
+            pending={pending}
+            eventError={eventError}
+            onBreakdown={breakdown}
+            closing={closing}
+            onClosing={setClosing}
+            clock={at}
+          />
+        )}
+      </div>
+
+      <div className="dock">
+        {current && selectedContainer && (
+          <ContainerCard
+            container={selectedContainer}
+            fill={sensors.readings.get(selectedContainer.id)}
+            liters={sensors.liters.get(selectedContainer.id)}
+            overflow={current.overflows.get(selectedContainer.id)}
+            visit={progress ? firstVisit(progress, selectedContainer.id) : undefined}
+            sectorName={containerSector && sectorLabel(containerSector)}
+            published={containerSector && planned ? windowAt(containerSector, planned.stream, planned.visitSeconds) : undefined}
+            now={time}
+            pending={pending !== null}
+            error={pending === null && eventError !== null ? eventError : null}
+            onReport={() => overflow(selectedContainer.id)}
+            onClose={() => setSelected(null)}
+            clock={at}
+          />
+        )}
+
+        {current && progress && (
+          <Timeline
+            shiftStart={current.plan.meta.shiftStart}
+            end={end}
+            time={time}
+            progress={progress}
+            streams={streams}
+            events={events}
+            night={current.plan.compliance.find((check) => check.id === 'R02')}
+            clock={at}
+            onSeek={
+              sim
+                ? undefined
+                : (seconds) => {
+                    setPlaying(false)
+                    setTime(seconds)
+                  }
+            }
+          >
             {sim ? (
               <>
                 <button
-                  className="play"
+                  className="control play"
                   onClick={() => controlClock(!sim.running, sim.speed)}
                   aria-label={sim.running ? 'Pausar' : finished ? 'Empezar un turno nuevo' : 'Reproducir'}
                   title={finished ? 'Turno nuevo: borra los eventos' : 'El reloj es el mismo para todos'}
                 >
-                  {sim.running ? '❚❚' : finished ? '↺' : '▶'}
+                  <PlayIcon state={sim.running ? 'pause' : finished ? 'restart' : 'play'} />
                 </button>
                 <button
-                  className="speed num"
+                  className="control num"
                   onClick={() => controlClock(sim.running, SPEEDS[(SPEEDS.indexOf(sim.speed) + 1) % SPEEDS.length])}
                   aria-label={`Velocidad del reloj: ${sim.speed} veces el tiempo real`}
                 >
@@ -278,48 +409,13 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button
-                className="play"
-                onClick={() => setPlaying(!playing)}
-                aria-label={playing ? 'Pausar' : 'Reproducir'}
-              >
-                {playing ? '❚❚' : '▶'}
+              <button className="control play" onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+                <PlayIcon state={playing ? 'pause' : 'play'} />
               </button>
             )}
-          </>
+          </Timeline>
         )}
-      </header>
-
-      {current && (
-        <PlanPanel
-          plan={current.plan}
-          visible={visible}
-          onToggle={toggleRoute}
-          live={live}
-          events={events}
-          pending={pending}
-          eventError={eventError}
-          onBreakdown={breakdown}
-          closing={closing}
-          onClosing={setClosing}
-          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
-        />
-      )}
-
-      {current && selectedContainer && (
-        <ContainerCard
-          container={selectedContainer}
-          fill={sensors.readings.get(selectedContainer.id)}
-          liters={sensors.liters.get(selectedContainer.id)}
-          overflow={current.overflows.get(selectedContainer.id)}
-          now={time}
-          pending={pending !== null}
-          error={pending === null && eventError !== null ? eventError : null}
-          onReport={() => overflow(selectedContainer.id)}
-          onClose={() => setSelected(null)}
-          clock={(seconds) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)}
-        />
-      )}
+      </div>
 
       {error && (
         <div className="status panel" role="alert">
@@ -334,6 +430,25 @@ export default function App() {
   )
 }
 
+/** Dibujados, no caracteres: ▶ y ❚❚ cambian de forma y de ancho según la fuente que los tenga. */
+function PlayIcon({ state }: { state: 'play' | 'pause' | 'restart' }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      {state === 'play' ? (
+        <path d="M2.5 1.5v9l8-4.5z" />
+      ) : state === 'pause' ? (
+        <path d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z" />
+      ) : (
+        <path d="M6 1.5a4.5 4.5 0 1 1-4.3 5.8l1.4-.4A3 3 0 1 0 6 3v1.8L3.3 2.3 6 0z" />
+      )}
+    </svg>
+  )
+}
+
+const sectorLabel = (sector: Sector) => (sector.ref === 'rural' ? sector.name : `UPZ ${sector.name}`)
+
+const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
+const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
 const CLOSURE_LAYERS = ['closures', 'closure-marks']
 
@@ -350,9 +465,8 @@ function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boo
       background: 'var(--panel)',
       color: 'var(--fg)',
       border: '1px solid var(--line)',
-      borderRadius: '8px',
+      borderRadius: '0',
       padding: '8px 10px',
-      backdropFilter: 'blur(12px)',
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },

@@ -1,6 +1,9 @@
 package me.ymid.rutea.app.web;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -13,6 +16,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
+import me.ymid.rutea.app.persistence.OperationLog;
 import me.ymid.rutea.app.planning.DemoPlan;
 
 /** Transmite por WebSocket la posición de cada vehículo mientras corre el reloj de la simulación (R08). */
@@ -31,11 +35,15 @@ public class Telemetry {
             Thread.ofPlatform().name("rutea-telemetry").daemon().factory());
     private TelemetryFeed feed;
     private Map<String, Integer> lastReadings = Map.of();
-    private double lastSensorSeconds = Double.NEGATIVE_INFINITY;
+    private final OperationLog log;
+    private long persistedShift = -1;
+    private boolean announced;
+    private double persistedUntil;
 
-    public Telemetry(OperationsService operations, EventsHub hub) {
+    public Telemetry(OperationsService operations, EventsHub hub, OperationLog log) {
         this.operations = operations;
         this.hub = hub;
+        this.log = log;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -73,19 +81,17 @@ public class Telemetry {
         if (!operations.ready()) {
             return;
         }
+        if (!announced) {
+            // Quien se conectó mientras se armaba el plan no recibió el turno: EventsHub solo lo manda si ya está listo.
+            hub.broadcast(operations.shiftMessage());
+            announced = true;
+        }
         double now = operations.clock().seconds();
-        if (!always && now == lastSensorSeconds) {
-            return;
-        }
-        if (now < lastSensorSeconds) {
-            lastSensorSeconds = Double.NEGATIVE_INFINITY;
-            lastReadings = Map.of();
-        }
-        if (now > lastSensorSeconds) {
-            operations.sensorOverflows(lastSensorSeconds, now).forEach(hub::broadcast);
-            lastSensorSeconds = now;
-        }
-        feed().next(operations.vehicles(), operations.clock(), always).ifPresent(hub::broadcast);
+        operations.sensorOverflows(now).forEach(hub::broadcast);
+        feed().next(operations.vehicles(), operations.clock(), always).ifPresent(message -> {
+            hub.broadcast(message);
+            persist(message);
+        });
         Map<String, Integer> readings = operations.readings(now, SENSOR_STEP_PERCENT);
         Map<String, Integer> changed = new HashMap<>();
         readings.forEach((id, reading) -> {
@@ -97,6 +103,31 @@ public class Telemetry {
         if (!changed.isEmpty()) {
             hub.broadcast(new SensorsMessage(now, changed, Map.of()));
         }
+    }
+
+    /** Cada punto una sola vez: al retomar un turno, lo ya guardado no se repite. */
+    private void persist(TelemetryMessage message) {
+        long shift = operations.shift();
+        if (shift != persistedShift) {
+            persistedShift = shift;
+            persistedUntil = log.lastShift().filter(saved -> saved.id() == shift && saved.lastSeconds() > 0)
+                    .map(OperationLog.Shift::lastSeconds).orElse(Double.NEGATIVE_INFINITY);
+        }
+        List<OperationLog.Position> positions = new ArrayList<>();
+        double latest = persistedUntil;
+        for (TelemetryMessage.Report report : message.vehicles()) {
+            for (int i = 0; i < report.points().size(); i++) {
+                double[] point = report.points().get(i);
+                if (point[2] > persistedUntil) {
+                    boolean last = i == report.points().size() - 1;
+                    positions.add(new OperationLog.Position(report.id(), point[2],
+                            last ? Optional.of(report.state().name()) : Optional.empty(), point[0], point[1]));
+                    latest = Math.max(latest, point[2]);
+                }
+            }
+        }
+        log.positions(shift, positions);
+        persistedUntil = latest;
     }
 
     private TelemetryFeed feed() {

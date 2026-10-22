@@ -1,0 +1,7 @@
+spring:
+  autoconfigure:
+    exclude: ""
+  datasource:
+    url: ${RUTEA_DB_URL:jdbc:postgresql://localhost:5432/rutea}
+    username: ${RUTEA_DB_USER:rutea}
+    password: ${RUTEA_DB_PASSWORD:rutea}

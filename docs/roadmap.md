@@ -62,7 +62,16 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 
 Las 129 soluciones son factibles según el `Evaluator`. Timefold no queda primero en ninguna instancia. JMH (`exec:exec@jmh`): una pasada completa de búsqueda local sobre un óptimo local tarda 166 µs en X-n101, 345 µs en X-n200 y 584 µs en X-n298, unos 5 ns por movimiento evaluado.
 
-Pendiente de F2: correr en frío y en caliente antes de publicar estas cifras fuera del repo, y comparar contra Timefold afinado (aquí va con su configuración por defecto).
+En frío y en caliente (2026-10-22; `alns-x4`, mismas 43 instancias, 60 s, semilla 1, misma máquina; las dos corridas a la vez). En frío, un proceso por instancia; en caliente, cada instancia se resuelve una vez y se descarta antes de medir (`--warmup`). CSV en `docs/benchmarks/f2-60s/frio/` y `caliente/`.
+
+| `alns-x4` | Gap promedio | Peor instancia | Llega a la BKS |
+|---|---:|---:|---:|
+| En frío | **0,18 %** | 0,64 % | 12 |
+| En caliente | 0,19 % | 0,93 % | 8 |
+
+Las 86 soluciones son factibles. La diferencia entre frío y caliente está dentro de la dispersión de una búsqueda con límite de tiempo: con 60 s, calentar la JVM no cambia el resultado.
+
+Pendiente de F2: comparar contra Timefold afinado (aquí va con su configuración por defecto).
 
 ## F3 — Mapa real: Suba completa (3–4 semanas)
 
@@ -202,10 +211,11 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 ## F6 — Producto y publicación (2–3 semanas)
 
-- API REST y WebSocket estables, persistencia en PostgreSQL + PostGIS.
-- Dashboard completo: plan, línea de tiempo, eventos, métricas.
-- Horarios estimados de paso por sector (R04).
-- Docker Compose: un comando para levantar todo.
+- [x] Docker Compose: `docker compose up` levanta los datos de OSM (de un release, verificados por SHA-256), PostGIS y la app con el mapa (ADR 0010).
+- [x] Persistencia en PostgreSQL + PostGIS (ADR 0010). Se guardan las órdenes de cada turno y, al reiniciar, se repiten: 52 órdenes en 433 ms, con los mismos 53 eventos. Cada posición transmitida queda como punto de PostGIS (R08).
+- [x] API REST y WebSocket estables (ADR 0011): errores RFC 9457 en español, validación en el borde, turnos en el WebSocket para ponerse al día con `GET /api/events?after=` y el contrato en `docs/api.md`, que un test compara con el código.
+- [x] Dashboard completo: plan, línea de tiempo, eventos, métricas. La línea de tiempo muestra las visitas del turno por corriente, la franja de R02, los eventos y el avance (contenedores, toneladas, vehículos en la calle), contado desde los recorridos: al final del turno da 1612 de 1612 contenedores, también con un compactador averiado.
+- [x] Horarios estimados de paso por sector (R04). Los sectores son las 12 UPZ de Suba, de OSM, y la zona rural, que no tiene UPZ. Cada UPZ tiene la ventana de cada corriente, en cuartos de hora: 132 pasadas de vehículo. Se descarga en CSV, y cada contenedor dice cuánto se desvía hoy de su horario publicado. Con C-04 averiado a las 18:00, 82 contenedores llegan fuera de su ventana; el que más, 73 min después.
 - Caso escrito en ymid.me con las métricas.
 
 **Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
