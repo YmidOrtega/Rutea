@@ -1,0 +1,48 @@
+# Un comando: docker compose up. El mapa queda en http://localhost:8080.
+name: rutea
+
+services:
+  data:
+    image: alpine:3.22
+    environment:
+      RELEASE_URL: https://github.com/YmidOrtega/Rutea/releases/download/data-osm-suba-20261019
+    volumes:
+      - osm:/data
+      - ./data/osm/SHA256SUMS:/expected/SHA256SUMS:ro
+      - ./docker/fetch-data.sh:/fetch-data.sh:ro
+    entrypoint: ["/bin/sh", "/fetch-data.sh"]
+
+  # Las órdenes de cada turno y las posiciones transmitidas (R08). Solo la app la ve: no publica su puerto.
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: rutea
+      POSTGRES_USER: rutea
+      POSTGRES_PASSWORD: rutea
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rutea -d rutea"]
+      interval: 2s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      data:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    environment:
+      RUTEA_GRAPH: /data/suba.rgraph
+      RUTEA_SITES: /data/suba-sitios-sensibles.csv
+      SPRING_PROFILES_ACTIVE: postgres
+      RUTEA_DB_URL: jdbc:postgresql://db:5432/rutea
+    volumes:
+      - osm:/data:ro
+    ports:
+      - "8080:8080"
+
+volumes:
+  osm:
+  db:

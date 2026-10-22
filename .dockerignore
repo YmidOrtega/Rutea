@@ -1,0 +1,12 @@
+**/target
+**/node_modules
+web/dist
+data
+docs
+.git
+.github
+.idea
+.vscode
+*.log
+.env
+.env.*

@@ -20,7 +20,7 @@ Autor: Yamid Ortega (ingeniero ambiental y desarrollador backend). El proyecto u
 
 ## Estructura del repo
 
-Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-sim/`, `rutea-app/`, `rutea-bench/` y `web/`.
+Estructura objetivo. Los módulos se crean a medida que avanzan las fases; hoy existen `docs/`, `data/`, `docker/`, `rutea-solver/`, `rutea-domain/`, `rutea-geo/`, `rutea-sim/`, `rutea-app/`, `rutea-bench/` y `web/`.
 
 ```
 rutea/
@@ -57,6 +57,8 @@ La traducción "problema de residuos → instancia CVRP" vive en `rutea-app` (pa
 Comandos previstos; se activan cuando exista cada módulo. Actualiza esta sección si cambian.
 
 ```bash
+docker compose up                            # todo: datos de OSM, PostGIS y la app con el mapa en http://localhost:8080
+
 # Backend
 mvn verify                                   # compila y corre todos los tests
 mvn -pl rutea-solver test                    # solo el solver

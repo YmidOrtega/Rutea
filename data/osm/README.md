@@ -22,6 +22,10 @@ Del extracto también salen, con `mvn -pl rutea-app exec:java@sensitive-sites`, 
 
 Geofabrik guarda los snapshots fechados por un tiempo limitado. Si este ya no está, descarga el más reciente, actualiza esta tabla y anota en el commit que cambió el extracto: el grafo, la matriz y las rutas cambian con él.
 
+## Sin descargar el extracto
+
+Para correr la app no hace falta el extracto: `docker compose up` descarga el grafo y los sitios ya construidos del release [`data-osm-suba-20261019`](https://github.com/YmidOrtega/Rutea/releases/tag/data-osm-suba-20261019) y los verifica contra [`SHA256SUMS`](SHA256SUMS). Reconstruirlos desde el extracto da los mismos bytes. Si cambia el extracto, se publica un release nuevo y se actualizan `SHA256SUMS` y `compose.yaml` en el mismo cambio.
+
 ## Licencia
 
 © colaboradores de OpenStreetMap. Datos disponibles bajo la [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Todo mapa o resultado derivado que se publique debe llevar la atribución "© OpenStreetMap contributors".
