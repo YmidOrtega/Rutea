@@ -216,9 +216,9 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] API REST y WebSocket estables (ADR 0011): errores RFC 9457 en español, validación en el borde, turnos en el WebSocket para ponerse al día con `GET /api/events?after=` y el contrato en `docs/api.md`, que un test compara con el código.
 - [x] Dashboard completo: plan, línea de tiempo, eventos, métricas. La línea de tiempo muestra las visitas del turno por corriente, la franja de R02, los eventos y el avance (contenedores, toneladas, vehículos en la calle), contado desde los recorridos: al final del turno da 1612 de 1612 contenedores, también con un compactador averiado.
 - [x] Horarios estimados de paso por sector (R04). Los sectores son las 12 UPZ de Suba, de OSM, y la zona rural, que no tiene UPZ. Cada UPZ tiene la ventana de cada corriente, en cuartos de hora: 132 pasadas de vehículo. Se descarga en CSV, y cada contenedor dice cuánto se desvía hoy de su horario publicado. Con C-04 averiado a las 18:00, 82 contenedores llegan fuera de su ventana; el que más, 73 min después.
-- Caso escrito en ymid.me con las métricas.
+- [x] Caso escrito en ymid.me con las métricas ([ymid.me/projects/rutea](https://ymid.me/projects/rutea), 2026-10-22): el turno nocturno de Suba sobre calles reales, con la avería de C-04 tal como la respondió la API, y las cifras del arnés.
 
-**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
+**Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando. **Cumplido** el 2026-10-22: un clon nuevo de `main` (7ab1c2c), con volúmenes vacíos, levanta con `docker compose up`; los datos de OSM se descargan y pasan el SHA-256, Flyway crea el esquema en PostGIS, `GET /api/plan` responde con las 15 rutas y los 1.612 contenedores, y el mapa se dibuja en http://localhost:8080. La imagen salió de la caché de Docker de esta máquina, así que el tiempo de la primera construcción no quedó medido.
 
 ## Más adelante (sin fase asignada)
 
