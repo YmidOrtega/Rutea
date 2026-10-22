@@ -276,6 +276,22 @@ public final class LiveOperation {
         return live.endSeconds(truck);
     }
 
+    /** Cada llegada del camión a un contenedor, de su plan o extra: cuando lo vacía. */
+    public record Visit(int node, long arriveSeconds) {
+    }
+
+    public List<Visit> visits(int truck) {
+        return live.timeline(truck).stream().map(stop -> new Visit(stop.node(), stop.arriveSeconds())).toList();
+    }
+
+    public int truckCount() {
+        return live.truckCount();
+    }
+
+    public boolean inService(int truck) {
+        return !outOfService.contains(truck);
+    }
+
     /** Nodo → hora de llegada de cada visita del plan del camión, que se corre con las recogidas extra. */
     public Map<Integer, Long> plannedArrivals(int truck) {
         Map<Integer, Long> arrivals = new LinkedHashMap<>();
