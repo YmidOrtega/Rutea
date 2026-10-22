@@ -70,6 +70,14 @@
   color: var(--fg-muted);
 }
 
+.tooltip .fill-warn {
+  color: var(--warn);
+}
+
+.tooltip .fill-crit {
+  color: var(--crit);
+}
+
 .tooltip .orphan {
   margin-top: 4px;
   color: var(--crit);

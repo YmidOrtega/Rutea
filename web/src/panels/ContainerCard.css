@@ -61,6 +61,14 @@
   cursor: progress;
 }
 
+.card-fill.fill-warn {
+  color: var(--warn);
+}
+
+.card-fill.fill-crit {
+  color: var(--crit);
+}
+
 .card-note {
   font-size: var(--text-12);
 }

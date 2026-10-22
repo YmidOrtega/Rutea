@@ -93,6 +93,34 @@ export function positionAt(vehicle: VehicleTrack, seconds: number): LonLat {
   return [path[i][0] + f * (path[i + 1][0] - path[i][0]), path[i][1] + f * (path[i + 1][1] - path[i][1])]
 }
 
+/** Lecturas de llenado en porcentaje, en pasos de 5: solo las que cambiaron; la instantánea trae todas y los litros. */
+export interface SensorsMessage {
+  type: 'sensors'
+  seconds: number
+  readings: Record<string, number>
+  liters: Record<string, number>
+}
+
+export interface Sensors {
+  readings: Map<string, number>
+  liters: Map<string, number>
+}
+
+export const applySensors = (sensors: Sensors, message: SensorsMessage): Sensors => ({
+  readings: new Map([...sensors.readings, ...Object.entries(message.readings)]),
+  liters: new Map([...sensors.liters, ...Object.entries(message.liters)]),
+})
+
+export const emptySensors = (): Sensors => ({ readings: new Map(), liters: new Map() })
+
+export const fetchSensors = () =>
+  fetch('/api/sensors').then((response) => (response.ok ? (response.json() as Promise<SensorsMessage>) : null))
+
+export type FillState = 'ok' | 'warn' | 'crit'
+
+/** Desde el 70 % conviene mirarlo; desde el 100 % está desbordado. */
+export const fillState = (percent: number): FillState => (percent >= 100 ? 'crit' : percent >= 70 ? 'warn' : 'ok')
+
 export const fetchTelemetry = () =>
   fetch('/api/telemetry').then((response) => (response.ok ? (response.json() as Promise<TelemetryMessage>) : null))
 

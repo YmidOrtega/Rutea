@@ -2,7 +2,7 @@ import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
 import { isReserveId, type ClosureEvent } from '../operations/live'
-import type { VehicleTrack } from '../operations/telemetry'
+import { fillState, type VehicleTrack } from '../operations/telemetry'
 import { strokeColor, type Palette } from './colors'
 import suba from './suba.json'
 
@@ -258,6 +258,25 @@ export function vehiclesLayer(marks: VehicleMark[], visible: Set<string>, palett
     lineWidthUnits: 'pixels',
     getLineWidth: (mark) => (mark.vehicle.state === 'BROKEN' ? 2.5 : 1.5),
     pickable: true,
+    parameters: FLAT,
+  })
+}
+
+/**
+ * El llenado que reporta cada sensor, como un punto dentro del contenedor: el borde ya dice si se puede compactar
+ * (R07) y el color del contenedor es el de su corriente, así que el estado va en el centro. Solo los que piden
+ * atención: 806 puntos verdes no dicen nada que la ausencia de punto no diga.
+ */
+export function fillLayer(containers: Container[], readings: Map<string, number>, palette: Palette) {
+  return new ScatterplotLayer<Container>({
+    id: 'fill',
+    data: containers.filter((container) => fillState(readings.get(container.id) ?? 0) !== 'ok'),
+    getPosition: (container) => container.position,
+    getFillColor: (container) => palette[fillState(readings.get(container.id) ?? 0)],
+    getRadius: 6,
+    radiusMinPixels: 1.5,
+    radiusMaxPixels: 4,
+    updateTriggers: { getFillColor: readings },
     parameters: FLAT,
   })
 }

@@ -235,11 +235,16 @@ function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['cloc
 }
 
 function Overflow({ event, clock }: { event: OverflowEvent; clock: Props['clock'] }) {
-  const redispatched = event.cause !== 'reporte'
+  const what =
+    event.cause === 'reporte'
+      ? 'desbordado'
+      : event.cause === 'sensor'
+        ? 'lleno según su sensor'
+        : `sin recoger tras la ${event.cause}`
   return (
     <li>
       <strong className="num">
-        {clock(event.atSeconds)} · {event.container} {redispatched ? `sin recoger tras la ${event.cause}` : 'desbordado'}
+        {clock(event.atSeconds)} · {event.container} {what}
       </strong>
       <span className="num">{capitalized(overflowPickup(event, clock))}.</span>
       <span>

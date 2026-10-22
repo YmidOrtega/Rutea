@@ -1,5 +1,5 @@
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
-import { fetchTelemetry, type TelemetryMessage } from './telemetry'
+import { fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
@@ -28,7 +28,7 @@ export interface OverflowEvent {
   seq: number
   container: string
   atSeconds: number
-  /** "reporte", o "avería de C-03" si el camión que lo iba a recoger se averió. */
+  /** "reporte", "sensor" si lo detectó su sensor de llenado, o "avería de C-03" si el camión que lo iba a recoger se averió. */
   cause: string
   pickup: 'PLANNED' | 'IN_SERVICE' | 'RESERVE'
   truck: string
@@ -71,6 +71,7 @@ export interface LoadedPlan {
   events: OperationEvent[]
   /** Los vehículos en la calle y el reloj del servidor; sin API, el mapa reproduce el plan por su cuenta. */
   telemetry: TelemetryMessage | null
+  sensors: SensorsMessage | null
 }
 
 /** Recién arrancada, la API tarda unos 27 s en armar el plan. */
@@ -83,18 +84,19 @@ export async function loadPlan(): Promise<LoadedPlan> {
     const response = await fetch('/api/plan', { signal: abort.signal })
     if (response.ok) {
       const plan = (await response.json()) as DemoPlan
-      const [events, telemetry] = await Promise.all([
+      const [events, telemetry, sensors] = await Promise.all([
         fetch('/api/events').then((r) => (r.ok ? (r.json() as Promise<OperationEvent[]>) : [])),
         fetchTelemetry(),
+        fetchSensors(),
       ])
-      return { plan, live: true, events, telemetry }
+      return { plan, live: true, events, telemetry, sensors }
     }
   } catch {
     // Sin API: se sigue con el plan estático.
   } finally {
     clearTimeout(timer)
   }
-  return { plan: await loadDemoPlan(), live: false, events: [], telemetry: null }
+  return { plan: await loadDemoPlan(), live: false, events: [], telemetry: null, sensors: null }
 }
 
 /** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. Todo a la hora del servidor. */
@@ -120,6 +122,7 @@ async function post<T extends object>(url: string, request: object): Promise<T> 
 export interface Listeners {
   event: (event: OperationEvent) => void
   telemetry: (message: TelemetryMessage) => void
+  sensors: (message: SensorsMessage) => void
   /** Empezó un turno nuevo: los eventos se borran. */
   reset: () => void
 }
@@ -137,8 +140,13 @@ export function listen(listeners: Listeners): () => void {
       retry = 1_000
     }
     socket.onmessage = (message) => {
-      const data = JSON.parse(String(message.data)) as OperationEvent | TelemetryMessage | { type: 'reset' }
+      const data = JSON.parse(String(message.data)) as
+        | OperationEvent
+        | TelemetryMessage
+        | SensorsMessage
+        | { type: 'reset' }
       if (data.type === 'telemetry') listeners.telemetry(data)
+      else if (data.type === 'sensors') listeners.sensors(data)
       else if (data.type === 'reset') listeners.reset()
       else listeners.event(data)
     }

@@ -4,7 +4,15 @@ import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
 import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { readPalette } from './map/colors'
-import { operationLayers, staticLayers, tripsLayer, vehiclesLayer, zoneLayers, type VehicleMark } from './map/layers'
+import {
+  fillLayer,
+  operationLayers,
+  staticLayers,
+  tripsLayer,
+  vehiclesLayer,
+  zoneLayers,
+  type VehicleMark,
+} from './map/layers'
 import {
   clock,
   secondsOfDay,
@@ -30,14 +38,18 @@ import {
   type OperationEvent,
 } from './operations/live'
 import {
+  applySensors,
   applyTelemetry,
   emptyFeed,
+  emptySensors,
   feedTime,
   feedTrips,
   positionAt,
   setClock,
   VEHICLE_STATES,
+  fillState,
   type Feed,
+  type Sensors,
 } from './operations/telemetry'
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
@@ -63,6 +75,7 @@ export default function App() {
   const [reducedMotion] = useState(prefersReducedMotion)
   const [playing, setPlaying] = useState(() => !reducedMotion)
   const [feed, setFeed] = useState<Feed | null>(null)
+  const [sensors, setSensors] = useState<Sensors>(emptySensors)
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
 
@@ -81,6 +94,7 @@ export default function App() {
         setVisible(new Set(loaded.plan.routes.map((route) => route.id)))
         loaded.events.forEach(addEvent)
         if (loaded.telemetry) setFeed(applyTelemetry(emptyFeed(loaded.telemetry.clock), loaded.telemetry))
+        if (loaded.sensors) setSensors(applySensors(emptySensors(), loaded.sensors))
       })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)))
   }, [addEvent])
@@ -90,6 +104,7 @@ export default function App() {
     return listen({
       event: addEvent,
       telemetry: (message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)),
+      sensors: (message) => setSensors((current) => applySensors(current, message)),
       reset: () => {
         setEvents([])
         setFeed((current) => current && { ...current, vehicles: new Map() })
@@ -192,8 +207,17 @@ export default function App() {
     ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
     : []
   // Sin API y antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
+  const filled = useMemo(
+    () => (current ? fillLayer(current.plan.containers.filter((c) => visible.has(c.route)), sensors.readings, palette) : null),
+    [current, visible, sensors, palette],
+  )
   const layers = feed
-    ? [...baseLayers, tripsLayer(trips, visible, time, palette), vehiclesLayer(marks, visible, palette)]
+    ? [
+        ...baseLayers,
+        ...(filled ? [filled] : []),
+        tripsLayer(trips, visible, time, palette),
+        vehiclesLayer(marks, visible, palette),
+      ]
     : plan && (playing || time > 0)
       ? [...baseLayers, tripsLayer(trips, visible, time, palette)]
       : baseLayers
@@ -216,7 +240,7 @@ export default function App() {
       >
         <DeckOverlay
           layers={layers}
-          getTooltip={tooltipFor(current, live)}
+          getTooltip={tooltipFor(current, live, sensors)}
           getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
           onClick={(info) => {
             if (closing) {
@@ -285,6 +309,8 @@ export default function App() {
       {current && selectedContainer && (
         <ContainerCard
           container={selectedContainer}
+          fill={sensors.readings.get(selectedContainer.id)}
+          liters={sensors.liters.get(selectedContainer.id)}
           overflow={current.overflows.get(selectedContainer.id)}
           now={time}
           pending={pending !== null}
@@ -311,11 +337,11 @@ export default function App() {
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
 const CLOSURE_LAYERS = ['closures', 'closure-marks']
 
-function tooltipFor(current: CurrentPlan | null, live: boolean) {
-  return (info: PickingInfo) => (current ? tooltip(info, current, live) : null)
+function tooltipFor(current: CurrentPlan | null, live: boolean, sensors: Sensors) {
+  return (info: PickingInfo) => (current ? tooltip(info, current, live, sensors) : null)
 }
 
-function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean) {
+function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean, sensors: Sensors) {
   if (!object || ![...CONTAINER_LAYERS, 'sites', 'vehicles', ...CLOSURE_LAYERS].includes(layer?.id ?? '')) return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
@@ -337,11 +363,11 @@ function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boo
           ? vehicleHtml(object as VehicleMark)
           : CLOSURE_LAYERS.includes(layer?.id ?? '')
           ? closureHtml(object as ClosureEvent, current)
-          : containerHtml(object as Container, current, live),
+          : containerHtml(object as Container, current, live, sensors),
   }
 }
 
-function containerHtml(container: Container, current: CurrentPlan, live: boolean): string {
+function containerHtml(container: Container, current: CurrentPlan, live: boolean, sensors: Sensors): string {
   const at = (seconds: number) => clock(secondsOfDay(current.plan.meta.shiftStart) + seconds)
   const reserve = current.orphanRoute.get(container.id)
   const orphan = reserve ? `<span class="orphan">Huérfano tras la avería de ${container.route}: lo recoge ${reserve}</span>` : ''
@@ -358,10 +384,16 @@ function containerHtml(container: Container, current: CurrentPlan, live: boolean
   return `<strong class="num">${container.id}</strong>
     <span>${STREAM_NAMES[container.stream]} · simulado</span>
     <span class="num">${container.kg} kg por recolección</span>
+    ${fillHtml(sensors.readings.get(container.id), sensors.liters.get(container.id))}
     <span class="num">Vehículo ${container.route} · llega a las ${at(container.visitSeconds)}</span>
     ${orphan}${spilled}${cutOff}${rules}${hint}`
 }
 
+
+function fillHtml(percent: number | undefined, liters: number | undefined): string {
+  if (percent === undefined || liters === undefined) return ''
+  return `<span class="num fill-${fillState(percent)}">${percent >= 100 ? 'Desbordado' : `Lleno al ${percent} %`} · ${liters.toLocaleString('es-CO')} L · sensor simulado</span>`
+}
 
 function vehicleHtml({ vehicle }: VehicleMark): string {
   return `<strong class="num">${vehicle.id}</strong>
