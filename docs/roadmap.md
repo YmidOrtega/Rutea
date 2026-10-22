@@ -62,7 +62,16 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 
 Las 129 soluciones son factibles según el `Evaluator`. Timefold no queda primero en ninguna instancia. JMH (`exec:exec@jmh`): una pasada completa de búsqueda local sobre un óptimo local tarda 166 µs en X-n101, 345 µs en X-n200 y 584 µs en X-n298, unos 5 ns por movimiento evaluado.
 
-Pendiente de F2: correr en frío y en caliente antes de publicar estas cifras fuera del repo, y comparar contra Timefold afinado (aquí va con su configuración por defecto).
+En frío y en caliente (2026-10-22; `alns-x4`, mismas 43 instancias, 60 s, semilla 1, misma máquina; las dos corridas a la vez). En frío, un proceso por instancia; en caliente, cada instancia se resuelve una vez y se descarta antes de medir (`--warmup`). CSV en `docs/benchmarks/f2-60s/frio/` y `caliente/`.
+
+| `alns-x4` | Gap promedio | Peor instancia | Llega a la BKS |
+|---|---:|---:|---:|
+| En frío | **0,18 %** | 0,64 % | 12 |
+| En caliente | 0,19 % | 0,93 % | 8 |
+
+Las 86 soluciones son factibles. La diferencia entre frío y caliente está dentro de la dispersión de una búsqueda con límite de tiempo: con 60 s, calentar la JVM no cambia el resultado.
+
+Pendiente de F2: comparar contra Timefold afinado (aquí va con su configuración por defecto).
 
 ## F3 — Mapa real: Suba completa (3–4 semanas)
 

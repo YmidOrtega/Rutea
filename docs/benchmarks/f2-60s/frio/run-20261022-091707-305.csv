@@ -1,0 +1,2 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+X-n115-k10,114,alns-x4,1,60000,,12747,12747,0.000,true,60000.933,10,false,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.12.1
