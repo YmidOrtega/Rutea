@@ -7,9 +7,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import me.ymid.rutea.app.operations.BreakdownReplanner;
+import me.ymid.rutea.app.operations.ContainerSensors;
 import me.ymid.rutea.app.operations.LiveOperation;
 import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.app.planning.ShiftScheduler;
@@ -31,6 +34,7 @@ import me.ymid.rutea.domain.CollectionRules;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.geo.TravelMatrix;
+import me.ymid.rutea.sim.FillSensor;
 import me.ymid.rutea.sim.SimulationClock;
 import me.ymid.rutea.solver.Solution;
 
@@ -62,6 +66,8 @@ public class OperationsService {
     private final List<OperationEvent> events = new ArrayList<>();
     private final Map<String, Vehicle> vehicles = new LinkedHashMap<>();
     private SimulationClock clock;
+    private ContainerSensors sensors;
+    private List<double[]> unloadSites;
 
     /**
      * Las rutas llegan como texto: si Spring las convirtiera a {@code Path}, pasaría por el cargador de recursos del
@@ -252,8 +258,95 @@ public class OperationsService {
         return true;
     }
 
+    synchronized List<double[]> unloadSites() {
+        return unloadSites;
+    }
+
+    /**
+     * Desbordes que los sensores detectaron en {@code (from, to]}, ya despachados como si alguien los hubiera
+     * reportado, en el orden en que ocurrieron. Uno anterior al turno se despacha cuando empieza, a las 18:00.
+     */
+    synchronized List<OperationEvent> sensorOverflows(double from, double to) {
+        List<OperationEvent> produced = new ArrayList<>();
+        while (true) {
+            double[][] visits = visits();
+            int next = -1;
+            double nextAt = Double.POSITIVE_INFINITY;
+            for (int i = 0; i < sensors.size(); i++) {
+                OptionalDouble crossing = sensors.fullBetween(i, visits[i], from, to);
+                if (crossing.isPresent() && crossing.getAsDouble() < nextAt) {
+                    next = i;
+                    nextAt = crossing.getAsDouble();
+                }
+            }
+            if (next < 0) {
+                return produced;
+            }
+            long at = Math.max(0, (long) Math.ceil(nextAt));
+            String id = waste.scenario().containers().get(next).id();
+            if (!pickupPending(id, at)) {
+                produced.add(record(operation.overflow(next + 1, at), "sensor"));
+            }
+            from = nextAt;
+        }
+    }
+
+    /** Lectura de cada sensor a {@code seconds}, en pasos de {@code stepPercent}. */
+    synchronized Map<String, Integer> readings(double seconds, int stepPercent) {
+        double[][] visits = visits();
+        Map<String, Integer> readings = new LinkedHashMap<>();
+        for (int i = 0; i < sensors.size(); i++) {
+            readings.put(waste.scenario().containers().get(i).id(),
+                    FillSensor.reading(sensors.fill(i, visits[i], seconds), stepPercent));
+        }
+        return readings;
+    }
+
+    synchronized Map<String, Integer> liters() {
+        Map<String, Integer> liters = new LinkedHashMap<>();
+        for (int i = 0; i < sensors.size(); i++) {
+            liters.put(waste.scenario().containers().get(i).id(), sensors.liters(i));
+        }
+        return liters;
+    }
+
+    /** Cuándo llega un vehículo a cada contenedor con sensor, en orden, según los recorridos vigentes. */
+    private double[][] visits() {
+        Map<String, Integer> index = new HashMap<>();
+        List<SimulatedContainers.Container> containers = waste.scenario().containers();
+        for (int i = 0; i < containers.size(); i++) {
+            index.put(containers.get(i).id(), i);
+        }
+        List<List<Double>> arrivals = new ArrayList<>();
+        containers.forEach(container -> arrivals.add(new ArrayList<>()));
+        for (Vehicle vehicle : vehicles.values()) {
+            List<Double> times = vehicle.arrivals(unloadSites);
+            for (int k = 0; k < times.size(); k++) {
+                Integer i = index.get(vehicle.stops().get(k));
+                if (i != null) {
+                    arrivals.get(i).add(times.get(k));
+                }
+            }
+        }
+        double[][] visits = new double[arrivals.size()][];
+        for (int i = 0; i < visits.length; i++) {
+            visits[i] = arrivals.get(i).stream().mapToDouble(Double::doubleValue).sorted().toArray();
+        }
+        return visits;
+    }
+
     synchronized List<Vehicle> vehicles() {
         return List.copyOf(vehicles.values());
+    }
+
+    /** Ya hay una recogida en camino por un desborde anterior del mismo contenedor. */
+    private boolean pickupPending(String containerId, long atSeconds) {
+        for (int i = events.size() - 1; i >= 0; i--) {
+            if (events.get(i) instanceof OverflowEvent last && last.container().equals(containerId)) {
+                return last.pickupSeconds() > atSeconds;
+            }
+        }
+        return false;
     }
 
     /** Lo que pasó en esta sesión, en orden: un cliente que llega tarde ve el mismo estado que los demás. */
@@ -384,6 +477,14 @@ public class OperationsService {
             plan = SubaPlanner.merge(waste.plan(), SubaPlanner.fleet(recyclables, SubaFigures.ECA_UNLOAD_SECONDS, seed).plan());
             clock = new SimulationClock(CLOCK_SPEED, 1);
             resetVehicles();
+            unloadSites = plan.sites().stream()
+                    .filter(site -> site.id().equals("relleno") || site.id().equals("eca"))
+                    .map(DemoPlan.Site::position).toList();
+            Map<String, Integer> plannedVisit = new HashMap<>();
+            plan.containers().forEach(container -> plannedVisit.put(container.id(), container.visitSeconds()));
+            sensors = ContainerSensors.of(scenario.containers(), scenario.containers().stream()
+                    .mapToInt(container -> plannedVisit.get(container.id())).toArray(), SubaFigures.CONTAINER_LITERS,
+                    ContainerSensors.Config.typical(seed));
         } catch (IOException e) {
             throw new DataMissingException("No se pudo leer el grafo o los sitios: " + e.getMessage());
         }

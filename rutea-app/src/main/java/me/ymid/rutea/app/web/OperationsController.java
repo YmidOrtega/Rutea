@@ -82,6 +82,11 @@ public class OperationsController {
         return event;
     }
 
+    @GetMapping("/sensors")
+    public SensorsMessage sensors() {
+        return telemetry.sensors();
+    }
+
     @GetMapping("/telemetry")
     public TelemetryMessage telemetry() {
         return telemetry.snapshot();

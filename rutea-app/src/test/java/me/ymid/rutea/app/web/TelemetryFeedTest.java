@@ -19,10 +19,11 @@ class TelemetryFeedTest {
     /** Sale a los 0 s, recoge en (1, 0) de 100 a 160, descarga en el relleno de 300 a 900 y vuelve a los 1000. */
     private static final Vehicle TRUCK = new Vehicle("C-01", WasteStream.NON_RECYCLABLE,
             new Track(new double[] {0, 1, 1, DUMP[0], DUMP[0], 0}, new double[] {0, 0, 0, DUMP[1], DUMP[1], 0},
-                    new double[] {0, 100, 160, 300, 900, 1000}), Vehicle.NOT_BROKEN);
+                    new double[] {0, 100, 160, 300, 900, 1000}), List.of("N1"), Vehicle.NOT_BROKEN);
 
     private static final Vehicle RESERVE = new Vehicle("R-01-1", WasteStream.NON_RECYCLABLE,
-            new Track(new double[] {0, 1}, new double[] {0, 1}, new double[] {500, 600}), Vehicle.NOT_BROKEN);
+            new Track(new double[] {0, 1}, new double[] {0, 1}, new double[] {500, 600}), List.of(),
+            Vehicle.NOT_BROKEN);
 
     private final TelemetryFeed feed = new TelemetryFeed(List.of(DUMP));
 
