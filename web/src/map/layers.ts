@@ -30,7 +30,7 @@ export function zoneLayers(palette: Palette) {
       id: 'zone-mask',
       data: [[SURROUNDINGS, SUBA]],
       getPolygon: (rings) => rings,
-      getFillColor: [...palette.bg, 150],
+      getFillColor: [...palette.bg, 205],
       stroked: false,
     }),
     new PathLayer<LonLat[]>({
@@ -61,7 +61,6 @@ export function sectorLayer(outline: LonLat[], palette: Palette) {
 
 export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
-  const containers = plan.containers.filter((container) => visible.has(container.route))
   const nonRecyclable = routes.filter((route) => route.stream === 'NON_RECYCLABLE')
 
   return [
@@ -71,9 +70,9 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       data: nonRecyclable,
       getPath: (route) => route.path,
       getColor: palette.nonRecyclableEdge,
-      getWidth: 6,
+      getWidth: 4,
       widthUnits: 'pixels',
-      opacity: 0.35,
+      opacity: 0.2,
       jointRounded: true,
       capRounded: true,
       parameters: FLAT,
@@ -83,28 +82,13 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       data: routes,
       getPath: (route) => route.path,
       getColor: (route) => palette.stream[route.stream],
-      getWidth: 3,
+      getWidth: 2,
       widthUnits: 'pixels',
-      opacity: 0.35,
+      // El plan es el fondo: lo que ya se recorrió, la estela, es lo que brilla
+      opacity: 0.2,
       jointRounded: true,
       capRounded: true,
       parameters: FLAT,
-    }),
-    new ScatterplotLayer<Container>({
-      id: 'containers',
-      data: containers,
-      getPosition: (container) => container.position,
-      getFillColor: (container) => palette.stream[container.stream],
-      // Ámbar si ahí no se puede compactar (R07): es lo único que el conductor tiene que hacer distinto.
-      getLineColor: (container) => (container.noCompaction ? palette.warn : strokeColor(palette, container.stream)),
-      getRadius: 14,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: true,
-      lineWidthUnits: 'pixels',
-      getLineWidth: 1.5,
-      pickable: true,
-      autoHighlight: true,
     }),
     // Relleno: punto lleno. Base: anillo. ECA: punto del color de los aprovechables, que terminan ahí.
     new ScatterplotLayer<Site>({
@@ -122,6 +106,41 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       pickable: true,
     }),
   ]
+}
+
+/** Lo que falta por recoger va tenue: como la línea de tiempo, el mapa se enciende a medida que pasa el turno. */
+const PENDING = 70
+
+export function containersLayer(
+  containers: Container[],
+  firstVisit: Map<string, number>,
+  seconds: number,
+  palette: Palette,
+) {
+  // Al minuto: recalcular el color de cada contenedor en cada cuadro no cambia nada que se vea
+  const minute = Math.floor(seconds / 60)
+  const collected = (container: Container) => (firstVisit.get(container.id) ?? Infinity) <= minute * 60
+  return new ScatterplotLayer<Container>({
+    id: 'containers',
+    data: containers,
+    getPosition: (container) => container.position,
+    getFillColor: (container) => [...palette.stream[container.stream], collected(container) ? 255 : PENDING],
+    // Advertencia si ahí no se puede compactar (R07): es lo único que el conductor tiene que hacer distinto.
+    getLineColor: (container) =>
+      container.noCompaction
+        ? palette.warn
+        : [...strokeColor(palette, container.stream), collected(container) ? 255 : PENDING],
+    // A la escala de la localidad son 1.612 puntos: pequeños, para que las rutas y los eventos se lean encima
+    getRadius: 10,
+    radiusMinPixels: 2,
+    radiusMaxPixels: 7,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 1,
+    pickable: true,
+    autoHighlight: true,
+    updateTriggers: { getFillColor: minute, getLineColor: minute },
+  })
 }
 
 /**

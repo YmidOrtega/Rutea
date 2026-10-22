@@ -3,68 +3,32 @@
   height: 100%;
 }
 
-.topbar {
+/* Arriba a la izquierda, el instrumento y debajo la ficha del plan: la ficha toma lo que quede de alto */
+.console {
   position: absolute;
   top: 16px;
   left: 16px;
+  bottom: 16px;
+  width: 320px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
 }
 
-.brand {
-  font-size: var(--text-18);
-  font-weight: 700;
-}
-
-.tag {
-  font-size: var(--text-12);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sodium);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
-/* La hora actual es lo único que lleva el acento (docs/diseno.md, principio 2) */
-.clock {
-  font-size: var(--text-18);
-  color: var(--sodium);
+.console > * {
+  pointer-events: auto;
 }
 
 .play {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: none;
-  color: var(--fg);
-  font-size: var(--text-12);
-  cursor: pointer;
-}
-
-.play:hover,
-.speed:hover {
-  background: var(--line);
-}
-
-.speed {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: none;
-  color: var(--fg-muted);
-  font-size: var(--text-12);
-  cursor: pointer;
+  width: 30px;
+  padding: 0;
 }
 
 /* Abajo, la línea de tiempo y encima la tarjeta del contenedor; deja libre la atribución de CARTO y OSM */
 .dock {
   position: absolute;
-  left: 332px;
+  left: 352px;
   right: 16px;
   bottom: 40px;
   display: flex;
@@ -113,7 +77,7 @@
 
 .status {
   position: absolute;
-  top: 72px;
+  top: 200px;
   left: 16px;
   max-width: 360px;
   display: flex;
@@ -128,17 +92,12 @@
 }
 
 @media (max-width: 640px) {
-  .topbar {
+  /* Abajo va la línea de tiempo: el plan baja colapsado desde el instrumento y no la alcanza */
+  .console {
     right: 16px;
-    gap: 8px;
-  }
-
-  .topbar .label {
-    display: none;
-  }
-
-  .topbar .clock {
-    margin-left: auto;
+    bottom: auto;
+    width: auto;
+    max-height: 55%;
   }
 
   .dock {

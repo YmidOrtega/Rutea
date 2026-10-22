@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
-import { BASEMAP_STYLE, DATA_ATTRIBUTION, initialViewState } from './map/view'
+import { DATA_ATTRIBUTION, initialViewState } from './map/view'
+import { sodiumBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
+  containersLayer,
   fillLayer,
   operationLayers,
   sectorLayer,
@@ -62,7 +64,8 @@ import {
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
 import { Timeline } from './panels/Timeline'
-import { firstVisit, progressOf } from './operations/progress'
+import { Instrument } from './panels/Instrument'
+import { collectedBy, firstVisit, progressOf } from './operations/progress'
 import { windowAt } from './demo/schedule'
 import './App.css'
 
@@ -90,6 +93,11 @@ export default function App() {
   const [sensors, setSensors] = useState<Sensors>(emptySensors)
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
+  const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof sodiumBasemap>> | null>(null)
+
+  useEffect(() => {
+    void sodiumBasemap(palette).then(setBasemap)
+  }, [palette])
 
   const shift = useRef<number | null>(null)
   const lastSeq = useRef(0)
@@ -228,11 +236,19 @@ export default function App() {
     return () => cancelAnimationFrame(frame)
   }, [feed, playing, duration])
 
+  const firstAt = useMemo(() => {
+    const first = new Map<string, number>()
+    for (const visit of progress?.visits ?? []) if (!first.has(visit.container)) first.set(visit.container, visit.seconds)
+    return first
+  }, [progress])
+  const shown = useMemo(() => current?.plan.containers.filter((c) => visible.has(c.route)) ?? [], [current, visible])
   const zone = useMemo(() => zoneLayers(palette), [palette])
-  const baseLayers = useMemo(
+  const planLayers = useMemo(
+    () => [...zone, ...(current ? staticLayers(current.plan, visible, palette) : [])],
+    [zone, current, visible, palette],
+  )
+  const eventLayers = useMemo(
     () => [
-      ...zone,
-      ...(current ? staticLayers(current.plan, visible, palette) : []),
       ...operationLayers(
         current?.reserve.filter((route) => visible.has(route.id)) ?? [],
         orphans,
@@ -243,15 +259,16 @@ export default function App() {
       ),
       ...(selectedSector && selectedSector.outline.length > 0 ? [sectorLayer(selectedSector.outline, palette)] : []),
     ],
-    [zone, current, visible, palette, orphans, overflowed, selectedContainer, selectedSector],
+    [current, visible, palette, orphans, overflowed, selectedContainer, selectedSector],
   )
+  const baseLayers = [...planLayers, containersLayer(shown, firstAt, time, palette), ...eventLayers]
   const marks: VehicleMark[] = feed
     ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
     : []
   // Sin API y antes de reproducir por primera vez, el mapa muestra el plan completo sin estelas
   const filled = useMemo(
-    () => (current ? fillLayer(current.plan.containers.filter((c) => visible.has(c.route)), sensors.readings, palette) : null),
-    [current, visible, sensors, palette],
+    () => (current ? fillLayer(shown, sensors.readings, palette) : null),
+    [current, shown, sensors, palette],
   )
   const layers = feed
     ? [
@@ -267,6 +284,9 @@ export default function App() {
   const finished = sim !== undefined && !sim.running && sim.seconds >= sim.endSeconds
   const end = Math.max(plan?.meta.shiftSeconds ?? 0, sim?.endSeconds ?? duration, progress?.lastSeconds ?? 0)
   const at = (seconds: number) => clock(secondsOfDay(plan?.meta.shiftStart ?? '00:00') + seconds)
+  const onStreet = feed
+    ? [...feed.vehicles.values()].filter((vehicle) => ON_STREET.includes(vehicle.state)).length
+    : undefined
 
   const toggleRoute = (routeId: string) =>
     setVisible((current) => {
@@ -277,54 +297,56 @@ export default function App() {
 
   return (
     <main className="app">
-      <MapGL
-        initialViewState={initialView}
-        mapStyle={BASEMAP_STYLE}
-        attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
-      >
-        <DeckOverlay
-          layers={layers}
-          getTooltip={tooltipFor(current, live, sensors)}
-          getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
-          onClick={(info) => {
-            if (closing) {
-              if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
-              return
-            }
-            setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
-          }}
-        />
-      </MapGL>
-
-      <header className="topbar panel">
-        <strong className="brand">Rutea</strong>
-        <span className="label">{plan?.meta.zone ?? 'Suba'} · Bogotá</span>
-        <span className="tag">Simulado</span>
-        {plan && (
-          <span className="num clock" aria-label="Hora simulada">
-            {at(time)}
-          </span>
-        )}
-      </header>
-
-      {current && progress && (
-        <PlanPanel
-          collectedKg={progress.kgBefore[progress.kgBefore.length - 1]}
-          sector={sector}
-          onSector={setSector}
-          plan={current.plan}
-          visible={visible}
-          onToggle={toggleRoute}
-          live={live}
-          events={events}
-          pending={pending}
-          eventError={eventError}
-          onBreakdown={breakdown}
-          closing={closing}
-          onClosing={setClosing}
-          clock={at}
-        />
+      {basemap && (
+        <MapGL
+          initialViewState={initialView}
+          mapStyle={basemap}
+          attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
+        >
+          <DeckOverlay
+            layers={layers}
+            getTooltip={tooltipFor(current, live, sensors)}
+            getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
+            onClick={(info) => {
+              if (closing) {
+                if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
+                return
+              }
+              setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
+            }}
+          />
+        </MapGL>
       )}
+
+      <div className="console">
+        <Instrument
+          zone={plan?.meta.zone ?? 'Suba'}
+          time={plan ? at(time) : null}
+          shift={plan ? `${at(0)}–${at(plan.meta.shiftSeconds)}` : null}
+          done={progress ? collectedBy(progress, time) : null}
+          totalContainers={current?.plan.containers.length ?? 0}
+          totalKg={progress?.kgBefore[progress.kgBefore.length - 1] ?? 0}
+          onStreet={onStreet}
+        />
+
+        {current && progress && (
+          <PlanPanel
+            sector={sector}
+            onSector={setSector}
+            plan={current.plan}
+            visible={visible}
+            onToggle={toggleRoute}
+            live={live}
+            events={events}
+            pending={pending}
+            eventError={eventError}
+            onBreakdown={breakdown}
+            closing={closing}
+            onClosing={setClosing}
+            clock={at}
+          />
+        )}
+      </div>
 
       <div className="dock">
         {current && selectedContainer && (
@@ -352,7 +374,6 @@ export default function App() {
             time={time}
             progress={progress}
             streams={streams}
-            totalContainers={current.plan.containers.length}
             events={events}
             night={current.plan.compliance.find((check) => check.id === 'R02')}
             clock={at}
@@ -364,22 +385,19 @@ export default function App() {
                     setTime(seconds)
                   }
             }
-            onStreet={
-              feed ? [...feed.vehicles.values()].filter((vehicle) => ON_STREET.includes(vehicle.state)).length : undefined
-            }
           >
             {sim ? (
               <>
                 <button
-                  className="play"
+                  className="control play"
                   onClick={() => controlClock(!sim.running, sim.speed)}
                   aria-label={sim.running ? 'Pausar' : finished ? 'Empezar un turno nuevo' : 'Reproducir'}
                   title={finished ? 'Turno nuevo: borra los eventos' : 'El reloj es el mismo para todos'}
                 >
-                  {sim.running ? '❚❚' : finished ? '↺' : '▶'}
+                  <PlayIcon state={sim.running ? 'pause' : finished ? 'restart' : 'play'} />
                 </button>
                 <button
-                  className="speed num"
+                  className="control num"
                   onClick={() => controlClock(sim.running, SPEEDS[(SPEEDS.indexOf(sim.speed) + 1) % SPEEDS.length])}
                   aria-label={`Velocidad del reloj: ${sim.speed} veces el tiempo real`}
                 >
@@ -387,8 +405,8 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button className="play" onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pausar' : 'Reproducir'}>
-                {playing ? '❚❚' : '▶'}
+              <button className="control play" onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+                <PlayIcon state={playing ? 'pause' : 'play'} />
               </button>
             )}
           </Timeline>
@@ -405,6 +423,21 @@ export default function App() {
         </div>
       )}
     </main>
+  )
+}
+
+/** Dibujados, no caracteres: ▶ y ❚❚ cambian de forma y de ancho según la fuente que los tenga. */
+function PlayIcon({ state }: { state: 'play' | 'pause' | 'restart' }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      {state === 'play' ? (
+        <path d="M2.5 1.5v9l8-4.5z" />
+      ) : state === 'pause' ? (
+        <path d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z" />
+      ) : (
+        <path d="M6 1.5a4.5 4.5 0 1 1-4.3 5.8l1.4-.4A3 3 0 1 0 6 3v1.8L3.3 2.3 6 0z" />
+      )}
+    </svg>
   )
 }
 
@@ -428,9 +461,8 @@ function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boo
       background: 'var(--panel)',
       color: 'var(--fg)',
       border: '1px solid var(--line)',
-      borderRadius: '8px',
+      borderRadius: '0',
       padding: '8px 10px',
-      backdropFilter: 'blur(12px)',
       fontFamily: 'var(--font-ui)',
       fontSize: 'var(--text-13)',
     },

@@ -1,29 +1,33 @@
 /* Ningún componente usa colores literales: todos salen de aquí (docs/diseno.md). */
 :root {
-  --bg: #0b0f14;
-  --panel: rgb(16 22 30 / 0.82);
-  --line: rgb(148 163 184 / 0.16);
-  --fg: #e6edf3;
-  --fg-muted: #8b98a8;
+  /* La ciudad bajo luz de sodio: negros y grises cálidos, no el gris pizarra de siempre */
+  --bg: #0d0b08;
+  --panel: rgb(13 11 8 / 0.94);
+  --line: rgb(201 168 120 / 0.16);
+  --line-strong: rgb(201 168 120 / 0.34);
+  --fg: #eee5d6;
+  --fg-muted: #9d8f7b;
   --sodium: #f5a524;
 
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --crit: #f87171;
+  --ok: #93cf9f;
+  /* Más claro y amarillo que el sodio: una advertencia no se confunde con lo que pasa ahora */
+  --warn: #e8d47a;
+  --crit: #ff5b48;
 
   /* Colores de la Resolución 2184 de 2019, adaptados al mapa oscuro. */
-  --stream-recyclable: #f1f5f9;
-  --stream-organic: #34d399;
+  --stream-recyclable: #f4efe6;
+  --stream-organic: #5fcb8b;
   --stream-non-recyclable: #0a0a0a;
-  --stream-non-recyclable-edge: #cbd5e1;
+  --stream-non-recyclable-edge: #cdc3b3;
 
   --font-ui: 'Schibsted Grotesk Variable', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-mono: 'Martian Mono Variable', ui-monospace, monospace;
 
+  --text-11: 11px;
   --text-12: 12px;
   --text-13: 13px;
   --text-15: 15px;
   --text-18: 18px;
   --text-24: 24px;
-  --text-32: 32px;
+  --text-40: 40px;
 }

@@ -22,25 +22,79 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--sodium);
+  outline: 1px solid var(--sodium);
   outline-offset: 2px;
+}
+
+button {
+  border-radius: 0;
 }
 
 .num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  font-stretch: 87.5%;
+  font-size: 0.92em;
 }
 
 .label {
-  font-size: var(--text-12);
+  font-size: var(--text-11);
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--fg-muted);
 }
 
+/* Un instrumento, no una tarjeta: opaco, de canto recto, con marcas de registro en las cuatro esquinas */
 .panel {
-  background: var(--panel);
+  --mark: var(--line-strong);
+  background:
+    linear-gradient(var(--mark), var(--mark)) top left / 7px 1px,
+    linear-gradient(var(--mark), var(--mark)) top left / 1px 7px,
+    linear-gradient(var(--mark), var(--mark)) top right / 7px 1px,
+    linear-gradient(var(--mark), var(--mark)) top right / 1px 7px,
+    linear-gradient(var(--mark), var(--mark)) bottom left / 7px 1px,
+    linear-gradient(var(--mark), var(--mark)) bottom left / 1px 7px,
+    linear-gradient(var(--mark), var(--mark)) bottom right / 7px 1px,
+    linear-gradient(var(--mark), var(--mark)) bottom right / 1px 7px,
+    var(--panel);
+  background-repeat: no-repeat;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  backdrop-filter: blur(12px);
+}
+
+/* Botón grabado: canto recto y línea fina; el acento solo cuando la acción es inminente */
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--fg-muted);
+}
+
+.control:disabled {
+  color: var(--fg-muted);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.control svg {
+  display: block;
+  fill: currentColor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .control {
+    transition: border-color 120ms;
+  }
 }

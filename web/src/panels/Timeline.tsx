@@ -1,7 +1,7 @@
 import { useId, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { secondsOfDay, STREAM_NAMES, type ComplianceCheck, type WasteStream } from '../demo/plan'
 import type { OperationEvent } from '../operations/live'
-import { collectedBy, type Progress } from '../operations/progress'
+import type { Progress } from '../operations/progress'
 import './Timeline.css'
 
 interface Props {
@@ -11,7 +11,6 @@ interface Props {
   time: number
   progress: Progress
   streams: WasteStream[]
-  totalContainers: number
   events: OperationEvent[]
   /** La regla R02 del plan: su franja se marca sobre la línea. */
   night: ComplianceCheck | undefined
@@ -20,8 +19,6 @@ interface Props {
   children: ReactNode
   /** Sin API, la hora es local y se puede mover; con API, el reloj es el mismo para todos y no se arrastra. */
   onSeek?: (seconds: number) => void
-  /** Vehículos que transmiten y no han terminado; sin API no se sabe. */
-  onStreet?: number
 }
 
 const BUCKET = 15 * 60
@@ -31,7 +28,6 @@ const NIGHT_START = '21:00'
 const NIGHT_HOURS = 9
 const KEY_STEP = 5 * 60
 
-const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 const share = (seconds: number, end: number) => `${(Math.min(Math.max(seconds, 0), end) / end) * 100}%`
 
 export function Timeline({
@@ -40,16 +36,13 @@ export function Timeline({
   time,
   progress,
   streams,
-  totalContainers,
   events,
   night,
   clock,
   children,
   onSeek,
-  onStreet,
 }: Props) {
   const clip = useId()
-  const done = collectedBy(progress, time)
   const buckets = Math.ceil(end / BUCKET)
   const counts = new Map(streams.map((stream) => [stream, new Array<number>(buckets).fill(0)]))
   for (const visit of progress.visits) {
@@ -86,21 +79,15 @@ export function Timeline({
     <section className="timeline panel" aria-label="Línea de tiempo del turno">
       <div className="timeline-head">
         {children}
-        <p className="timeline-metrics" aria-live="off">
-          <span className="num">
-            <strong>{done.containers}</strong> de {totalContainers}
-          </span>{' '}
-          contenedores ·{' '}
-          <span className="num">
-            <strong>{tonnes(done.kg)}</strong> de {tonnes(progress.kgBefore[progress.kgBefore.length - 1])} t
-          </span>
-          {onStreet !== undefined && (
-            <>
-              {' '}
-              · <span className="num">{onStreet}</span> en la calle
-            </>
-          )}
-        </p>
+        <span className="label timeline-title">Visitas cada 15 min</span>
+        <span className="timeline-legend">
+          {streams.map((stream) => (
+            <span key={stream} className="label">
+              <span className={`timeline-key lane-${stream}`} aria-hidden="true" />
+              {STREAM_NAMES[stream]}
+            </span>
+          ))}
+        </span>
       </div>
 
       <div
@@ -160,13 +147,15 @@ export function Timeline({
         </svg>
 
         <div className="timeline-axis num" aria-hidden="true">
-          {hours.map((seconds) =>
-            seconds % 7200 === 0 && seconds <= end - 1800 ? (
-              <span key={seconds} style={{ left: share(seconds, end) }}>
-                {clock(seconds)}
-              </span>
-            ) : null,
-          )}
+          {hours.map((seconds) => (
+            <span
+              key={seconds}
+              className={seconds % 7200 === 0 ? 'major' : undefined}
+              style={{ left: share(seconds, end) }}
+            >
+              {seconds % 7200 === 0 && seconds <= end - 1800 ? clock(seconds) : null}
+            </span>
+          ))}
         </div>
 
         <div className="timeline-now" style={{ left: share(time, end) }} aria-hidden="true" />

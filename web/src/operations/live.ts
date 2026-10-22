@@ -1,3 +1,4 @@
+import { km } from '../format'
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
 import { apiError, fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
 
@@ -248,7 +249,7 @@ export function overflowPickup(event: OverflowEvent, at: (seconds: number) => st
     case 'PLANNED':
       return `lo recoge ${event.truck} en su visita del plan a las ${at(event.pickupSeconds)} (${minutes} min)`
     case 'IN_SERVICE':
-      return `${event.truck} se desvía ${(event.extraMeters / 1000).toFixed(1)} km y llega a las ${at(event.pickupSeconds)} (${minutes} min)`
+      return `${event.truck} se desvía ${km(event.extraMeters)} km y llega a las ${at(event.pickupSeconds)} (${minutes} min)`
     case 'RESERVE':
       return `ningún compactador tiene cupo; sale ${event.truck} y llega a las ${at(event.pickupSeconds)} (${minutes} min)`
   }

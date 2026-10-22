@@ -9,6 +9,7 @@ import {
   type OperationEvent,
   type OverflowEvent,
 } from '../operations/live'
+import { decimal, km } from '../format'
 import './PlanPanel.css'
 
 interface Props {
@@ -24,8 +25,6 @@ interface Props {
   closing: boolean
   onClosing: (closing: boolean) => void
   clock: (secondsFromShiftStart: number) => string
-  /** Lo que recogen las visitas del plan vigente, con las reservas: la misma cifra de la línea de tiempo. */
-  collectedKg: number
   /** La UPZ elegida en los horarios de paso: su borde se marca en el mapa. */
   sector: string | null
   onSector: (ref: string | null) => void
@@ -33,12 +32,10 @@ interface Props {
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 
-const km = (meters: number) => (meters / 1000).toFixed(1)
 const hours = (seconds: number) => {
   const minutes = Math.round(seconds / 60)
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
 }
-const tonnes = (kg: number) => (kg / 1000).toFixed(1)
 const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function PlanPanel({
@@ -53,7 +50,6 @@ export function PlanPanel({
   closing,
   onClosing,
   clock,
-  collectedKg,
   sector,
   onSector,
 }: Props) {
@@ -67,19 +63,18 @@ export function PlanPanel({
   return (
     <aside className="plan panel" aria-label="Plan de recolección">
       <button className="plan-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="label">Plan simulado</span>
+        <span className="label">Ficha del plan</span>
         <span className="plan-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
       </button>
 
       {open && (
         <div className="plan-body">
-          <dl className="kpis">
-            <Kpi value={km(totalMeters)} unit="km" label="Recorrido" />
-            <Kpi value={(totalSeconds / 3600).toFixed(1)} unit="h" label="Horas" />
-            <Kpi value={tonnes(collectedKg)} unit="t" label="Recolectado" />
-            <Kpi value={tonnes(co2Kg)} unit="t" label="CO₂ estimado" />
-            <Kpi value={String(plan.containers.length)} label="Contenedores" />
-            <Kpi value={String(plan.routes.length)} unit={`· ${trips} viajes`} label="Vehículos" />
+          <dl className="spec">
+            <Spec label="Recorrido" value={km(totalMeters)} unit="km" />
+            <Spec label="Horas de vehículo" value={decimal(totalSeconds / 3600, 1)} unit="h" />
+            <Spec label="CO₂ estimado" value={decimal(co2Kg / 1000, 1)} unit="t" />
+            <Spec label="Vehículos" value={decimal(plan.routes.length)} unit={`· ${trips} viajes`} />
+            <Spec label="Contenedores" value={decimal(plan.containers.length)} />
           </dl>
 
           {STREAMS.map((stream) => {
@@ -142,7 +137,7 @@ export function PlanPanel({
                             aria-label={`Simular avería de ${route.id} a la hora del reloj`}
                             title={broken.has(route.id) ? `${route.id} ya está averiado` : 'Simular avería ahora'}
                           >
-                            {pending === route.id ? '…' : '!'}
+                            {pending === route.id ? '…' : <HazardIcon />}
                           </button>
                         )}
                       </li>
@@ -254,7 +249,7 @@ export function PlanPanel({
           <p className="note">
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
-            <span className="num">{plan.meta.iterations.toLocaleString('es-CO')}</span> iteraciones) sobre las
+            <span className="num">{decimal(plan.meta.iterations)}</span> iteraciones) sobre las
             calles reales de OpenStreetMap, con el menor número de vehículos en turnos de{' '}
             <span className="num">{plan.meta.shiftSeconds / 3600} h</span>. Los compactadores de{' '}
             <span className="num">8 t</span> salen de la base de Fontibón y descargan en Doña Juana en{' '}
@@ -295,7 +290,7 @@ function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['cloc
       <span className={event.meetsRecoveryRule ? 'rule-OK' : 'rule-FAIL'} title={event.citation}>
         R05 {event.meetsRecoveryRule ? '✓' : '✗'} servicio restablecido en{' '}
         <span className="num">{Math.round((event.firstPickupSeconds - event.atSeconds) / 60)} min</span> (máximo 3
-        h) · replanificado en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+        h) · replanificado en <span className="num">{decimal(event.latencyMs)} ms</span>
       </span>
     </li>
   )
@@ -317,7 +312,7 @@ function Overflow({ event, clock }: { event: OverflowEvent; clock: Props['clock'
       <span>
         Decidido en{' '}
         <span className="num">
-          {event.latencyMs < 1 ? `${(event.latencyMs * 1000).toFixed(0)} µs` : `${event.latencyMs.toFixed(1)} ms`}
+          {event.latencyMs < 1 ? `${decimal(event.latencyMs * 1000)} µs` : `${decimal(event.latencyMs, 1)} ms`}
         </span>
       </span>
     </li>
@@ -362,20 +357,31 @@ function Closure({ event, clock }: { event: ClosureEvent; clock: Props['clock'] 
         <span className="num">
           {event.recomputed} de {event.matrixSize}
         </span>{' '}
-        filas y columnas en <span className="num">{event.latencyMs.toFixed(0)} ms</span>
+        filas y columnas en <span className="num">{decimal(event.latencyMs)} ms</span>
       </span>
     </li>
   )
 }
 
-function Kpi({ value, unit, label }: { value: string; unit?: string; label: string }) {
+/** Una línea de la ficha técnica: la etiqueta a la izquierda y la cifra alineada a la derecha. */
+function Spec({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
-    <div className="kpi">
-      <dt className="label">{label}</dt>
-      <dd className="num kpi-value">
+    <div className="spec-row">
+      <dt>{label}</dt>
+      <dd className="num">
         {value}
         {unit && <span className="unit">{unit}</span>}
       </dd>
     </div>
+  )
+}
+
+/** El triángulo de emergencia de los vehículos: averiar este compactador ahora. */
+function HazardIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M6 1 11.2 10.5H.8z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M5.4 4.4h1.2v3H5.4zM5.4 8.2h1.2v1.2H5.4z" fill="currentColor" />
+    </svg>
   )
 }
