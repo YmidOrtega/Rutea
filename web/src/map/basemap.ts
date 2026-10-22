@@ -15,7 +15,7 @@ export async function sodiumBasemap(palette: Palette): Promise<StyleSpecificatio
     for (const layer of style.layers) {
       if (!('paint' in layer) || !layer.paint) continue
       // El agua no lleva luminarias: más oscura que una calle con la misma luminancia
-      const gain = layer.id.startsWith('water') ? 0.35 : 0.9
+      const gain = layer.id.startsWith('water') ? 0.5 : 1.7
       const paint = layer.paint as Record<string, unknown>
       for (const key of Object.keys(paint)) {
         if (key.endsWith('-color')) paint[key] = recolor(paint[key], palette.bg, palette.sodium, gain)
@@ -39,13 +39,15 @@ function recolor(value: unknown, bg: RGB, light: RGB, gain: number): unknown {
 }
 
 const BASE_LUMINANCE = 0.055
+// Las autopistas no llegan al sodio pleno: el acento es de las reservas, no de la ciudad de fondo
+const MAX_TINT = 0.4
 
 function tint(color: string, bg: RGB, light: RGB, gain: number): string | null {
   const parsed = parse(color)
   if (!parsed) return null
   const [r, g, b, a] = parsed
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-  const t = Math.min(1, Math.max(0, luminance - BASE_LUMINANCE) * gain)
+  const t = Math.min(MAX_TINT, Math.max(0, luminance - BASE_LUMINANCE) * gain)
   const [x, y, z] = bg.map((channel, i) => Math.round(channel + (light[i] - channel) * t))
   return `rgba(${x}, ${y}, ${z}, ${a})`
 }

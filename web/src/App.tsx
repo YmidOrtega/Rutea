@@ -247,19 +247,23 @@ export default function App() {
     () => [...zone, ...(current ? staticLayers(current.plan, visible, palette) : [])],
     [zone, current, visible, palette],
   )
+  const minute = Math.floor(time / 60)
   const eventLayers = useMemo(
     () => [
       ...operationLayers(
         current?.reserve.filter((route) => visible.has(route.id)) ?? [],
         orphans,
         overflowed,
+        current?.overflows ?? new Map(),
+        firstAt,
         selectedContainer,
         current?.closures ?? [],
+        minute * 60,
         palette,
       ),
       ...(selectedSector && selectedSector.outline.length > 0 ? [sectorLayer(selectedSector.outline, palette)] : []),
     ],
-    [current, visible, palette, orphans, overflowed, selectedContainer, selectedSector],
+    [current, visible, palette, orphans, overflowed, firstAt, selectedContainer, minute, selectedSector],
   )
   const baseLayers = [...planLayers, containersLayer(shown, firstAt, time, palette), ...eventLayers]
   const marks: VehicleMark[] = feed
