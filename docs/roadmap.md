@@ -202,10 +202,11 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 ## F6 — Producto y publicación (2–3 semanas)
 
-- API REST y WebSocket estables, persistencia en PostgreSQL + PostGIS.
+- [x] Docker Compose: `docker compose up` levanta los datos de OSM (de un release, verificados por SHA-256), PostGIS y la app con el mapa (ADR 0010).
+- [x] Persistencia en PostgreSQL + PostGIS (ADR 0010). Se guardan las órdenes de cada turno y, al reiniciar, se repiten: 52 órdenes en 433 ms, con los mismos 53 eventos. Cada posición transmitida queda como punto de PostGIS (R08).
+- API REST y WebSocket estables.
 - Dashboard completo: plan, línea de tiempo, eventos, métricas.
 - Horarios estimados de paso por sector (R04).
-- Docker Compose: un comando para levantar todo.
 - Caso escrito en ymid.me con las métricas.
 
 **Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
