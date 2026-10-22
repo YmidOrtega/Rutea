@@ -29,7 +29,7 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
     }
 
     /**
-     * Sin estado de llenado: todavía no hay sensores, y un porcentaje inventado no sería honesto.
+     * Sin estado de llenado: lo transmiten los sensores aparte ({@code GET /api/sensors} y el WebSocket).
      *
      * @param visitSeconds segundos desde el inicio del turno hasta que el camión llega
      * @param rules lo que la norma exige en esta parada (R02, R07), en texto
