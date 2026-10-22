@@ -216,7 +216,7 @@ Rutea/
 ├── docs/              # Regulations, architecture, API, roadmap, design, ADRs and benchmarks
 ├── docker/
 ├── Dockerfile
-└── docker-compose.yml
+└── compose.yaml
 ```
 
 ---
