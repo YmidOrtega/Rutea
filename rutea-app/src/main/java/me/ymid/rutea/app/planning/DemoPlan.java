@@ -9,7 +9,7 @@ import me.ymid.rutea.domain.WasteStream;
  * Las calles son reales (OSM); los contenedores y sus cargas son simulados.
  */
 public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, List<Route> routes,
-        List<Compliance.Check> compliance) {
+        List<Compliance.Check> compliance, List<Sector> sectors) {
 
     /**
      * @param shiftStart hora a la que los camiones salen de la base, "HH:mm"
@@ -33,9 +33,26 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
      *
      * @param visitSeconds segundos desde el inicio del turno hasta que el camión llega
      * @param rules lo que la norma exige en esta parada (R02, R07), en texto
+     * @param sector código de la UPZ donde queda (R04)
      */
     public record Container(String id, WasteStream stream, double[] position, int kg, String route, int visitSeconds,
-            boolean noCompaction, boolean nightNoise, List<String> rules) {
+            boolean noCompaction, boolean nightNoise, List<String> rules, String sector) {
+    }
+
+    /**
+     * Una UPZ con los horarios de paso que se publican (R04).
+     *
+     * @param ref código oficial de la UPZ
+     * @param outline borde simplificado, [lon, lat], cerrado
+     */
+    public record Sector(String ref, String name, List<double[]> outline, List<Pass> passes) {
+    }
+
+    /**
+     * Un vehículo pasando por una UPZ: de la primera a la última llegada planeada a sus contenedores del sector,
+     * en cuartos de hora hacia afuera.
+     */
+    public record Pass(WasteStream stream, String route, int fromSeconds, int toSeconds, int containers) {
     }
 
     /**

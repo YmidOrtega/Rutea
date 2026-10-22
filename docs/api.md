@@ -167,7 +167,9 @@ Campos: `type`, `seconds`, `readings`, `liters`
 
 ### `DemoPlan`
 
-Campos: `meta`, `sites`, `containers`, `routes`, `compliance`
+Campos: `meta`, `sites`, `containers`, `routes`, `compliance`, `sectors`
+
+`sectors` son los horarios de paso por UPZ que se publican (R04). Salen del plan y no cambian con los eventos del turno: un cambio de horario se avisa con tres días (R05).
 
 ### `DemoPlan.Meta`
 
@@ -181,9 +183,21 @@ Campos: `id`, `label`, `position`
 
 ### `DemoPlan.Container`
 
-Campos: `id`, `stream`, `position`, `kg`, `route`, `visitSeconds`, `noCompaction`, `nightNoise`, `rules`
+Campos: `id`, `stream`, `position`, `kg`, `route`, `visitSeconds`, `noCompaction`, `nightNoise`, `rules`, `sector`
 
-`noCompaction` (R07) y `nightNoise` (R02) marcan las paradas cerca de un sitio sensible; `rules` las explica en texto.
+`noCompaction` (R07) y `nightNoise` (R02) marcan las paradas cerca de un sitio sensible; `rules` las explica en texto. `sector` es el código de su UPZ, o `rural`.
+
+### `DemoPlan.Sector`
+
+Campos: `ref`, `name`, `outline`, `passes`
+
+`ref` es el código oficial de la UPZ (`27` es Suba) o `rural` para lo que queda fuera de todas. `outline` es el borde simplificado a 5 m, cerrado; la zona rural no trae borde.
+
+### `DemoPlan.Pass`
+
+Campos: `stream`, `route`, `fromSeconds`, `toSeconds`, `containers`
+
+Un vehículo pasando por el sector: de su primera a su última llegada planeada, redondeadas hacia afuera al cuarto de hora. Si vuelve más de 30 min después, es otra pasada.
 
 ### `DemoPlan.Route`
 

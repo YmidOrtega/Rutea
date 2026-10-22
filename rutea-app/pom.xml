@@ -108,6 +108,18 @@
             </configuration>
           </execution>
           <execution>
+            <id>sectors</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractSectors</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <!-- "UPZs Localidad Suba": sus subáreas son las 12 UPZ -->
+                <argument>11486101</argument>
+                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/sectors/suba-upz.geojson</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>breakdowns</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>

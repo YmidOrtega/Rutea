@@ -121,12 +121,14 @@ public final class SubaPlanner {
         }
 
         Compliance.Result compliance = Compliance.evaluate(scenario, visitSeconds, SubaFigures.SHIFT_START);
+        Sectors sectors = Sectors.suba();
         List<DemoPlan.Container> planContainers = new ArrayList<>(containers.size());
         for (int i = 0; i < containers.size(); i++) {
             Container c = containers.get(i);
             Compliance.Stop stop = compliance.stops().get(i);
             planContainers.add(new DemoPlan.Container(c.id(), c.stream(), lonLat(c.latE7(), c.lonE7()), c.kg(),
-                    routeOf[i], visitSeconds[i], stop.noCompaction(), stop.nightNoise(), stop.reasons()));
+                    routeOf[i], visitSeconds[i], stop.noCompaction(), stop.nightNoise(), stop.reasons(),
+                    sectors.locate(c.latE7(), c.lonE7())));
         }
         List<DemoPlan.Site> sites = scenario.stream() == WasteStream.NON_RECYCLABLE
                 ? List.of(
@@ -141,7 +143,7 @@ public final class SubaPlanner {
                 SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
                 SubaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
                 "© colaboradores de OpenStreetMap (ODbL 1.0)", ASSUMPTIONS);
-        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks());
+        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks(), List.of());
     }
 
     /** Tras un cierre, un turno pasa por grafos distintos y cada índice de arco es de su grafo. */
@@ -276,8 +278,10 @@ public final class SubaPlanner {
         }
         checks.add(Compliance.nightNoiseCheck(nightNoise));
         checks.addAll(Compliance.fleetChecks(waste.routes().size(), recyclables.routes().size()));
+        List<DemoPlan.Sector> sectors = Sectors.suba().schedule(containers);
+        checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
-        return new DemoPlan(waste.meta(), sites, containers, routes, checks);
+        return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors);
     }
 
     /**

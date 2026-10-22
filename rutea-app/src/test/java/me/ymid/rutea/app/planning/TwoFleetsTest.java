@@ -76,7 +76,7 @@ class TwoFleetsTest {
     void mergedChecksAddUpNightStopsAndStateEachRule() {
         long nightStops = merged.containers().stream().filter(DemoPlan.Container::nightNoise).count();
 
-        assertThat(merged.compliance()).extracting(Compliance.Check::id).containsExactly("R02", "R03", "R06", "R07", "R10");
+        assertThat(merged.compliance()).extracting(Compliance.Check::id).containsExactly("R02", "R03", "R04", "R06", "R07", "R10");
         assertThat(check("R02").count()).isEqualTo((int) nightStops);
         assertThat(check("R03").status()).isEqualTo(Status.OK);
         assertThat(check("R06").status()).isEqualTo(Status.OK);

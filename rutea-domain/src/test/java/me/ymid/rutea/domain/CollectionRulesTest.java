@@ -96,4 +96,10 @@ class CollectionRulesTest {
         assertThat(CollectionRules.MIN_ROUTE_CHANGE_NOTICE).isEqualTo(Duration.ofDays(3));
         assertThat(CollectionRules.ROUTE_CHANGE_NOTICE.citation()).isEqualTo("R05 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.34");
     }
+
+    @Test
+    @DisplayName("R04 · D. 1077/2015 art. 2.3.2.2.2.3.33: rutas y horarios se publican en la página web del prestador")
+    void scheduleDisclosureCitesItsVerifiedArticle() {
+        assertThat(CollectionRules.SCHEDULE_DISCLOSURE.citation()).isEqualTo("R04 · Decreto 1077 de 2015, art. 2.3.2.2.2.3.33");
+    }
 }

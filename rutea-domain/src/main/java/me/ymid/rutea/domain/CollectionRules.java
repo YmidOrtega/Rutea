@@ -35,6 +35,13 @@ public final class CollectionRules {
             "art. 2.3.2.5.1.1, par. 1 y art. 2.3.2.5.2.6, num. 4", Norms.DECREE_1381_2024_SOURCE,
             Verification.VERIFICADA);
 
+    /**
+     * Frecuencias, rutas y horarios se divulgan: la página web del prestador publica rutas y horarios, y las facturas
+     * informan las frecuencias.
+     */
+    public static final NormRef SCHEDULE_DISCLOSURE = new NormRef("R04", Norms.DECREE_1077_2015,
+            "art. 2.3.2.2.2.3.33", Norms.DECREE_1077_2015_SOURCE, Verification.VERIFICADA);
+
     /** Ante la avería de un vehículo, el servicio se restablece en máximo tres horas. */
     public static final NormRef BREAKDOWN_RECOVERY = new NormRef("R05", Norms.DECREE_1077_2015,
             "art. 2.3.2.2.2.3.34", Norms.DECREE_1077_2015_SOURCE, Verification.VERIFICADA);
