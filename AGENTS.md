@@ -29,7 +29,7 @@ rutea/
 ├── rutea-solver/             CVRP: modelo, lector CVRPLIB, evaluador, solvers, benchmarks (Java puro)
 ├── rutea-domain/             dominio de residuos: corrientes, vehículos, contenedores, reglas normativas
 ├── rutea-geo/                grafo vial desde OpenStreetMap, Dijkstra/A*, matriz de distancias (F3)
-├── rutea-sim/                reloj de simulación acelerable y recorridos con hora (F5); sensores de llenado, después
+├── rutea-sim/                reloj de simulación acelerable, recorridos con hora y sensores de llenado (F5)
 ├── rutea-app/                Spring Boot: API REST, WebSocket, persistencia; une todos los módulos
 ├── rutea-bench/              comparación contra Timefold y microbenchmarks JMH; nunca entra al solver
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
@@ -71,6 +71,7 @@ mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
+mvn -pl rutea-app exec:java@sensors          # desbordes según densidad, tamaño y día, con y sin sensores → docs/benchmarks/f5-sensors/*.csv
 mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan, reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm)
 
 # Frontend
@@ -139,4 +140,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F5 — Operación en tiempo real.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F6 — Producto y publicación.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.

@@ -11,8 +11,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F2 | Metaheurística y paralelismo | Completa |
 | F3 | Mapa real: Suba completa | Completa |
 | F4 | Restricciones del dominio | Completa |
-| F5 | Operación en tiempo real | **En curso** |
-| F6 | Producto y publicación | Pendiente |
+| F5 | Operación en tiempo real | Completa |
+| F6 | Producto y publicación | **Siguiente** |
 
 ## F0 — Fundamentos (1–2 semanas)
 
@@ -198,7 +198,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Contenedor desbordado (ADR 0006). Un clic en un contenedor negro lo reporta a la hora del reloj (`POST /api/overflows`). Se queda con su visita del plan si ningún desvío llega antes; si no, se desvía el compactador que llega primero, con cupo y turno; si ninguno puede, sale una reserva. Medido con 500 desbordes (`mvn -pl rutea-app exec:java@overflows`, CSV en `docs/benchmarks/f5-overflows/`): despachar tarda 41,9 µs (P50) y 163,3 µs (P99); del reporte a la recogida pasan 31,7 min (P50) y 99,6 min (P95). Una reserva sale en el 28,0 % de los casos. Desviar el camión que menos se desvía ahorra un 11,9 % de km, pero duplica el P95 de espera (207,3 min). (Cifras de la remedición del 2026-10-21.)
 - [x] Vía cerrada (ADR 0007). "Cerrar una vía", en el panel, y un clic en el mapa cierran la calle más cercana a la hora del reloj (`POST /api/closures`). La matriz se repara en vez de recalcularse: solo las filas y columnas cuyos caminos pasaban por la vía, con un resultado idéntico al de calcularla de cero. Cada tramo usa la red vigente cuando el camión arranca; si la vía se cierra con el camión en camino, este gira. Los contenedores sin acceso salen del plan, y los camiones afectados reordenan lo que les falta. Medido con 500 cierres sobre calles que un compactador tenía por delante (`mvn -pl rutea-app exec:java@closures`, CSV en `docs/benchmarks/f5-closures/`): reparar la matriz tarda 9,2 ms (P50) y 41,7 ms (P99), frente a 87,8 y 106,0 ms de calcularla de cero, y la matriz es idéntica en los 500. Reparar y replanificar tarda 13,1 ms (P50) y 46,3 ms (P99). Reordenar agrega un 20,5 % menos de km que solo desviar (294,1 frente a 370,1 km en total). 57 cierres dejan contenedores sin acceso y en 15 un camión termina fuera de turno.
 - [x] Reloj y posiciones transmitidos por el servidor (ADR 0008, R08). El reloj de la simulación es el del servidor (`rutea-sim`): corre a 15, 60 o 240×, es el mismo para todos los clientes y marca la hora de cada evento. Cuatro veces por segundo, el servidor reporta por WebSocket cada vehículo que se movió, con su estado y lo recorrido desde el reporte anterior. El mapa dibuja esos reportes, no el plan. A 60× con 15 vehículos son 8,4 KB/s (2,1 KB por reporte de media, 3,5 KB en P95).
-- [ ] Sensores de llenado.
+- [x] Sensores de llenado simulados (ADR 0009). Cada contenedor de no aprovechables tiene un sensor que transmite su llenado en pasos de 5 %. Si llega al 100 % antes de que un camión llegue a él, el servidor lo despacha solo, como un desborde. El modelo usa la carga simulada, los tamaños que declara el operador y 150 kg/m³ de densidad (`PENDIENTE_VERIFICAR`). El patrón por día sale de la frecuencia: el lunes se acumulan dos días. No hay patrón por zona, porque no se encontró la producción por estrato. Medido con `mvn -pl rutea-app exec:java@sensors`: un día cualquiera se desborda el 8,6 % de los contenedores (29,5 % de los de 1.100 L); un lunes, el 34,5 %. Con turno nocturno, los sensores no acortan el desborde (P50 de 3:28 a 3:26), porque casi la mitad ocurre antes de las 18:00. Lo que decide es el tamaño del contenedor y la recolección del domingo.
 
 ## F6 — Producto y publicación (2–3 semanas)
 

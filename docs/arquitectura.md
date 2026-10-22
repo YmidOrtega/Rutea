@@ -68,7 +68,7 @@ Grafo vial en arreglos compactos (CSR), Dijkstra y A*, y construcción de la mat
 
 ### rutea-sim (F5)
 
-Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de paso por cada punto (`Track`), en Java puro. `rutea-app` los usa para transmitir la posición de cada vehículo por WebSocket ([ADR 0008](adr/0008-reloj-y-posiciones-del-servidor.md)). Los sensores de llenado vendrán aquí.
+Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de paso por cada punto (`Track`), en Java puro. `rutea-app` los usa para transmitir la posición de cada vehículo por WebSocket ([ADR 0008](adr/0008-reloj-y-posiciones-del-servidor.md)). También el modelo de los sensores de llenado (`FillSensor`, [ADR 0009](adr/0009-sensores-de-llenado.md)).
 
 ### rutea-app
 
