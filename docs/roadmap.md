@@ -206,7 +206,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Persistencia en PostgreSQL + PostGIS (ADR 0010). Se guardan las órdenes de cada turno y, al reiniciar, se repiten: 52 órdenes en 433 ms, con los mismos 53 eventos. Cada posición transmitida queda como punto de PostGIS (R08).
 - [x] API REST y WebSocket estables (ADR 0011): errores RFC 9457 en español, validación en el borde, turnos en el WebSocket para ponerse al día con `GET /api/events?after=` y el contrato en `docs/api.md`, que un test compara con el código.
 - [x] Dashboard completo: plan, línea de tiempo, eventos, métricas. La línea de tiempo muestra las visitas del turno por corriente, la franja de R02, los eventos y el avance (contenedores, toneladas, vehículos en la calle), contado desde los recorridos: al final del turno da 1612 de 1612 contenedores, también con un compactador averiado.
-- Horarios estimados de paso por sector (R04).
+- [x] Horarios estimados de paso por sector (R04). Los sectores son las 12 UPZ de Suba, de OSM, y la zona rural, que no tiene UPZ. Cada UPZ tiene la ventana de cada corriente, en cuartos de hora: 132 pasadas de vehículo. Se descarga en CSV, y cada contenedor dice cuánto se desvía hoy de su horario publicado. Con C-04 averiado a las 18:00, 82 contenedores llegan fuera de su ventana; el que más, 73 min después.
 - Caso escrito en ymid.me con las métricas.
 
 **Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando.
