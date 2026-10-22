@@ -204,7 +204,7 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 - [x] Docker Compose: `docker compose up` levanta los datos de OSM (de un release, verificados por SHA-256), PostGIS y la app con el mapa (ADR 0010).
 - [x] Persistencia en PostgreSQL + PostGIS (ADR 0010). Se guardan las órdenes de cada turno y, al reiniciar, se repiten: 52 órdenes en 433 ms, con los mismos 53 eventos. Cada posición transmitida queda como punto de PostGIS (R08).
-- API REST y WebSocket estables.
+- [x] API REST y WebSocket estables (ADR 0011): errores RFC 9457 en español, validación en el borde, turnos en el WebSocket para ponerse al día con `GET /api/events?after=` y el contrato en `docs/api.md`, que un test compara con el código.
 - Dashboard completo: plan, línea de tiempo, eventos, métricas.
 - Horarios estimados de paso por sector (R04).
 - Caso escrito en ymid.me con las métricas.

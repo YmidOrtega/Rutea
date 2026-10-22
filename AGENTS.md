@@ -36,7 +36,7 @@ rutea/
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
 ├── data/osm/                 extracto de OpenStreetMap fijo, se descarga (ver data/osm/README.md)
 ├── data/suba/                instancias CVRP reales de Suba, se generan (ver data/suba/README.md)
-└── docs/                     normativa, arquitectura, roadmap, diseño, ADRs
+└── docs/                     normativa, arquitectura, contrato de la API, roadmap, diseño, ADRs
 ```
 
 ### Dirección de dependencias (obligatoria)

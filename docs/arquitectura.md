@@ -75,7 +75,7 @@ Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de 
 Spring Boot. Paquetes:
 
 - `planning`: traduce el problema de residuos a instancias CVRP y las rutas de vuelta a geometrías.
-- `api`: REST (`/api/...`) y WebSocket.
+- `web`: REST (`/api/...`) y WebSocket (`/ws/events`). El contrato está en [`api.md`](api.md) ([ADR 0011](adr/0011-api-estable.md)).
 - `persistence`: PostgreSQL + PostGIS ([ADR 0010](adr/0010-un-comando-y-persistencia.md)). Guarda las órdenes de cada turno, que se repiten al arrancar, y cada posición transmitida como punto. Por ejemplo, kilómetros y minutos detenidos por vehículo en el último turno:
 
   ```sql
@@ -105,6 +105,6 @@ sequenceDiagram
   APP->>APP: Congela lo recorrido y arma una sub-instancia
   APP->>SOL: solve(instancia, plan vigente, límite 2 s)
   SOL-->>APP: Nuevo plan
-  APP-->>WEB: plan.updated (WebSocket)
+  APP-->>WEB: breakdown (WebSocket)
   WEB->>WEB: Anima el cambio de rutas
 ```
