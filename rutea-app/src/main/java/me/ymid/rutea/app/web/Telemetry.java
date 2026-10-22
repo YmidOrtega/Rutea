@@ -37,6 +37,7 @@ public class Telemetry {
     private Map<String, Integer> lastReadings = Map.of();
     private final OperationLog log;
     private long persistedShift = -1;
+    private boolean announced;
     private double persistedUntil;
 
     public Telemetry(OperationsService operations, EventsHub hub, OperationLog log) {
@@ -79,6 +80,11 @@ public class Telemetry {
     private synchronized void publish(boolean always) {
         if (!operations.ready()) {
             return;
+        }
+        if (!announced) {
+            // Quien se conectó mientras se armaba el plan no recibió el turno: EventsHub solo lo manda si ya está listo.
+            hub.broadcast(operations.shiftMessage());
+            announced = true;
         }
         double now = operations.clock().seconds();
         operations.sensorOverflows(now).forEach(hub::broadcast);

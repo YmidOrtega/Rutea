@@ -1,17 +1,14 @@
 package me.ymid.rutea.app.web;
 
 import java.util.List;
-import java.util.Map;
 import java.util.OptionalLong;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import me.ymid.rutea.app.planning.DemoPlan;
@@ -50,8 +47,8 @@ public class OperationsController {
     }
 
     @GetMapping("/events")
-    public List<OperationEvent> events() {
-        return operations.events();
+    public EventsPage events(@RequestParam(name = "after", defaultValue = "0") int after) {
+        return operations.events(after);
     }
 
     /**
@@ -92,23 +89,13 @@ public class OperationsController {
         return telemetry.snapshot();
     }
 
-    /** Reproducir con el turno terminado empieza uno nuevo: los clientes reciben {@code reset} y borran los eventos. */
+    /** Reproducir con el turno terminado empieza uno nuevo: los clientes reciben el turno y borran los eventos. */
     @PutMapping("/clock")
     public TelemetryMessage clock(@RequestBody ClockRequest request) {
         if (operations.clock(request.running(), request.speed())) {
-            hub.broadcast(Map.of("type", "reset"));
+            hub.broadcast(operations.shiftMessage());
         }
         telemetry.publishNow();
         return telemetry.snapshot();
-    }
-
-    @ExceptionHandler(OperationsService.DataMissingException.class)
-    ResponseEntity<Map<String, String>> missing(OperationsService.DataMissingException e) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", e.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<Map<String, String>> invalid(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
 }

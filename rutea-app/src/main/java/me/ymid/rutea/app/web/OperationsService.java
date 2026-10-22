@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -59,6 +60,15 @@ public class OperationsService {
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(OperationsService.class);
+
+    /** Un clic sobre una calle cae a pocos metros de ella; más lejos es un parque, un humedal o fuera del mapa. */
+    static final double MAX_CLOSURE_METERS = 150;
+
+    /**
+     * La telemetría sale cada {@link Telemetry#REPORT_MILLIS}: a 3.600× cada reporte cubre 15 min de turno. Más rápido,
+     * un reporte se saltaría el turno entero y los sensores despacharían todos sus desbordes de golpe.
+     */
+    static final double MAX_SPEED = 3_600;
 
     private final Path graph;
     private final Path sites;
@@ -191,8 +201,8 @@ public class OperationsService {
     /**
      * Cierra la calle más cercana a ({@code lon}, {@code lat}) desde {@code atSeconds}.
      *
-     * @throws IllegalArgumentException si la calle ya está cerrada, el cierre aísla la base o la portería, o es
-     *     anterior al último cierre
+     * @throws IllegalArgumentException si el punto queda a más de {@link #MAX_CLOSURE_METERS} de una calle, la calle
+     *     ya está cerrada, el cierre aísla la base o la portería, o es anterior al último cierre
      */
     public synchronized ClosureEvent closure(double lon, double lat, long atSeconds) {
         plan();
@@ -201,7 +211,16 @@ public class OperationsService {
                     + atSeconds + " s queda fuera");
         }
         RoadGraph graph = waste.scenario().graph();
-        return close(graph.nearestShape((int) Math.round(lat * 1e7), (int) Math.round(lon * 1e7)), atSeconds);
+        int latE7 = (int) Math.round(lat * 1e7);
+        int lonE7 = (int) Math.round(lon * 1e7);
+        int shape = graph.nearestShape(latE7, lonE7);
+        double meters = graph.metersToShape(shape, latE7, lonE7);
+        if (meters > MAX_CLOSURE_METERS) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT,
+                    "el punto (%.5f, %.5f) queda a %.0f m de la calle más cercana; un cierre se marca sobre una calle,"
+                            + " a menos de %.0f m", lon, lat, meters, MAX_CLOSURE_METERS));
+        }
+        return close(shape, atSeconds);
     }
 
     private ClosureEvent close(int shape, long atSeconds) {
@@ -257,6 +276,10 @@ public class OperationsService {
      * @return si empezó un turno nuevo
      */
     public synchronized boolean clock(boolean running, double speed) {
+        if (speed > MAX_SPEED) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT,
+                    "la velocidad va hasta %.0f×; llegó %.0f×", MAX_SPEED, speed));
+        }
         plan();
         clock.speed(speed);
         if (!running) {
@@ -321,7 +344,7 @@ public class OperationsService {
         return Optional.of(event);
     }
 
-    synchronized long shift() {
+    public synchronized long shift() {
         return shift;
     }
 
@@ -383,9 +406,20 @@ public class OperationsService {
         return false;
     }
 
-    /** Lo que pasó en esta sesión, en orden: un cliente que llega tarde ve el mismo estado que los demás. */
-    public synchronized List<OperationEvent> events() {
-        return List.copyOf(events);
+    /**
+     * Los eventos del turno con {@code seq} mayor a {@code after}, en orden: con 0, un cliente que llega tarde ve el
+     * mismo estado que los demás; con su último {@code seq}, uno que se reconecta recibe solo lo que le falta.
+     */
+    public synchronized EventsPage events(int after) {
+        if (after < 0) {
+            throw new IllegalArgumentException("after es el último seq que ya tiene el cliente: 0 o más, llegó " + after);
+        }
+        return new EventsPage(shift, List.copyOf(events.subList(Math.min(after, events.size()), events.size())));
+    }
+
+    /** El turno en curso y su último {@code seq}, leídos juntos. */
+    public synchronized ShiftMessage shiftMessage() {
+        return new ShiftMessage(shift, events.size());
     }
 
     private OverflowEvent record(LiveOperation.Dispatch dispatch, String cause) {

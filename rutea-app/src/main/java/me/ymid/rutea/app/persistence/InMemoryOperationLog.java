@@ -7,7 +7,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Sin base de datos: nada sobrevive a un reinicio. Es lo que usan los tests y {@code pnpm dev}. */
 public final class InMemoryOperationLog implements OperationLog {
 
-    private final AtomicLong shifts = new AtomicLong();
+    /** Desde la hora de arranque: después de reiniciar, un cliente conectado ve otro turno y no mezcla los eventos. */
+    private final AtomicLong shifts = new AtomicLong(System.currentTimeMillis());
 
     @Override
     public long newShift() {

@@ -1,5 +1,5 @@
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
-import { fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
+import { apiError, fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
@@ -63,12 +63,30 @@ export interface ClosureEvent {
 
 export type OperationEvent = BreakdownEvent | OverflowEvent | ClosureEvent
 
+/** Eventos de un turno; si el turno no es el que se conocía, empezó otro. */
+export interface EventsPage {
+  shift: number
+  events: OperationEvent[]
+}
+
+/** Llega al conectarse y cuando empieza un turno nuevo: con él se sabe si faltan eventos o hay que olvidarlos. */
+export interface ShiftMessage {
+  type: 'shift'
+  shift: number
+  /** El último evento del turno; 0 si todavía no hay ninguno. */
+  seq: number
+}
+
+/** Los eventos con seq mayor a after: lo que le falta a quien ya tiene hasta after. */
+export const fetchEvents = (after = 0) =>
+  fetch(`/api/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
+
 export interface LoadedPlan {
   plan: DemoPlan
   /** Con la API detrás se puede simular averías; con el plan estático, solo mirar. */
   live: boolean
-  /** Lo que ya ocurrió en la sesión del servidor. */
-  events: OperationEvent[]
+  /** Lo que ya ocurrió en el turno del servidor; sin API, nada. */
+  events: EventsPage | null
   /** Los vehículos en la calle y el reloj del servidor; sin API, el mapa reproduce el plan por su cuenta. */
   telemetry: TelemetryMessage | null
   sensors: SensorsMessage | null
@@ -85,7 +103,7 @@ export async function loadPlan(): Promise<LoadedPlan> {
     if (response.ok) {
       const plan = (await response.json()) as DemoPlan
       const [events, telemetry, sensors] = await Promise.all([
-        fetch('/api/events').then((r) => (r.ok ? (r.json() as Promise<OperationEvent[]>) : [])),
+        fetchEvents(),
         fetchTelemetry(),
         fetchSensors(),
       ])
@@ -96,7 +114,7 @@ export async function loadPlan(): Promise<LoadedPlan> {
   } finally {
     clearTimeout(timer)
   }
-  return { plan: await loadDemoPlan(), live: false, events: [], telemetry: null, sensors: null }
+  return { plan: await loadDemoPlan(), live: false, events: null, telemetry: null, sensors: null }
 }
 
 /** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. Todo a la hora del servidor. */
@@ -112,19 +130,16 @@ async function post<T extends object>(url: string, request: object): Promise<T> 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })
-  const body = (await response.json()) as T | { error: string }
-  if (!response.ok || 'error' in body) {
-    throw new Error('error' in body ? body.error : `la API respondió ${response.status}`)
-  }
-  return body
+  if (!response.ok) throw await apiError(response)
+  return (await response.json()) as T
 }
 
 export interface Listeners {
   event: (event: OperationEvent) => void
   telemetry: (message: TelemetryMessage) => void
   sensors: (message: SensorsMessage) => void
-  /** Empezó un turno nuevo: los eventos se borran. */
-  reset: () => void
+  /** El turno al conectarse o al empezar uno nuevo; reconnected si ya se había conectado antes y se cayó. */
+  shift: (message: ShiftMessage, reconnected: boolean) => void
 }
 
 /** Escucha la operación; reconecta con espera creciente si se cae. Devuelve cómo cerrar. */
@@ -133,21 +148,23 @@ export function listen(listeners: Listeners): () => void {
   let retry = 1_000
   let closed = false
   let timer = 0
+  let opened = 0
   const connect = () => {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
     socket = new WebSocket(`${scheme}://${window.location.host}/ws/events`)
     socket.onopen = () => {
       retry = 1_000
+      opened++
     }
     socket.onmessage = (message) => {
       const data = JSON.parse(String(message.data)) as
         | OperationEvent
         | TelemetryMessage
         | SensorsMessage
-        | { type: 'reset' }
+        | ShiftMessage
       if (data.type === 'telemetry') listeners.telemetry(data)
       else if (data.type === 'sensors') listeners.sensors(data)
-      else if (data.type === 'reset') listeners.reset()
+      else if (data.type === 'shift') listeners.shift(data, opened > 1)
       else listeners.event(data)
     }
     socket.onclose = () => {

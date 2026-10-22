@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
@@ -25,6 +25,7 @@ import {
 } from './demo/plan'
 import {
   currentPlan,
+  fetchEvents,
   isReserveId,
   listen,
   loadPlan,
@@ -36,6 +37,7 @@ import {
   type ClosureEvent,
   type CurrentPlan,
   type OperationEvent,
+  type ShiftMessage,
 } from './operations/live'
 import {
   applySensors,
@@ -43,6 +45,8 @@ import {
   emptyFeed,
   emptySensors,
   feedTime,
+  fetchSensors,
+  fetchTelemetry,
   feedTrips,
   positionAt,
   setClock,
@@ -79,8 +83,12 @@ export default function App() {
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
 
+  const shift = useRef<number | null>(null)
+  const lastSeq = useRef(0)
+
   // Cada evento llega una vez por WebSocket y, a quien lo pidió, también en la respuesta: se cuenta una sola vez.
   const addEvent = useCallback((event: OperationEvent) => {
+    lastSeq.current = Math.max(lastSeq.current, event.seq)
     setEvents((current) => (current.some((e) => e.seq === event.seq) ? current : [...current, event]))
     const reserve = event.type === 'breakdown' ? event.reserve : event.routes.filter((route) => isReserveId(route.id))
     setVisible((current) => new Set([...current, ...reserve.map((route) => route.id)]))
@@ -92,7 +100,8 @@ export default function App() {
         setPlan(loaded.plan)
         setLive(loaded.live)
         setVisible(new Set(loaded.plan.routes.map((route) => route.id)))
-        loaded.events.forEach(addEvent)
+        shift.current = loaded.events?.shift ?? null
+        loaded.events?.events.forEach(addEvent)
         if (loaded.telemetry) setFeed(applyTelemetry(emptyFeed(loaded.telemetry.clock), loaded.telemetry))
         if (loaded.sensors) setSensors(applySensors(emptySensors(), loaded.sensors))
       })
@@ -105,10 +114,25 @@ export default function App() {
       event: addEvent,
       telemetry: (message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)),
       sensors: (message) => setSensors((current) => applySensors(current, message)),
-      reset: () => {
-        setEvents([])
-        setFeed((current) => current && { ...current, vehicles: new Map() })
-        setVisible(new Set(plan.routes.map((route) => route.id)))
+      shift: (message: ShiftMessage, reconnected: boolean) => {
+        const newShift = message.shift !== shift.current
+        if (newShift) {
+          shift.current = message.shift
+          lastSeq.current = 0
+          setEvents([])
+          setVisible(new Set(plan.routes.map((route) => route.id)))
+        }
+        // Los reportes de telemetría y sensores traen solo lo que cambió: tras un corte o un turno nuevo, se rehacen.
+        const snapshots = newShift || reconnected
+        void Promise.all([
+          message.seq > lastSeq.current ? fetchEvents(lastSeq.current) : null,
+          snapshots ? fetchTelemetry() : null,
+          snapshots ? fetchSensors() : null,
+        ]).then(([page, telemetry, readings]) => {
+          if (page?.shift === shift.current) page.events.forEach(addEvent)
+          if (telemetry) setFeed(applyTelemetry(emptyFeed(telemetry.clock), telemetry))
+          if (readings) setSensors(applySensors(emptySensors(), readings))
+        })
       },
     })
   }, [live, plan, addEvent])
