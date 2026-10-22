@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { STREAM_NAMES, type DemoPlan, type WasteStream } from '../demo/plan'
+import { scheduleCsv, windows } from '../demo/schedule'
 import {
   overflowPickup,
   roadClassName,
@@ -25,6 +26,9 @@ interface Props {
   clock: (secondsFromShiftStart: number) => string
   /** Lo que recogen las visitas del plan vigente, con las reservas: la misma cifra de la línea de tiempo. */
   collectedKg: number
+  /** La UPZ elegida en los horarios de paso: su borde se marca en el mapa. */
+  sector: string | null
+  onSector: (ref: string | null) => void
 }
 
 const STREAMS: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
@@ -50,6 +54,8 @@ export function PlanPanel({
   onClosing,
   clock,
   collectedKg,
+  sector,
+  onSector,
 }: Props) {
   const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
@@ -193,6 +199,58 @@ export function PlanPanel({
             </ul>
           </section>
 
+          {plan.sectors.length > 0 && (
+            <details className="schedule">
+              <summary className="label">Horarios de paso por UPZ · R04</summary>
+              <p className="schedule-note" title={plan.compliance.find((check) => check.id === 'R04')?.citation}>
+                Lo que se publicaría: de la primera a la última llegada planeada de cada corriente, en cuartos de
+                hora hacia afuera. Elige una UPZ para verla en el mapa.
+              </p>
+              <ul>
+                {plan.sectors.map((s) => {
+                  const content = (
+                    <>
+                      <span className="sector-name">
+                        {s.name}
+                        {s.ref !== 'rural' && <span className="num unit">UPZ {s.ref}</span>}
+                      </span>
+                      {[...windows(s)]
+                        .sort(([a], [b]) => STREAMS.indexOf(a) - STREAMS.indexOf(b))
+                        .map(([stream, list]) => (
+                          <span key={stream} className="sector-stream" title={STREAM_NAMES[stream]}>
+                            <span className={`swatch swatch-${stream}`} aria-label={STREAM_NAMES[stream]} />
+                            <span className="num">
+                              {list.map(([from, to]) => `${clock(from)}–${clock(to)}`).join(' · ')}
+                            </span>
+                          </span>
+                        ))}
+                    </>
+                  )
+                  return (
+                    <li key={s.ref}>
+                      {s.outline.length > 0 ? (
+                        <button
+                          className="sector"
+                          aria-pressed={sector === s.ref}
+                          onClick={() => onSector(sector === s.ref ? null : s.ref)}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div className="sector" title="El suelo rural no se divide en UPZ: no tiene borde que marcar">
+                          {content}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              <button className="schedule-download" onClick={() => download(scheduleCsv(plan, clock))}>
+                Descargar por vehículo (CSV)
+              </button>
+            </details>
+          )}
+
           <p className="note">
             Viajes del solver <span className="num">{plan.meta.solver}</span> (semilla{' '}
             <span className="num">{plan.meta.seed}</span>,{' '}
@@ -213,6 +271,13 @@ export function PlanPanel({
       )}
     </aside>
   )
+}
+
+function download(csv: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = Object.assign(document.createElement('a'), { href: url, download: 'rutea-horarios-suba.csv' })
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function Breakdown({ event, clock }: { event: BreakdownEvent; clock: Props['clock'] }) {

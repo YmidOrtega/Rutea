@@ -45,6 +45,20 @@ export function zoneLayers(palette: Palette) {
   ]
 }
 
+/** El borde de la UPZ elegida en los horarios de paso: es una selección, va en el acento. */
+export function sectorLayer(outline: LonLat[], palette: Palette) {
+  return new PathLayer<LonLat[]>({
+    id: 'sector',
+    data: [outline],
+    getPath: (ring) => ring,
+    getColor: palette.sodium,
+    getWidth: 2,
+    widthUnits: 'pixels',
+    jointRounded: true,
+    parameters: FLAT,
+  })
+}
+
 export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
   const containers = plan.containers.filter((container) => visible.has(container.route))

@@ -7,6 +7,7 @@ import { readPalette } from './map/colors'
 import {
   fillLayer,
   operationLayers,
+  sectorLayer,
   staticLayers,
   tripsLayer,
   vehiclesLayer,
@@ -21,6 +22,7 @@ import {
   type Container,
   type DemoPlan,
   type LonLat,
+  type Sector,
   type Site,
   type WasteStream,
 } from './demo/plan'
@@ -60,7 +62,8 @@ import {
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
 import { Timeline } from './panels/Timeline'
-import { progressOf } from './operations/progress'
+import { firstVisit, progressOf } from './operations/progress'
+import { windowAt } from './demo/schedule'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
@@ -74,6 +77,7 @@ export default function App() {
   const [live, setLive] = useState(false)
   const [events, setEvents] = useState<OperationEvent[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const [sector, setSector] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const [eventError, setEventError] = useState<string | null>(null)
@@ -183,6 +187,10 @@ export default function App() {
   )
   const selectedContainer = current?.plan.containers.find((container) => container.id === selected) ?? null
   const progress = useMemo(() => (current ? progressOf(current, events) : null), [current, events])
+  const selectedSector = plan?.sectors.find((s) => s.ref === sector) ?? null
+  // El horario publicado sale del plan original: un evento cambia la llegada de hoy, no lo que se publicó (R05).
+  const planned = plan?.containers.find((container) => container.id === selected)
+  const containerSector = plan?.sectors.find((s) => s.ref === planned?.sector)
   const streams = useMemo(
     () => STREAM_ORDER.filter((stream) => plan?.routes.some((route) => route.stream === stream)),
     [plan],
@@ -233,8 +241,9 @@ export default function App() {
         current?.closures ?? [],
         palette,
       ),
+      ...(selectedSector && selectedSector.outline.length > 0 ? [sectorLayer(selectedSector.outline, palette)] : []),
     ],
-    [zone, current, visible, palette, orphans, overflowed, selectedContainer],
+    [zone, current, visible, palette, orphans, overflowed, selectedContainer, selectedSector],
   )
   const marks: VehicleMark[] = feed
     ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
@@ -301,6 +310,8 @@ export default function App() {
       {current && progress && (
         <PlanPanel
           collectedKg={progress.kgBefore[progress.kgBefore.length - 1]}
+          sector={sector}
+          onSector={setSector}
           plan={current.plan}
           visible={visible}
           onToggle={toggleRoute}
@@ -322,6 +333,9 @@ export default function App() {
             fill={sensors.readings.get(selectedContainer.id)}
             liters={sensors.liters.get(selectedContainer.id)}
             overflow={current.overflows.get(selectedContainer.id)}
+            visit={progress ? firstVisit(progress, selectedContainer.id) : undefined}
+            sectorName={containerSector && sectorLabel(containerSector)}
+            published={containerSector && planned ? windowAt(containerSector, planned.stream, planned.visitSeconds) : undefined}
             now={time}
             pending={pending !== null}
             error={pending === null && eventError !== null ? eventError : null}
@@ -393,6 +407,8 @@ export default function App() {
     </main>
   )
 }
+
+const sectorLabel = (sector: Sector) => (sector.ref === 'rural' ? sector.name : `UPZ ${sector.name}`)
 
 const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']

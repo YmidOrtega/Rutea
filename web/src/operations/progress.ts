@@ -4,6 +4,7 @@ import type { CurrentPlan, OperationEvent } from './live'
 /** Un vehículo llega a un contenedor y recoge lo que su ruta planea ahí. */
 export interface Visit {
   container: string
+  route: string
   stream: WasteStream
   seconds: number
   kg: number
@@ -51,7 +52,7 @@ export function progressOf(current: CurrentPlan, events: OperationEvent[]): Prog
     arrivals(route, unloadSites).forEach((seconds, k) => {
       if (seconds >= until) return
       const container = route.stops[k]
-      visits.push({ container, stream: route.stream, seconds, kg: kg.get(container) ?? 0 })
+      visits.push({ container, route: route.id, stream: route.stream, seconds, kg: kg.get(container) ?? 0 })
       first.set(container, Math.min(seconds, first.get(container) ?? Infinity))
     })
   }
@@ -85,3 +86,7 @@ function countUpTo(sorted: number[], seconds: number): number {
   }
   return low
 }
+
+/** La primera llegada a un contenedor en el plan vigente: tras una avería, la de su reserva. */
+export const firstVisit = (progress: Progress, container: string): Visit | undefined =>
+  progress.visits.find((visit) => visit.container === container)

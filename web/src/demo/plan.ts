@@ -18,6 +18,25 @@ export interface Container {
   noCompaction: boolean
   nightNoise: boolean
   rules: string[]
+  /** Código de su UPZ, o 'rural' (R04). */
+  sector: string
+}
+
+/** Un vehículo pasando por un sector: de la primera a la última llegada planeada, en cuartos de hora hacia afuera. */
+export interface Pass {
+  stream: WasteStream
+  route: string
+  fromSeconds: number
+  toSeconds: number
+  containers: number
+}
+
+/** Una UPZ con sus horarios de paso (R04); la zona rural no trae borde. */
+export interface Sector {
+  ref: string
+  name: string
+  outline: LonLat[]
+  passes: Pass[]
 }
 
 /**
@@ -80,6 +99,7 @@ export interface DemoPlan {
   containers: Container[]
   routes: Route[]
   compliance: ComplianceCheck[]
+  sectors: Sector[]
 }
 
 export interface Trip {

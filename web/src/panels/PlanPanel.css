@@ -173,6 +173,87 @@
   color: var(--crit);
 }
 
+.schedule {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.schedule summary {
+  cursor: pointer;
+}
+
+.schedule-note {
+  margin: 6px 0 8px;
+  font-size: var(--text-12);
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+
+.schedule ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sector {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 5px 6px;
+  margin: 0 -6px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+button.sector {
+  cursor: pointer;
+}
+
+button.sector:hover {
+  background: var(--line);
+}
+
+/* La UPZ elegida lleva el acento, como su borde en el mapa */
+.sector[aria-pressed='true'] .sector-name {
+  color: var(--sodium);
+}
+
+.sector-stream {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-12);
+  color: var(--fg-muted);
+}
+
+.sector-stream .swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-download {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.schedule-download:hover {
+  background: var(--line);
+}
+
 .note {
   margin: 12px 0 0;
   font-size: var(--text-12);
