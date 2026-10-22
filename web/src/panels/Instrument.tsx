@@ -69,7 +69,7 @@ export function Instrument({ zone, time, shift, done, totalContainers, totalKg, 
         </div>
         {onStreet !== undefined && (
           <div>
-            <dt className="label">En la calle</dt>
+            <dt className="label">En ruta</dt>
             <dd className="num">
               <strong>{onStreet}</strong>
             </dd>

@@ -80,8 +80,9 @@
 
 .instrument-figures {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   margin: 0;
+  white-space: nowrap;
 }
 
 .instrument-figures dd {

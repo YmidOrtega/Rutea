@@ -107,23 +107,38 @@
   pointer-events: none;
 }
 
-/* Averías y cierres cambian el plan: cruzan la línea. Los desbordes, que pueden ser decenas, van debajo */
+/*
+ * Averías y cierres cambian el plan: cruzan la línea, pero punteados y con un rombo, para no confundirse con la
+ * aguja de la hora. Los desbordes, que pueden ser decenas, van debajo.
+ */
 .timeline-event {
   position: absolute;
   top: -3px;
   bottom: -3px;
-  width: 2px;
-  margin-left: -1px;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--crit) 0 2px, transparent 2px 4px);
+}
+
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2.5px;
+  width: 6px;
+  height: 6px;
   background: var(--crit);
+  transform: rotate(45deg);
 }
 
 .timeline-event-overflow {
   top: auto;
   bottom: -7px;
   height: 5px;
-  width: 1px;
-  margin-left: 0;
   background: var(--warn);
+}
+
+.timeline-event-overflow::before {
+  content: none;
 }
 
 .timeline-axis {

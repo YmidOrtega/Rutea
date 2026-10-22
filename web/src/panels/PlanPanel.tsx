@@ -131,7 +131,7 @@ export function PlanPanel({
                         </button>
                         {live && route.id.startsWith('C-') && (
                           <button
-                            className="breakdown"
+                            className={`breakdown${broken.has(route.id) ? ' is-broken' : ''}`}
                             disabled={pending !== null || broken.has(route.id)}
                             onClick={() => onBreakdown(route.id)}
                             aria-label={`Simular avería de ${route.id} a la hora del reloj`}

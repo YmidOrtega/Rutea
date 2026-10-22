@@ -313,6 +313,20 @@ button.sector:hover {
   cursor: default;
 }
 
+/* Quince triángulos de emergencia dicen que todo está mal: aparece solo en la fila que se mira */
+@media (hover: hover) {
+  .routes li:not(:hover, :focus-within) .breakdown:not(.is-broken) {
+    opacity: 0;
+  }
+}
+
+/* El que ya se averió lo sigue diciendo: es un estado, no una acción */
+.breakdown.is-broken:disabled {
+  opacity: 1;
+  color: var(--crit);
+  border-color: var(--crit);
+}
+
 .events {
   border-top: 1px solid var(--line);
   padding-top: 10px;
