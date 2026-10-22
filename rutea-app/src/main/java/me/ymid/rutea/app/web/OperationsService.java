@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 
 import org.slf4j.Logger;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import me.ymid.rutea.app.operations.BreakdownReplanner;
 import me.ymid.rutea.app.operations.ContainerSensors;
+import me.ymid.rutea.app.persistence.Command;
+import me.ymid.rutea.app.persistence.OperationLog;
 import me.ymid.rutea.app.operations.LiveOperation;
 import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.app.planning.ShiftScheduler;
@@ -68,13 +71,19 @@ public class OperationsService {
     private SimulationClock clock;
     private ContainerSensors sensors;
     private List<double[]> unloadSites;
+    private final OperationLog log;
+    private long shift;
+    private int commands;
+    private boolean replaying;
+    private double sensorsScannedUntil = Double.NEGATIVE_INFINITY;
 
     /**
      * Las rutas llegan como texto: si Spring las convirtiera a {@code Path}, pasaría por el cargador de recursos del
      * servidor, que rechaza rutas con "..".
      */
     public OperationsService(@Value("${rutea.graph}") String graph, @Value("${rutea.sites}") String sites,
-            @Value("${rutea.warm-up:true}") boolean warmUp) {
+            @Value("${rutea.warm-up:true}") boolean warmUp, OperationLog log) {
+        this.log = log;
         this.graph = Path.of(graph);
         this.sites = Path.of(sites);
         this.warmUp = warmUp;
@@ -146,6 +155,7 @@ public class OperationsService {
         for (LiveOperation.Dispatch again : operation.outOfService(truck, atSeconds)) {
             produced.add(record(again, "avería de " + truckId));
         }
+        logged(new Command.Breakdown(truckId, atSeconds));
         return produced;
     }
 
@@ -173,7 +183,9 @@ public class OperationsService {
                 break;
             }
         }
-        return record(operation.overflow(node, atSeconds), "reporte");
+        OverflowEvent event = record(operation.overflow(node, atSeconds), "reporte");
+        logged(new Command.Overflow(containerId, atSeconds, "reporte"));
+        return event;
     }
 
     /**
@@ -188,9 +200,13 @@ public class OperationsService {
             throw new IllegalArgumentException("el turno va de 0 a " + operation.shiftSeconds() + " s; el cierre a "
                     + atSeconds + " s queda fuera");
         }
+        RoadGraph graph = waste.scenario().graph();
+        return close(graph.nearestShape((int) Math.round(lat * 1e7), (int) Math.round(lon * 1e7)), atSeconds);
+    }
+
+    private ClosureEvent close(int shape, long atSeconds) {
         SubaScenario scenario = waste.scenario();
         RoadGraph graph = scenario.graph();
-        int shape = graph.nearestShape((int) Math.round(lat * 1e7), (int) Math.round(lon * 1e7));
         LiveOperation.Closure closure = operation.close(shape, atSeconds);
         List<double[]> path = new ArrayList<>();
         for (int p = graph.firstShapePoint(shape); p < graph.endShapePoint(shape); p++) {
@@ -214,6 +230,7 @@ public class OperationsService {
                 ids(closure.isolated()), ids(closure.dropped()), changes, routes, visits,
                 CollectionRules.ROUTE_CHANGE_NOTICE.citation());
         add(event);
+        logged(new Command.Closure(shape, atSeconds));
         return event;
     }
 
@@ -255,6 +272,7 @@ public class OperationsService {
         events.clear();
         resetVehicles();
         clock.restart();
+        startShift();
         return true;
     }
 
@@ -263,10 +281,16 @@ public class OperationsService {
     }
 
     /**
-     * Desbordes que los sensores detectaron en {@code (from, to]}, ya despachados como si alguien los hubiera
-     * reportado, en el orden en que ocurrieron. Uno anterior al turno se despacha cuando empieza, a las 18:00.
+     * Desbordes que los sensores detectaron desde la revisión anterior hasta {@code to}, ya despachados como si alguien
+     * los hubiera reportado, en el orden en que ocurrieron. Uno anterior al turno se despacha cuando empieza, a las
+     * 18:00.
      */
-    synchronized List<OperationEvent> sensorOverflows(double from, double to) {
+    synchronized List<OperationEvent> sensorOverflows(double to) {
+        double from = sensorsScannedUntil;
+        if (to <= from) {
+            return List.of();
+        }
+        sensorsScannedUntil = to;
         List<OperationEvent> produced = new ArrayList<>();
         while (true) {
             double[][] visits = visits();
@@ -282,13 +306,23 @@ public class OperationsService {
             if (next < 0) {
                 return produced;
             }
-            long at = Math.max(0, (long) Math.ceil(nextAt));
-            String id = waste.scenario().containers().get(next).id();
-            if (!pickupPending(id, at)) {
-                produced.add(record(operation.overflow(next + 1, at), "sensor"));
-            }
+            sensorOverflow(next, Math.max(0, (long) Math.ceil(nextAt))).ifPresent(produced::add);
             from = nextAt;
         }
+    }
+
+    private Optional<OperationEvent> sensorOverflow(int index, long atSeconds) {
+        String id = waste.scenario().containers().get(index).id();
+        if (pickupPending(id, atSeconds)) {
+            return Optional.empty();
+        }
+        OverflowEvent event = record(operation.overflow(index + 1, atSeconds), "sensor");
+        logged(new Command.Overflow(id, atSeconds, "sensor"));
+        return Optional.of(event);
+    }
+
+    synchronized long shift() {
+        return shift;
     }
 
     /** Lectura de cada sensor a {@code seconds}, en pasos de {@code stepPercent}. */
@@ -413,6 +447,61 @@ public class OperationsService {
         return vehicles.values().stream().mapToDouble(vehicle -> vehicle.track().end()).max().orElseThrow();
     }
 
+    private void startShift() {
+        shift = log.newShift();
+        commands = 0;
+        sensorsScannedUntil = Double.NEGATIVE_INFINITY;
+    }
+
+    /**
+     * Retoma el último turno guardado repitiendo sus órdenes: la operación es determinista, así que el estado vuelve
+     * idéntico. Si una orden ya no se puede repetir (cambiaron los datos o el código), empieza un turno nuevo.
+     */
+    private void resume() {
+        Optional<OperationLog.Shift> saved = log.lastShift();
+        if (saved.isEmpty()) {
+            startShift();
+            return;
+        }
+        replaying = true;
+        long start = System.nanoTime();
+        try {
+            for (Command command : saved.get().commands()) {
+                switch (command) {
+                    case Command.Breakdown breakdown -> breakdown(breakdown.truck(), breakdown.atSeconds());
+                    case Command.Overflow overflow when overflow.cause().equals("sensor") ->
+                            sensorOverflow(containerNode(overflow.container()) - 1, overflow.atSeconds());
+                    case Command.Overflow overflow -> overflow(overflow.container(), overflow.atSeconds());
+                    case Command.Closure closure -> close(closure.shape(), closure.atSeconds());
+                }
+            }
+            shift = saved.get().id();
+            commands = saved.get().commands().size();
+            double last = saved.get().lastSeconds();
+            clock.seek(last);
+            sensorsScannedUntil = last > 0 ? last : Double.NEGATIVE_INFINITY;
+            LOG.info("Turno {} retomado: {} órdenes repetidas en {} ms, reloj en {} s", shift, commands,
+                    (System.nanoTime() - start) / 1_000_000, Math.round(last));
+        } catch (RuntimeException e) {
+            LOG.warn("No se pudo retomar el turno {}; empieza uno nuevo", saved.get().id(), e);
+            operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
+                    SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            events.clear();
+            resetVehicles();
+            clock.seek(0);
+            startShift();
+        } finally {
+            replaying = false;
+        }
+    }
+
+    private void logged(Command command) {
+        commands++;
+        if (!replaying) {
+            log.command(shift, commands, command);
+        }
+    }
+
     private List<String> ids(List<Integer> nodes) {
         return nodes.stream().map(node -> waste.scenario().containers().get(node - 1).id()).toList();
     }
@@ -485,6 +574,7 @@ public class OperationsService {
             sensors = ContainerSensors.of(scenario.containers(), scenario.containers().stream()
                     .mapToInt(container -> plannedVisit.get(container.id())).toArray(), SubaFigures.CONTAINER_LITERS,
                     ContainerSensors.Config.typical(seed));
+            resume();
         } catch (IOException e) {
             throw new DataMissingException("No se pudo leer el grafo o los sitios: " + e.getMessage());
         }
