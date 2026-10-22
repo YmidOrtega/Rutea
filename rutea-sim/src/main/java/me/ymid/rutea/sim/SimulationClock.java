@@ -62,6 +62,12 @@ public final class SimulationClock {
         running = false;
     }
 
+    /** Pausado en {@code seconds}: para retomar un turno guardado donde quedó. */
+    public synchronized void seek(double seconds) {
+        baseSeconds = Math.min(Math.max(0, seconds), endSeconds);
+        running = false;
+    }
+
     public synchronized void restart() {
         baseSeconds = 0;
         baseNanos = nanos.getAsLong();
