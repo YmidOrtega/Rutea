@@ -4,6 +4,37 @@ Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente
 
 Las cifras de la Superservicios salen del [informe de inspección a Área Limpia](https://www.superservicios.gov.co/sites/default/files/inline-files/Area-Limpia-Distrito-Capital-SAS-ESP.pdf) (visita del 9 al 13 de marzo de 2026), que compara el PGIRS de Bogotá con el PPSA del operador.
 
+## Bogotá: localidades y ASE
+
+Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `rutea-app/.../scenario/ServiceAreas.java`.
+
+- **Reparto y operadores:** "Así está dividido el esquema de aseo en las localidades de Bogotá" ([Bogotá.gov.co, 7 feb. 2026](https://bogota.gov.co/mi-ciudad/habitat/como-esta-dividido-el-esquema-de-aseo-en-las-localidades-de-bogota)). Los nombres legales salen de la adjudicación ([Bogotá.gov.co, 4 ene. 2018](https://bogota.gov.co/mi-ciudad/habitat/adjudicado-nuevo-esquema-de-aseo-para-bogota)), que no lista localidades. El ASE 2 se adjudicó a "Limpieza Metropolitana S.A. ESP", que la página de 2026 llama LIME.
+- **Relaciones de OSM:** son las `boundary=administrative` con `admin_level=8` del extracto `colombia-261019`. Su etiqueta `ref` coincide con el número oficial de cada una de las 20 localidades.
+
+| ASE | Operador | Localidades (número oficial) | Base |
+|---|---|---|---|
+| 1 | Promoambiental Distrito | Usaquén (1), Chapinero (2), Santa Fe (3), San Cristóbal (4), Usme (5), La Candelaria (17), Sumapaz (20) | `PENDIENTE_VERIFICAR` |
+| 2 | LIME | Tunjuelito (6), Bosa (7), Teusaquillo (13), Los Mártires (14), Antonio Nariño (15), Puente Aranda (16), Rafael Uribe Uribe (18), Ciudad Bolívar (19) | `PENDIENTE_VERIFICAR` |
+| 3 | Ciudad Limpia | Kennedy (8), Fontibón (9) | `PENDIENTE_VERIFICAR` |
+| 4 | Bogotá Limpia | Engativá (10), Barrios Unidos (12) | `PENDIENTE_VERIFICAR` |
+| 5 | Área Limpia | Suba (11) | Av. Calle 17 # 124-81, Fontibón; nodo OSM 865490722 (ver abajo) |
+
+| Localidad | Relación OSM | Localidad | Relación OSM |
+|---|---:|---|---:|
+| Usaquén | 2214885 | Suba | 2214884 |
+| Chapinero | 1379547 | Barrios Unidos | 2214882 |
+| Santa Fe | 4740232 | Teusaquillo | 2216632 |
+| San Cristóbal | 4740231 | Los Mártires | 2216631 |
+| Usme | 4740233 | Antonio Nariño | 2216654 |
+| Tunjuelito | 2216689 | Puente Aranda | 2216655 |
+| Bosa | 4740227 | La Candelaria | 2218276 |
+| Kennedy | 4740229 | Rafael Uribe Uribe | 4740230 |
+| Fontibón | 2216630 | Ciudad Bolívar | 4740228 |
+| Engativá | 2214883 | Sumapaz | 5579632 |
+
+- La base de cada operador sale de su informe de inspección de la Superservicios, como la de Área Limpia. Esos informes existen (la Superservicios lista uno de Promoambiental Distrito de 2026), pero el portal no deja descargarlos de forma automática; hay que bajarlos a mano. Ciudad Limpia publica en su sitio una base en la Calle 59C Sur # 51-50, pero en una página de hace unos cinco años, así que no se usa.
+- Sumapaz es toda rural. Su modelo de recolección es `PENDIENTE_VERIFICAR`.
+
 ## Cifras con fuente
 
 | Dato | Valor | Fuente | Uso en Rutea |
@@ -78,3 +109,4 @@ Desde el centroide del PGIRS (Calle 145 cerca de la Carrera 84B, nodo OSM 515077
 
 - Población de Suba frente a la de Bogotá en la serie oficial DANE–SDP–RMBC (agosto de 2025). Hoy no se usa: se usa el 15 % del PGIRS.
 - Inventario oficial de contenedores de Suba (UAESP o Área Limpia).
+- Bases de los operadores de las ASE 1 a 4, con dirección y nodo de OSM (informes de inspección de la Superservicios).
