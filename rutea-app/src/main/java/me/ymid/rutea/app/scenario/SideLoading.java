@@ -1,6 +1,7 @@
 package me.ymid.rutea.app.scenario;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
@@ -45,6 +46,14 @@ public final class SideLoading {
      */
     public static final int MAX_TRIPS_PER_TRUCK = 4;
 
+    /** Contenedores sin ubicación publicada: cuántos hay y entre qué tamaños se sortea cada uno. */
+    public record Planned(int count, List<Integer> liters) {
+
+        public Planned {
+            liters = List.copyOf(liters);
+        }
+    }
+
     /** Frecuencia que se mide al lado cuando el operador no publica la de sus contenedores. */
     public static final int SENSITIVITY_COLLECTIONS_PER_WEEK = 6;
 
@@ -57,13 +66,15 @@ public final class SideLoading {
      * @param frequencyPublished el operador publica esa frecuencia; si no, es un supuesto y se mide también
      *     {@link #SENSITIVITY_COLLECTIONS_PER_WEEK}
      * @param sideLoaders compactadores de cargue lateral que declara el operador; vacío si no los declara
-     * @param shifts turnos en que el operador reparte sus contenedores; vacío si su capa no los trae
+     * @param shifts turnos en que se planifican sus contenedores
+     * @param planned la cantidad oficial que se simula, si el operador no publica la ubicación de sus contenedores
      */
     public record Area(ServiceAreas.ServiceArea area, Optional<Double> tonnesPerDay, int collectionsPerWeek,
-            boolean frequencyPublished, OptionalInt sideLoaders, List<Shift> shifts) {
+            boolean frequencyPublished, OptionalInt sideLoaders, List<Shift> shifts, Optional<Planned> planned) {
 
         public Area {
             shifts = List.copyOf(shifts);
+            Objects.requireNonNull(planned, "planned");
         }
 
         /**
@@ -106,18 +117,31 @@ public final class SideLoading {
     public static final Shift ASE_2_NIGHT = new Shift("Noche", "NOCHE", "18:30", 10 * 3600);
 
     /**
+     * La capa del ASE 1 asigna cada contenedor al turno de día o al de noche. Las horas son las de sus microrrutas
+     * domiciliarias de 3 veces por semana, 06:00–16:00 y 18:00–04:00 (capa de microrrutas del operador); no se ha
+     * cruzado la microrruta de cada contenedor.
+     */
+    public static final Shift ASE_1_DAY = new Shift("Dia", "DIA", "06:00", 10 * 3600);
+
+    public static final Shift ASE_1_NIGHT = new Shift("Noche", "NOCHE", "18:00", 10 * 3600);
+
+    /**
+     * {@code PENDIENTE_VERIFICAR}: la capa del ASE 4 no trae turno, así que todos sus contenedores van al de mañana,
+     * 06:00–15:00. La Superservicios vio su compactador de carga lateral en la microrruta 411067 a las 10:45.
+     */
+    public static final Shift ASE_4_DAY = new Shift("Dia", "", "06:00", 9 * 3600);
+
+    /**
+     * {@code PENDIENTE_VERIFICAR}: los contenedores simulados del ASE 3 van al turno de 06:00–14:00, el que su informe
+     * de la Superservicios pone al lado de la frecuencia de "atención de contenedores".
+     */
+    public static final Shift ASE_3_DAY = new Shift("Dia", "", "06:00", 8 * 3600);
+
+    /**
      * El turno de 18:00 a 02:00 del ASE 5, el mismo de su {@link ServiceAreas.Operation}. Sus contenedores no tienen
      * ubicación publicada: todos se simulan en este turno.
      */
     public static final Shift ASE_5_NIGHT = new Shift("Noche", "", "18:00", 8 * 3600);
-
-    public static final List<Area> AREAS = List.of(
-            new Area(ServiceAreas.ASE_1, Optional.of(1_169.0), 3, true, OptionalInt.of(3), List.of()),
-            new Area(ServiceAreas.ASE_2, Optional.of(1_804.7), 3, false, OptionalInt.of(5),
-                    List.of(ASE_2_DAY, ASE_2_NIGHT)),
-            new Area(ServiceAreas.ASE_3, Optional.of(1_075.0), 6, true, OptionalInt.empty(), List.of()),
-            new Area(ServiceAreas.ASE_4, Optional.of(725.1), 3, false, OptionalInt.empty(), List.of()),
-            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true, OptionalInt.empty(), List.of(ASE_5_NIGHT)));
 
     /** Contenedores negros del Plan de Contenerización de 2026 del ASE 3: 91 de 1.100 L, sin ubicación publicada. */
     public static final int ASE_3_CONTAINERS = 91;
@@ -126,6 +150,18 @@ public final class SideLoading {
 
     /** Contenedores negros del plan de 2026 del ASE 5, de tamaños no publicados. */
     public static final int ASE_5_CONTAINERS = 320;
+
+    public static final List<Area> AREAS = List.of(
+            new Area(ServiceAreas.ASE_1, Optional.of(1_169.0), 3, true, OptionalInt.of(3),
+                    List.of(ASE_1_DAY, ASE_1_NIGHT), Optional.empty()),
+            new Area(ServiceAreas.ASE_2, Optional.of(1_804.7), 3, false, OptionalInt.of(5),
+                    List.of(ASE_2_DAY, ASE_2_NIGHT), Optional.empty()),
+            new Area(ServiceAreas.ASE_3, Optional.of(1_075.0), 6, true, OptionalInt.empty(), List.of(ASE_3_DAY),
+                    Optional.of(new Planned(ASE_3_CONTAINERS, List.of(ASE_3_LITERS)))),
+            new Area(ServiceAreas.ASE_4, Optional.of(725.1), 3, false, OptionalInt.empty(), List.of(ASE_4_DAY),
+                    Optional.empty()),
+            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true, OptionalInt.empty(), List.of(ASE_5_NIGHT),
+                    Optional.of(new Planned(ASE_5_CONTAINERS, ServiceAreas.ASE_5.verified().containerLiters()))));
 
     private SideLoading() {
     }

@@ -5,6 +5,7 @@ import static me.ymid.rutea.app.scenario.AreaScenarioFixture.FARM;
 import static me.ymid.rutea.app.scenario.AreaScenarioFixture.HALVES_TOWN;
 import static me.ymid.rutea.app.scenario.AreaScenarioFixture.TWO_HALVES;
 import static me.ymid.rutea.app.scenario.AreaScenarioFixture.WEST;
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.rectangle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,7 +66,7 @@ class AreaScenarioTest {
                 new OperatorContainers.Container("L2", town.latE7(b), town.lonE7(b), 2_200, "BOSA", "1", "NOCHE"),
                 new OperatorContainers.Container("L3", town.latE7(b), town.lonE7(b), 1_100, "BOSA", "1", "DIA"));
 
-        AreaScenario day = AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_DAY, real, 0.5, 24, 30);
+        AreaScenario day = real(town, SideLoading.ASE_2_DAY, ServiceAreas.ASE_2.localities(), real, 0.5);
 
         assertThat(day.containers()).extracting(Container::id).containsExactly("L1", "L3");
         assertThat(day.containers()).extracting(Container::vertex).containsExactly(a, b);
@@ -73,8 +75,8 @@ class AreaScenarioTest {
         assertThat(day.instance().capacity()).isEqualTo(SideLoading.SIDE_LOADER_KG);
         assertThat(day.operation().shiftStart()).isEqualTo("06:00");
         assertThat(day.operation().sideLoadingShare()).isEmpty();
-        assertThatThrownBy(() -> AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_NIGHT,
-                real.subList(0, 1), 1.0, 24, 30)).hasMessageContaining("turno NOCHE");
+        assertThatThrownBy(() -> real(town, SideLoading.ASE_2_NIGHT, ServiceAreas.ASE_2.localities(),
+                real.subList(0, 1), 1.0)).hasMessageContaining("ASE 2 es del turno NOCHE");
     }
 
     @Test
@@ -82,8 +84,8 @@ class AreaScenarioTest {
         RoadGraph town = SampleTown.graph(dir);
         List<Integer> liters = List.of(3_200, 1_100);
 
-        AreaScenario planned = AreaScenario.buildPlanned(town, ServiceAreas.ASE_5, SideLoading.ASE_5_NIGHT, 12,
-                liters, 1.0, 4, AreaScenarioFixture.SUBA_TOWN, 24, 30);
+        AreaScenario planned = AreaScenario.buildPlanned(town, ServiceAreas.ASE_5, SideLoading.ASE_5_NIGHT,
+                ServiceAreas.ASE_5.localities(), 12, liters, 1.0, 4, AreaScenarioFixture.SUBA_TOWN, 24, 30);
         AreaScenario simulated = AreaScenarioFixture.town(dir, 12, 160);
 
         assertThat(planned.instance().name()).isEqualTo("SubaNoche-n13-s4-f100");
@@ -93,6 +95,70 @@ class AreaScenarioTest {
                 .contains(480, 165);
         assertThat(planned.operation().maxTripsPerTruck()).isEqualTo(SideLoading.MAX_TRIPS_PER_TRUCK);
         assertThat(planned.operation().shiftStart()).isEqualTo("18:00");
+    }
+
+    @Test
+    void realContainersAreSelectedByTheLocalityWhereTheyStand() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        Locality bosa = ServiceAreas.locality(7).orElseThrow();
+        Locality bolivar = ServiceAreas.locality(19).orElseThrow();
+        Localities split = new Localities(Map.of(bosa, rectangle(-1, -1, 11, 6), bolivar, rectangle(-1, 6, 11, 11),
+                ServiceAreas.locality(11).orElseThrow(), rectangle(-30, 30, -20, 50)));
+        int west = town.vertexOf(20).orElseThrow();
+        int east = town.vertexOf(22).orElseThrow();
+        List<OperatorContainers.Container> real = List.of(
+                new OperatorContainers.Container("L1", town.latE7(west), town.lonE7(west), 2_200, "", "1", "DIA"),
+                new OperatorContainers.Container("L2", town.latE7(east), town.lonE7(east), 2_200, "", "1", "DIA"),
+                new OperatorContainers.Container("L3", town.latE7(east), town.lonE7(east), 2_200, "", "1", "NOCHE"));
+
+        AreaScenario inBosa = AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_DAY, List.of(bosa),
+                split, real, 1.0, 24, 30);
+        AreaScenario inBolivar = AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_DAY,
+                List.of(bolivar), split, real, 1.0, 24, 30);
+
+        assertThat(inBosa.containers()).extracting(Container::id).containsExactly("L1");
+        assertThat(inBosa.instance().name()).isEqualTo("BosaDia-n2-f100");
+        assertThat(inBolivar.containers()).extracting(Container::id).containsExactly("L2");
+        assertThatThrownBy(() -> AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_NIGHT,
+                List.of(bosa), split, real, 1.0, 24, 30)).hasMessageContaining("de Bosa es del turno NOCHE");
+        List<OperatorContainers.Container> stray = List.of(new OperatorContainers.Container("L4",
+                47_000_000 - 250_000, -740_000_000 + 400_000, 2_200, "", "1", "DIA"));
+        assertThatThrownBy(() -> AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_DAY,
+                List.of(bosa), split, stray, 1.0, 24, 30)).hasMessageContaining("L4 de ASE 2 cae en Suba");
+    }
+
+    @Test
+    void aPlannedContainerKeepsItsPlaceAndSizeWhateverTheSelection() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        Locality kennedy = ServiceAreas.locality(8).orElseThrow();
+        Locality fontibon = ServiceAreas.locality(9).orElseThrow();
+        Localities split = new Localities(Map.of(kennedy, rectangle(-1, -1, 11, 6), fontibon,
+                rectangle(-1, 6, 11, 11)));
+        List<Integer> liters = List.of(3_200, 1_100);
+
+        AreaScenario whole = planned(town, List.of(fontibon, kennedy), split, liters);
+        AreaScenario west = planned(town, List.of(kennedy), split, liters);
+        AreaScenario east = planned(town, List.of(fontibon), split, liters);
+
+        assertThat(whole.instance().name()).isEqualTo("ASE3Dia-n13-s4-f100");
+        assertThat(west.instance().name()).isEqualTo("KennedyDia-n" + (west.containers().size() + 1) + "-s4-f100");
+        assertThat(west.containers()).isNotEmpty();
+        assertThat(east.containers()).isNotEmpty();
+        List<Container> both = new ArrayList<>(west.containers());
+        both.addAll(east.containers());
+        assertThat(both).containsExactlyInAnyOrderElementsOf(whole.containers());
+    }
+
+    private static AreaScenario planned(RoadGraph town, List<Locality> selection, Localities localities,
+            List<Integer> liters) {
+        return AreaScenario.buildPlanned(town, ServiceAreas.ASE_3, SideLoading.ASE_3_DAY, selection, 12, liters, 1.0,
+                4, localities, 24, 30);
+    }
+
+    private static AreaScenario real(RoadGraph town, SideLoading.Shift shift, List<Locality> selection,
+            List<OperatorContainers.Container> real, double fill) {
+        return AreaScenario.buildReal(town, ServiceAreas.ASE_2, shift, selection, AreaScenarioFixture.SUBA_TOWN, real,
+                fill, 24, 30);
     }
 
     @Test

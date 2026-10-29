@@ -48,8 +48,19 @@ class SideLoadingTest {
         assertThat(lime.operation(SideLoading.ASE_2_NIGHT).maxTripsPerTruck()).isEqualTo(4);
         assertThat(lime.operation(SideLoading.ASE_2_NIGHT).compactorKg()).isEqualTo(SideLoading.SIDE_LOADER_KG);
         assertThat(ServiceAreas.ASE_5.verified().maxTripsPerTruck()).isEqualTo(3);
-        assertThatThrownBy(() -> SideLoading.of(ServiceAreas.ASE_1).operation(SideLoading.ASE_2_DAY))
+        assertThatThrownBy(() -> SideLoading.of(ServiceAreas.ASE_1).operation(SideLoading.ASE_4_DAY))
                 .hasMessageContaining("no es un turno");
+    }
+
+    @Test
+    void everyAreaHasAShiftAndEitherRealOrPlannedContainers() {
+        List<Integer> real = OperatorContainers.LAYERS.stream().map(OperatorContainers.Layer::area).toList();
+
+        assertThat(SideLoading.AREAS).allSatisfy(area -> {
+            assertThat(area.shifts()).isNotEmpty();
+            assertThat(area.planned().isPresent()).isNotEqualTo(real.contains(area.area().number()));
+        });
+        assertThat(SideLoading.of(ServiceAreas.ASE_3).planned()).hasValue(new SideLoading.Planned(91, List.of(1_100)));
     }
 
     @Test

@@ -315,7 +315,18 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
     | `timefold` 2.7.1, configuración por defecto | 832,7 km; 827,2–838,8 | 832,4 km; 829,5–836,9 | 14 |
 
     Las 36 soluciones son factibles según el `Evaluator`. Con 321 nodos, Timefold queda un 5 % por encima de `alns-x4`, frente al 35 % con los 807 de `SubaBase-n807-s1`. Entre `alns` y `alns-x4`, y entre frío y caliente, las diferencias (≤ 0,2 %) están dentro de la dispersión entre semillas.
-- [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
+- [x] Planificación en paralelo (2026-10-29; `mvn -pl rutea-app exec:java@city-plan`; i5-14400F, 16 hilos, Java 21.0.12, con el navegador abierto; CSV en `docs/benchmarks/f7-city-plan/`): `CityPlanner` reparte la selección entre sus ASE, y cada ASE sale con una instancia de cargue lateral por turno. Las ASE 1, 2 y 4 usan sus contenedores reales y las ASE 3 y 5 la cantidad oficial simulada. La selección filtra los reales por la localidad donde está cada uno, y los simulados igual que en el paso 5: se ubican sobre la ASE completa y solo se filtran. Cada instancia se arma y se resuelve en su propio hilo, un hilo por instancia y no por ASE, porque los turnos de una ASE son instancias independientes. El comando comprueba que el plan en paralelo sea el mismo que en serie, solución por solución. Los artefactos de Suba salen con los mismos SHA-256.
+  - **Turnos nuevos** (detalle en `docs/datos.md`): el ASE 1 reparte sus contenedores entre día y noche en su capa, con las horas de sus microrrutas domiciliarias. Los del ASE 4 van todos al turno de mañana y los simulados del ASE 3 al de 06:00–14:00, los dos `PENDIENTE_VERIFICAR`.
+  - **Resultado** (llenado del 100 %, ALNS con semilla 7 y 2.000 iteraciones; en frío / en caliente, la segunda pasada en la misma JVM):
+
+    | Localidades | ASE | Instancias | Contenedores | En paralelo | En serie | Aceleración |
+    |---:|---:|---:|---:|---:|---:|---:|
+    | 1 (Suba) | 1 | 1 | 320 | 4,8 / 4,1 s | 4,3 / 4,1 s | 0,9 / 1,0× |
+    | 5 (Usme, Ciudad Bolívar, Kennedy, Engativá, Suba) | 5 | 6 | 1.608 | 11,6 / 11,4 s | 22,0 / 21,8 s | 1,9× |
+    | 20 | 5 | 7 | 2.332 | 11,7 / 11,9 s | 31,8 / 32,4 s | 2,7× |
+
+    En paralelo, la latencia es la de la instancia más grande, el ASE 4 con sus 763 contenedores (4,1 s de escenario y 7,8 s de ALNS). Pasar de 5 a 20 localidades no la sube. La aceleración se queda en 2,7× con 16 hilos porque las 7 instancias están muy desparejas: las del ASE 1 de noche y el ASE 3 terminan en menos de 1,2 s. Con 5 localidades, el ASE 1 no tiene contenedores de noche en Usme, y ese turno sale como "sin contenedores", no como un plan vacío.
+  - **Lo que pesa:** un tercio de la latencia es armar el escenario del ASE 4, casi todo en ubicar cada contenedor en su trazo más cercano, que recorre todos los trazos del grafo. Un índice espacial en `rutea-geo` lo bajaría. La latencia no incluye dibujar el plan ni revisar la normativa, que llegan con el paso de normativa por ASE.
 - [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.
 - [ ] Normativa por ASE: sectores (UPZ) y sitios sensibles de toda Bogotá; R02, R03, R04 y R07 revisadas en cada plan.
 - [ ] API y WebSocket: la selección viaja en la petición, el plan responde por ASE, los eventos llevan su ASE y `docs/api.md` se actualiza con su test.
