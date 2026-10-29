@@ -18,6 +18,8 @@ sha256sum colombia-261019.osm.pbf
 | Contenido | 48.316.739 nodos, 5.294.162 vías (1.157.004 con `highway`), 38.465 relaciones |
 | Límite de Suba | relación [2214884](https://www.openstreetmap.org/relation/2214884), "Localidad Suba", `admin_level=8` |
 
+El grafo de todo Bogotá (F7, ADR 0012) sale con `mvn -pl rutea-geo compile exec:java@bogota` en `bogota.rgraph` (7,5 MB). Todavía no está en un release; tampoco se sube.
+
 Del extracto también salen, con `mvn -pl rutea-app exec:java@sensitive-sites`, los sitios sensibles para R02 y R07 (`suba-sitios-sensibles.csv`, unos 100 KB; tampoco se sube).
 
 Geofabrik guarda los snapshots fechados por un tiempo limitado. Si este ya no está, descarga el más reciente, actualiza esta tabla y anota en el commit que cambió el extracto: el grafo, la matriz y las rutas cambian con él.

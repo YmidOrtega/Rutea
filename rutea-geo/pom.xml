@@ -61,6 +61,19 @@
             <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
           </arguments>
         </configuration>
+        <executions>
+          <execution>
+            <id>bogota</id>
+            <configuration>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>--area</argument>
+                <argument>bogota</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

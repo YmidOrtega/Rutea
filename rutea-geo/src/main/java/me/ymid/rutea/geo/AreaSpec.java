@@ -48,6 +48,13 @@ public record AreaSpec(long localityRelation, long cityRelation, List<Site> site
             new Site(DEPOT, 865490722, 500),
             new Site(DISPOSAL, 1013564592, 2000)));
 
+    /**
+     * Las calles públicas de todo Bogotá D. C. (relación 1387968), con los mismos sitios que {@link #SUBA}: es la
+     * única base verificada (ADR 0012). Las bases de los demás operadores entran cuando se verifiquen. La localidad de
+     * cada calle no queda en el grafo: se asigna por polígono donde se necesita.
+     */
+    public static final AreaSpec BOGOTA = new AreaSpec(1387968, 1387968, SUBA.sites());
+
     public AreaSpec {
         sites = List.copyOf(sites);
         Set<String> names = new HashSet<>();
