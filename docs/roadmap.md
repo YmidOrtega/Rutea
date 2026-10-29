@@ -259,7 +259,13 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 
   - **Escala:** la matriz del ASE 2 (1.666 contenedores, más la base y la portería) sale en 941 ms en frío y 902 ms en caliente (`exec:java@graphs`; i5-14400F, 16 hilos). Como el ASE 2 aún no tiene base verificada, la matriz sale de la base de Suba, que solo cambia una fila.
   - **Límite conocido:** Sumapaz no lleva contenedores porque es rural, pero el suelo rural de Usme, Ciudad Bolívar, Usaquén, Chapinero, Santa Fe y San Cristóbal sí los recibe. Los límites de OSM son los de la localidad, no el perímetro urbano, así que esas localidades quedan con más contenedores de los que les tocan. `PENDIENTE_VERIFICAR`: recortar con el perímetro urbano del POT.
-- [ ] Segunda ASE: una del sur, cerca de Doña Juana, el extremo opuesto a Suba (muchos viajes cortos en lugar de pocos largos). Prueba `ShiftScheduler` y el encadenamiento de viajes con otra forma de problema.
+- [x] Inventario de fuentes por ASE en `docs/datos.md` (2026-10-29): bases, flotas, toneladas, rutas y contenedores de los cinco operadores, de los informes de supervisión de la UAESP (agosto de 2026), las inspecciones de la Superservicios (marzo de 2026) y las capas públicas de ArcGIS de los operadores. Con la prórroga de 2026, todas las ASE bajaron su capacidad nominal de contenedores negros, y lo que sale de la calle pasa a puerta a puerta. Decisión en el ADR 0013: el cargue lateral y el puerta a puerta son instancias distintas, y F7 planifica el cargue lateral.
+- [x] Extracto de los operadores (ADR 0013, 2026-10-29): `mvn -pl rutea-app exec:java@operator-containers` descarga a `data/ase/` los contenedores negros "en campo" de las ASE 1, 2 y 4, con un manifiesto de URL, filtro, fecha de edición de la capa y SHA-256. No se versiona mientras la licencia de las capas siga `PENDIENTE_VERIFICAR`.
+  - **Resultado:** 168 contenedores en el ASE 1 (153 de 1.100 L y 15 de 2.200 L), 990 de 2.200 L en el ASE 2 y 763 de 2.400 L en el ASE 4. No hay códigos repetidos, ningún contenedor cae fuera de su ASE y dos descargas seguidas dan los mismos bytes. Tabla y SHA-256 en `data/ase/README.md`.
+- [ ] Bases en el grafo: el nodo de OSM de las bases de las ASE 1 a 4, como el de Área Limpia.
+- [ ] Carga por capacidad (ADR 0013): litros × 150 kg/m³ × llenado medio al recoger (`PENDIENTE_VERIFICAR`). Se miden dos o tres valores del llenado, y en el ASE 5 se contrasta con el 13 % de toneladas por cargue lateral.
+- [ ] Segunda ASE: el ASE 2, con sus 990 contenedores reales, cerca de Doña Juana: el extremo opuesto a Suba (muchos viajes cortos en lugar de pocos largos). Prueba `ShiftScheduler` y el encadenamiento de viajes con otra forma de problema, y si los 5 camiones de cargue lateral que declara LIME alcanzan.
+- [ ] Suba de 2026 (ADR 0013): instancia nueva con los 320 contenedores del plan aprobado. `SubaBase-n807-s1` queda congelada en el arnés, las cifras de F3 a F6 se rotulan como de 806 contenedores simulados, y la diferencia entre las dos se mide y se publica.
 - [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
 - [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.
 - [ ] Normativa por ASE: sectores (UPZ) y sitios sensibles de toda Bogotá; R02, R03, R04 y R07 revisadas en cada plan.
@@ -268,11 +274,11 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 - [ ] Benchmarks: una instancia `.vrp` por ASE y una fila por ASE en la tabla del arnés, en frío y en caliente.
 - [ ] Release de datos de Bogotá con `SHA256SUMS`; `docker compose up` sigue siendo un solo comando.
 
-**Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada.
+**Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. Cada plan dice qué parte de las toneladas de su ASE cubre el cargue lateral. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada.
 
 ## Más adelante (sin fase asignada)
 
-- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá. Con F7, si una ASE recoge casa por casa, su instancia cambia de modelo, no solo de datos.
+- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Verificado en 2026 (ADR 0013): todas las ASE combinan los dos esquemas, y en el ASE 3 casi todo es puerta a puerta. El modelo va en su propio ADR, después de medir cuántos nodos daría el ASE más grande.
 
 ## Después (fuera de alcance por ahora)
 

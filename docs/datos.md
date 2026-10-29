@@ -127,7 +127,7 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
   - **Flota:** 48 vehículos de recolección: 30 compactadores de 16 a 25 yd³, 13 volquetas y 5 ampliroll. El SUI registra 48 compactadores.
   - **Toneladas:** "en promedio 21.753 toneladas de residuos mensuales provenientes de la ASE4 y un promedio diario de 725,1 toneladas".
 
-**Fuentes de los operadores.** Visores públicos de ArcGIS Online, leídos con la API REST pública (`/query`). Ninguna capa declara licencia: `PENDIENTE_VERIFICAR` antes de versionar un extracto.
+**Fuentes de los operadores.** Visores públicos de ArcGIS Online, leídos con la API REST pública (`/query`). Ninguna capa declara licencia: `PENDIENTE_VERIFICAR` antes de versionar un extracto. Los contenedores negros "en campo" de las ASE 1, 2 y 4 se descargan con `mvn -pl rutea-app exec:java@operator-containers` (ver `data/ase/README.md`).
 
 - **ASE 1, Promoambiental** ([visor](https://experience.arcgis.com/experience/ce3b02ef43e440479c946a0da02f331e/page/Recolecci%C3%B3n?org=promodistrito1)):
   - **Contenedores** (`C0nt3n3d0r3s`): 1.168 registros. 168 "En campo", todos no aprovechables, con frecuencia de 3 veces por semana:
