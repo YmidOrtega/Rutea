@@ -2,7 +2,9 @@ package me.ymid.rutea.app.planning;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.geo.TravelMatrix;
@@ -25,6 +27,9 @@ public final class ShiftScheduler {
 
     /** 2^20 subconjuntos: más viajes que esto ya no se resuelven exactos en un tiempo razonable. */
     static final int MAX_EXACT_TRIPS = 20;
+
+    /** Lo más que admite la asignación; cada operación fija el suyo ({@code Operation#maxTripsPerTruck}). */
+    public static final int MAX_TRIPS_PER_TRUCK = 4;
 
     /**
      * Un camión y sus viajes en orden. {@code reversed[i]}: si el viaje {@code i} se recorre al revés.
@@ -69,8 +74,9 @@ public final class ShiftScheduler {
 
     public static Schedule schedule(AreaScenario scenario, Solution solution, int serviceSeconds, int unloadSeconds,
             int shiftSeconds, int maxTripsPerTruck) {
-        if (maxTripsPerTruck < 1 || maxTripsPerTruck > 3) {
-            throw new IllegalArgumentException("de 1 a 3 viajes por camión, no " + maxTripsPerTruck);
+        if (maxTripsPerTruck < 1 || maxTripsPerTruck > MAX_TRIPS_PER_TRUCK) {
+            throw new IllegalArgumentException("de 1 a " + MAX_TRIPS_PER_TRUCK + " viajes por camión, no "
+                    + maxTripsPerTruck);
         }
         Trips trips = new Trips(scenario, solution, serviceSeconds);
         int n = solution.routeCount();
@@ -120,6 +126,37 @@ public final class ShiftScheduler {
     }
 
     /**
+     * Agrega a {@code prefix} cada viaje que falta, si la secuencia todavía cabe en el turno. Agregar un viaje nunca
+     * acorta el turno, así que una secuencia que no cabe no se extiende.
+     */
+    private static void extend(Trips trips, int[] ids, int[] prefix, int bits, int unloadSeconds, int shiftSeconds,
+            int maxTripsPerTruck, Map<Integer, Truck> best) {
+        for (int next = 0; next < ids.length; next++) {
+            if ((bits & 1 << next) != 0) {
+                continue;
+            }
+            int[] positions = Arrays.copyOf(prefix, prefix.length + 1);
+            positions[prefix.length] = next;
+            int[] sequence = new int[positions.length];
+            for (int i = 0; i < positions.length; i++) {
+                sequence[i] = ids[positions[i]];
+            }
+            Truck truck = trips.truck(sequence, unloadSeconds);
+            if (truck.seconds() > shiftSeconds) {
+                continue;
+            }
+            int withNext = bits | 1 << next;
+            Truck current = best.get(withNext);
+            if (current == null || truck.meters() < current.meters()) {
+                best.put(withNext, truck);
+            }
+            if (positions.length < maxTripsPerTruck) {
+                extend(trips, ids, positions, withNext, unloadSeconds, shiftSeconds, maxTripsPerTruck, best);
+            }
+        }
+    }
+
+    /**
      * Ningún reparto usa menos camiones: cada viaje que ni solo cabe va en su propio camión, cada camión hace a lo
      * sumo {@code maxTripsPerTruck} viajes, y el turno de un camión dura al menos la suma de sus viajes, cada uno
      * desde la base o la portería (lo más cercano) hasta descargar.
@@ -142,39 +179,25 @@ public final class ShiftScheduler {
     private static List<Truck> exact(Trips trips, int[] ids, int unloadSeconds, int shiftSeconds,
             int maxTripsPerTruck) {
         int n = ids.length;
-        // Todas las secuencias de viajes que caben en un turno, agrupadas por su viaje de menor posición en ids.
+        // Por cada conjunto de viajes que cabe en un turno, su orden de menos metros: la DP solo ve conjuntos.
+        Map<Integer, Truck> best = new LinkedHashMap<>();
+        for (int a = 0; a < n; a++) {
+            best.put(1 << a, trips.truck(new int[] {ids[a]}, unloadSeconds));
+            if (maxTripsPerTruck >= 2) {
+                extend(trips, ids, new int[] {a}, 1 << a, unloadSeconds, shiftSeconds, maxTripsPerTruck, best);
+            }
+        }
         List<List<Truck>> byLowest = new ArrayList<>();
         List<List<Integer>> bitsByLowest = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             byLowest.add(new ArrayList<>());
             bitsByLowest.add(new ArrayList<>());
         }
-        for (int a = 0; a < n; a++) {
-            byLowest.get(a).add(trips.truck(new int[] {ids[a]}, unloadSeconds));
-            bitsByLowest.get(a).add(1 << a);
-            for (int b = 0; maxTripsPerTruck >= 2 && b < n; b++) {
-                if (b == a) {
-                    continue;
-                }
-                Truck pair = trips.truck(new int[] {ids[a], ids[b]}, unloadSeconds);
-                if (pair.seconds() > shiftSeconds) {
-                    continue;
-                }
-                byLowest.get(Math.min(a, b)).add(pair);
-                bitsByLowest.get(Math.min(a, b)).add(1 << a | 1 << b);
-                for (int c = 0; maxTripsPerTruck >= 3 && c < n; c++) {
-                    if (c == a || c == b) {
-                        continue;
-                    }
-                    Truck triple = trips.truck(new int[] {ids[a], ids[b], ids[c]}, unloadSeconds);
-                    if (triple.seconds() <= shiftSeconds) {
-                        int lowest = Math.min(a, Math.min(b, c));
-                        byLowest.get(lowest).add(triple);
-                        bitsByLowest.get(lowest).add(1 << a | 1 << b | 1 << c);
-                    }
-                }
-            }
-        }
+        best.forEach((bits, truck) -> {
+            int lowest = Integer.numberOfTrailingZeros(bits);
+            byLowest.get(lowest).add(truck);
+            bitsByLowest.get(lowest).add(bits);
+        });
 
         // costo[mask] = camiones · 2^40 + metros: comparar el long es comparar primero camiones y luego km.
         int full = (1 << n) - 1;

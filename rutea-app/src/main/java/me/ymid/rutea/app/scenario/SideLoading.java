@@ -38,6 +38,13 @@ public final class SideLoading {
     public record Shift(String name, String operatorName, String start, int seconds) {
     }
 
+    /**
+     * Supuesto: viajes que encadena un camión de cargue lateral en su turno. Con 3, el máximo de F4, la flota del ASE 2
+     * salía igual con 40 que con 90 min de descarga: en turnos de 10 h con viajes cortos limitaba el máximo, con el
+     * turno a medio usar.
+     */
+    public static final int MAX_TRIPS_PER_TRUCK = 4;
+
     /** Frecuencia que se mide al lado cuando el operador no publica la de sus contenedores. */
     public static final int SENSITIVITY_COLLECTIONS_PER_WEEK = 6;
 
@@ -59,13 +66,16 @@ public final class SideLoading {
             shifts = List.copyOf(shifts);
         }
 
-        /** La operación con que se planifica un turno: no declara qué parte de las toneladas va por cargue lateral. */
+        /**
+         * La operación con que se planifica un turno: no declara qué parte de las toneladas va por cargue lateral, y
+         * cada camión encadena hasta {@link #MAX_TRIPS_PER_TRUCK} viajes.
+         */
         public ServiceAreas.Operation operation(Shift shift) {
             if (!shifts.contains(shift)) {
                 throw new IllegalArgumentException(shift.name() + " no es un turno de " + area.name());
             }
             return new ServiceAreas.Operation(OptionalDouble.empty(), collectionsPerWeek, shift.start(),
-                    shift.seconds(), SIDE_LOADER_KG, List.of());
+                    shift.seconds(), SIDE_LOADER_KG, List.of(), MAX_TRIPS_PER_TRUCK);
         }
 
         public List<Integer> frequencies() {

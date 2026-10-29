@@ -269,6 +269,7 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Aprovechables (`PENDIENTE_VERIFICAR` todo): 806 contenedores blancos (la otra mitad, dato UAESP); 21.100 kg por día, que salen de aplicar 16/84 a lo que pasa por los negros; la ECA en el vértice más cercano al centro de Suba, porque no hay ECA ubicadas ni en OSM ni en datos públicos; vehículos sin compactación de 1.500 kg; 20 min de descarga en la ECA; mismo turno que los compactadores. Las cifras muestran la mecánica de dos flotas, no sirven para decidir.
 - `PENDIENTE_VERIFICAR`: **15 min de despacho de un camión de reserva** tras una avería (avisar, alistar tripulación y vehículo). Sin dato del operador.
 - Cada compactador puede encadenar hasta 3 viajes en su turno de 8 h: base → viaje → descarga → viaje → descarga → base. Del segundo viaje en adelante sale de la portería, en el sentido que mide menos.
+- En el cargue lateral de 2026 (`SideLoading`), hasta 4 viajes por camión. En el ASE 2, con 3 viajes, la flota salía igual con 40 que con 90 min de descarga: en turnos de 10 h con viajes cortos limitaba el máximo, con el turno a medio usar. El escenario de Suba de F3 a F6 sigue con 3, y sus cifras no cambian.
 
 ## Calibración del grafo
 

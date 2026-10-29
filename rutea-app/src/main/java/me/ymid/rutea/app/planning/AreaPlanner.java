@@ -73,7 +73,7 @@ public final class AreaPlanner {
 
     public static ShiftScheduler.Schedule fewestTrucks(AreaScenario scenario, Solution solution, int unloadSeconds) {
         return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
-                scenario.operation().shiftSeconds(), 3);
+                scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
     }
 
     /**
@@ -260,7 +260,7 @@ public final class AreaPlanner {
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
         ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), 3);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new Fleet(scenario, solution, schedule, plan(scenario, solution, schedule, "alns", seed, ITERATIONS));
     }
 

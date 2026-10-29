@@ -141,7 +141,7 @@ public final class BreakdownReplanner {
                 new SolverSettings(seed, Duration.ofMinutes(10), iterations), inPlanOrder(part));
         Solution trips = toOriginalNodes(warm, forReserve);
         ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), 3);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         long latency = System.nanoTime() - start;
 
         long dispatch = breakdownSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS;

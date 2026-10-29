@@ -186,7 +186,7 @@ public final class BreakdownBenchmark {
         Solution trips = BreakdownReplanner.toOriginalNodes(solved, replan.orphans());
         ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
                 BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
-                scenario.operation().shiftSeconds(), 3);
+                scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new long[] {System.nanoTime() - start, reserve.meters()};
     }
 

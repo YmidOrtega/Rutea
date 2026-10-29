@@ -65,9 +65,10 @@ public final class ServiceAreas {
      * @param shiftStart inicio del turno que se planifica, {@code HH:mm}
      * @param compactorKg capacidad del compactador más común de la flota
      * @param containerLiters tamaños de los contenedores de no aprovechables en vía pública
+     * @param maxTripsPerTruck supuesto: viajes que puede encadenar un camión en su turno
      */
     public record Operation(OptionalDouble sideLoadingShare, int collectionsPerWeek, String shiftStart, int shiftSeconds,
-            int compactorKg, List<Integer> containerLiters) {
+            int compactorKg, List<Integer> containerLiters, int maxTripsPerTruck) {
 
         public Operation {
             Objects.requireNonNull(sideLoadingShare, "sideLoadingShare");
@@ -204,12 +205,14 @@ public final class ServiceAreas {
      *   <li>Turnos de 8 h; se planifica el de 18:00 a 02:00, uno de sus dos turnos principales.
      *   <li>Compactador más común: 17 de 32 yardas, 8 toneladas.
      *   <li>Contenedores de no aprovechables en vía pública: de 3.200, 2.400 y 1.100 L.
+     *   <li>Supuesto de F4: hasta 3 viajes por camión en el turno. Con viajes largos hasta Doña Juana, el turno limita
+     *       antes.
      * </ul>
      */
     public static final ServiceArea ASE_5 = new ServiceArea(5, "Área Limpia", List.of(
             new Locality(11, "Suba", 2214884, false)),
             0.15, new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
-            Optional.of(new Operation(OptionalDouble.of(0.13), 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
+            Optional.of(new Operation(OptionalDouble.of(0.13), 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100), 3)));
 
     public static final List<ServiceArea> BOGOTA = List.of(ASE_1, ASE_2, ASE_3, ASE_4, ASE_5);
 

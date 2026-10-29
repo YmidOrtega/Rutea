@@ -41,6 +41,18 @@ class SideLoadingTest {
     }
 
     @Test
+    void sideLoadingShiftsChainFourTripsAndSubaKeepsThree() {
+        SideLoading.Area lime = SideLoading.of(ServiceAreas.ASE_2);
+
+        assertThat(lime.shifts()).containsExactly(SideLoading.ASE_2_DAY, SideLoading.ASE_2_NIGHT);
+        assertThat(lime.operation(SideLoading.ASE_2_NIGHT).maxTripsPerTruck()).isEqualTo(4);
+        assertThat(lime.operation(SideLoading.ASE_2_NIGHT).compactorKg()).isEqualTo(SideLoading.SIDE_LOADER_KG);
+        assertThat(ServiceAreas.ASE_5.verified().maxTripsPerTruck()).isEqualTo(3);
+        assertThatThrownBy(() -> SideLoading.of(ServiceAreas.ASE_1).operation(SideLoading.ASE_2_DAY))
+                .hasMessageContaining("no es un turno");
+    }
+
+    @Test
     void plansUseTheHighestMeasuredFill() {
         assertThat(SideLoading.FILLS).contains(SideLoading.MEAN_FILL);
         assertThat(SideLoading.MEAN_FILL).isEqualTo(SideLoading.FILLS.stream().mapToDouble(Double::doubleValue).max()

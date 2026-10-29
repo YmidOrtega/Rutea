@@ -269,18 +269,20 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
   - **Contraste con el ASE 5:** el 13 % declarado no acota el llenado. Con los 320 contenedores del plan haría falta un llenado del 84 % si todos fueran de 3.200 L y del 245 % si fueran de 1.100 L, y no se publica la mezcla.
 - [x] Segunda ASE (2026-10-29; `mvn -pl rutea-app exec:java@second-area`; ALNS con semilla 7 y 2.000 iteraciones, determinista; CSV en `docs/benchmarks/f7-second-area/`): el ASE 2 con sus 990 contenedores reales, cerca de Doña Juana. Es el extremo opuesto a Suba: muchos viajes cortos en lugar de pocos largos. `AreaScenario.buildReal` ubica cada contenedor en el extremo más cercano de su trazo de calle más cercano, con el código del operador y la carga por capacidad. Cada turno de LIME es una instancia, con los contenedores que su capa le asigna. Los compactadores son de 8 t (`PENDIENTE_VERIFICAR`). `ShiftScheduler` ya no se limita a 20 viajes: con más, los parte en grupos que asigna exactos por separado y reporta una cota inferior de camiones. Los artefactos de Suba salen con los mismos SHA-256.
 
-  | Turno | Contenedores | Llenado | t | Viajes | Camiones (cota inferior) | km |
-  |---|---:|---:|---:|---:|---:|---:|
-  | Día, 10 h | 609 | 50 % | 100,5 | 13 | 5 (5) | 391,5 |
-  | | | 75 % | 151,0 | 20 | 7 (7) | 564,2 |
-  | | | 100 % | 201,0 | 26 | 10 (9) | 746,2 |
-  | Noche, 10 h | 381 | 50 % | 62,9 | 9 | 3 (3) | 241,5 |
-  | | | 75 % | 94,5 | 12 | 4 (4) | 318,1 |
-  | | | 100 % | 125,7 | 16 | 6 (6) | 422,8 |
+  Con hasta 3 viajes por camión, el máximo de F4, la flota salía igual con 40 que con 90 min de descarga: en un turno de 10 h con viajes cortos limitaba el máximo, no el reloj. Al 50 % de día, los 5 camiones sumaban 31 h de 50 posibles. En Suba, los viajes largos hacen que el turno limite primero. Por eso el cargue lateral permite hasta 4 viajes por camión (`SideLoading.MAX_TRIPS_PER_TRUCK`), y el escenario de Suba sigue con 3: sus cifras y su plan de demo no cambian. Con 4, la cuenta queda así (camiones con 40 / 90 min de descarga, y la cota inferior entre paréntesis):
 
-  - **¿Alcanzan los 5 de LIME?** Solo si los contenedores llegan a la mitad de llenos, y con cada camión trabajando los dos turnos (5 de día y 3 de noche). Al 75 % hacen falta 7 de día, y al 100 %, 10 de día y 6 de noche. Con un turno por camión, ni al 50 % alcanzan (5 + 3 = 8).
-  - **La descarga no cambia la flota, y el límite de 3 viajes por camión sí.** Con 40 o con 90 min de descarga salen los mismos camiones, porque en un turno de 10 h, con viajes cortos, lo que limita es el máximo de 3 viajes por camión que viene de F4, no el reloj: al 50 % de día, los 5 camiones suman 31 h de 50 posibles con 40 min de descarga. En Suba los viajes largos hacían que el turno limitara primero. Ese máximo se revisa antes de dar una flota como resultado.
-  - **Partir en grupos cuesta a lo sumo un camión:** con 26 viajes de día al 100 %, el reparto en dos grupos da 10 camiones y la cota inferior, 9. En los demás casos coinciden.
+  | Turno | Contenedores | Llenado | t | Viajes | Camiones, 40 min | Camiones, 90 min | km, 40 min |
+  |---|---:|---:|---:|---:|---:|---:|---:|
+  | Día, 10 h | 609 | 50 % | 100,5 | 13 | 4 (4) | 5 (5) | 376,0 |
+  | | | 75 % | 151,0 | 20 | 5 (5) | 7 (7) | 533,2 |
+  | | | 100 % | 201,0 | 26 | 8 (7) | 9 (7) | 714,1 |
+  | Noche, 10 h | 381 | 50 % | 62,9 | 9 | 3 (3) | 3 (3) | 241,5 |
+  | | | 75 % | 94,5 | 12 | 3 (3) | 4 (4) | 307,5 |
+  | | | 100 % | 125,7 | 16 | 4 (4) | 6 (6) | 400,6 |
+
+  - **¿Alcanzan los 5 de LIME?** Solo si cada camión trabaja los dos turnos, y no con contenedores llenos. Con 40 min de descarga alcanzan hasta el 75 % de llenado (5 de día y 3 de noche). Con 90 min, solo hasta el 50 %. Al 100 % hacen falta 8 o 9 de día. Con un turno por camión no alcanzan con ningún llenado (4 + 3 = 7 en el mejor caso).
+  - **La descarga en Doña Juana pesa tanto como el llenado:** al 75 %, pasar de 40 a 90 min sube la flota de día de 5 a 7 camiones.
+  - **Partir en grupos:** solo hace falta con 26 viajes, de día al 100 %. Ahí el reparto da 8 y 9 camiones, y la cota inferior, 7. La cota es la mayor entre el tiempo de los viajes y el número de viajes entre 4, y con 4 viajes por camión ninguna de las dos es ajustada. En los demás casos el reparto es exacto.
   - **Escenario:** de 2,0 a 3,1 s por turno, casi todo en ubicar cada contenedor en su trazo, que recorre todos los trazos del grafo. La matriz del ASE 2 de `exec:java@graphs`, con la base de LIME, salió a 3–5 % de la medida anterior con un núcleo ocupado por el navegador. No se reemplaza la cifra publicada.
 - [ ] Suba de 2026 (ADR 0013): instancia nueva con los 320 contenedores del plan aprobado. `SubaBase-n807-s1` queda congelada en el arnés, las cifras de F3 a F6 se rotulan como de 806 contenedores simulados, y la diferencia entre las dos se mide y se publica.
 - [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.

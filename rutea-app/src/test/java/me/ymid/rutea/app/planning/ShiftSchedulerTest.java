@@ -60,6 +60,14 @@ class ShiftSchedulerTest {
     }
 
     @Test
+    void chainsUpToFourTripsWhenAllowed() {
+        Schedule four = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 4);
+
+        assertThat(four.trucks().size()).isEqualTo((solution.routeCount() + 3) / 4);
+        assertThat(four.trucks()).allSatisfy(truck -> assertThat(truck.trips().length).isLessThanOrEqualTo(4));
+    }
+
+    @Test
     void anExactScheduleIsItsOwnLowerBound() {
         Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
 
