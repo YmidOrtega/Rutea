@@ -32,7 +32,24 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
 | Fontibón | 2216630 | Ciudad Bolívar | 4740228 |
 | Engativá | 2214883 | Sumapaz | 5579632 |
 
-- La base de cada operador sale de su informe de inspección de la Superservicios, como la de Área Limpia. Esos informes existen (la Superservicios lista uno de Promoambiental Distrito de 2026), pero el portal no deja descargarlos de forma automática; hay que bajarlos a mano. Ciudad Limpia publica en su sitio una base en la Calle 59C Sur # 51-50, pero en una página de hace unos cinco años, así que no se usa.
+### Cifras por ASE
+
+| ASE | Suelo urbano | Contenedores exigidos, no aprovechables | Centroide | Centroide → Doña Juana | Contenedores negros en Rutea (supuesto) |
+|---|---:|---:|---|---:|---:|
+| 1 | 9.044,4 ha (24 %) | 1.160.000 L | Cra. 3 con Calle 75 | 27,848 km | 1.290 |
+| 2 | 11.834,7 ha (31 %) | 2.410.000 L | AK 68 # 41A-46 Sur | 9,74 km | 1.666 |
+| 3 | 6.659,2 ha (18 %) | 2.390.000 L | Cra. 80F # 7A-39 | 14,4 km | 967 |
+| 4 | 4.629,6 ha (12 %) | 3.440.000 L | Cra. 83 # 71B-21 | 21,5 km | 645 |
+| 5 | 5.800,7 ha (15 %) | 3.270.000 L | Av. Calle 145 con Cra. 84B | 32,589 km | 806 |
+| Bogotá | 37.969 ha | 12.670.000 L | | | 5.374 |
+
+- **Suelo urbano:** "Cobertura de recolección área urbana", [Línea base del PGIRS de Bogotá, agosto de 2018](https://habitatbogota.gov.co/sites/default/files/archivos-adjuntos/LINEA%20BASE%20PGIRS%20OBS%20HABITAT%203.8.2018.pdf), Tabla 3, parámetro 1: la intersección del suelo urbano con cada ASE. Es el 15 % que la inspección de la Superservicios cita para el ASE 5 ("Área Limpia corresponde al ASE 5 con el 15% del total de la ciudad"). Desde F3, Rutea lo había leído como parte de las toneladas: es parte del área.
+- **Contenedores exigidos:** [UAESP, Licitación 02 de 2017, Anexo 11](https://bogota.gov.co/sites/default/files/inline-files/anexo-11.-plan-de-contenerizacion_adenda20171124-1.pdf), Tabla 4: capacidad nominal agregada, en litros, de los contenedores de no aprovechables de cada ASE.
+- **Centroide y distancia a Doña Juana:** misma línea base, Tabla 3, parámetro 7, tomados de los estudios de costos de cada prestador (Resolución CRA 720 de 2015). Sirven para calibrar el grafo en cada ASE, como se hizo con el ASE 5 (abajo).
+- **Contenedores negros en Rutea:** 10.746 × parte del suelo urbano × 1/2, el mismo supuesto que da los 806 de Suba (ver "Supuestos"). El ASE 2 es la más grande, con 1.666, por debajo de los ~1.700 en los que F3 previó el primer ajuste de escala del solver.
+- **Las dos participaciones no coinciden.** El ASE 5 tiene el 15 % del suelo urbano, pero le corresponde el 25,8 % de los litros exigidos; el ASE 1 tiene el 24 % del suelo y el 9,2 % de los litros. Cuál aproxima mejor los contenedores reales es una decisión abierta: cambiarla movería todas las cifras de Suba publicadas desde F3.
+- `PENDIENTE_VERIFICAR`: **toneladas por ASE**. No se encontró una participación por ASE en toneladas publicada.
+- `PENDIENTE_VERIFICAR`: **base, flota, turnos, frecuencia y cargue lateral de los operadores de las ASE 1 a 4**. Salen de su informe de inspección de la Superservicios, como los de Área Limpia. Esos informes existen (la Superservicios lista uno de Promoambiental Distrito de 2026), pero el portal no deja descargarlos de forma automática; hay que bajarlos a mano. Ciudad Limpia publica en su sitio una base en la Calle 59C Sur # 51-50, pero en una página de hace unos cinco años, así que no se usa.
 - Sumapaz es toda rural. Su modelo de recolección es `PENDIENTE_VERIFICAR`.
 
 ## Cifras con fuente
@@ -42,7 +59,7 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
 | Contenedores en vía pública en Bogotá | 10.746 | UAESP, [Bogotá.gov.co, 9 mar. 2022](https://bogota.gov.co/mi-ciudad/habitat/contenedores-soterrados-mejoraran-disposicion-de-residuos-en-bogota) | Base del número de contenedores |
 | Reparto de los contenedores | "la mitad para residuos no aprovechables y la mitad para promover el reciclaje" | UAESP, [Bogotá.gov.co, 26 feb. 2025](https://bogota.gov.co/mi-ciudad/habitat/contenedores-de-basuras-en-bogota-apoyan-prestacion-servicio-aseo-2025) | F3 solo simula los negros |
 | Servicio ordinario que entra a Doña Juana | ≈ 5.680 t/día (1.er trimestre de 2026, sin puntos críticos) | UAESP, [Bogotá.gov.co, 17 abr. 2026](https://bogota.gov.co/mi-ciudad/habitat/aumenta-la-produccion-de-residuos-solidos-en-bogota-segun-uaesp) | Demanda |
-| Parte del ASE 5 en las toneladas de la ciudad | 15 % | PGIRS, en el informe de la Superservicios | Demanda y número de contenedores |
+| Parte del suelo urbano de Bogotá que cubre el ASE 5 | 15 % (5.800,7 de 37.969 ha) | PGIRS, en el informe de la Superservicios y en su línea base de 2018 | Supuesto: se usa como parte de las toneladas y de los contenedores (ver "Supuestos") |
 | Toneladas domiciliarias por cargue lateral (contenedores) | mínimo 13 % | PPSA de Área Limpia, en el informe de la Superservicios | Demanda (se usa el mínimo) |
 | Frecuencia de recolección | de 3 a 6 veces por semana | Operador, en el informe de la Superservicios | 6 veces: carga de 7/6 días |
 | Turnos | 06:00–14:00 y 18:00–02:00 (88 microrrutas cada uno), y otros menores | Operador, en el informe de la Superservicios | Turno de 8 h desde las 18:00 |
@@ -81,7 +98,7 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 
 ## Supuestos (no son datos)
 
-- Los contenedores se reparten entre las ASE como las toneladas (15 %). No hay un inventario por localidad publicado.
+- Las toneladas y los contenedores se reparten entre las ASE como el suelo urbano (15 % en Suba). No hay participación en toneladas ni inventario de contenedores por ASE publicados.
 - Los contenedores se ubican al azar según la longitud de calle local, no según la vivienda: en el rectángulo de Suba OSM tiene 15.000 edificios mapeados, una cobertura incompleta y despareja para una localidad de cerca de 1,3 millones de habitantes.
 - La carga de cada contenedor varía de forma uniforme entre 0,5 y 1,5 veces la media.
 - Velocidades por tipo de vía (`RoadClass`): de 10 km/h en `living_street` a 60 km/h en autopista, para un compactador de noche.

@@ -2,6 +2,7 @@ package me.ymid.rutea.app.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.data.Offset.offset;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,19 @@ class ServiceAreasTest {
     void onlyTheVerifiedAreaHasItsOperation() {
         assertThat(ServiceAreas.BOGOTA).filteredOn(area -> area.operation().isPresent())
                 .containsExactly(ServiceAreas.ASE_5);
+    }
+
+    @Test
+    void theAreasCoverTheWholeUrbanLand() {
+        assertThat(ServiceAreas.BOGOTA.stream().mapToDouble(ServiceArea::urbanAreaShare).sum())
+                .isCloseTo(1.0, offset(1e-9));
+    }
+
+    @Test
+    void anAreaWithoutItsOperationSaysWhatIsMissing() {
+        assertThatThrownBy(() -> ServiceAreas.ASE_2.containerKgPerDay())
+                .hasMessageContaining("ASE 2").hasMessageContaining("PENDIENTE_VERIFICAR");
+        assertThat(ServiceAreas.ASE_2.nonRecyclableContainers()).isEqualTo(1_666);
     }
 
     @Test

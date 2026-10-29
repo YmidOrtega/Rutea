@@ -29,7 +29,7 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
         List<Container> containers, int[] points, Instance instance, TravelMatrix travel, List<SensitiveSites.Site> sites) {
 
     public AreaScenario {
-        operationOf(area);
+        area.verified();
         containers = List.copyOf(containers);
         sites = List.copyOf(sites);
     }
@@ -58,16 +58,16 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     /** Con la base y las cifras del operador de la ASE, que tiene que tener la operación verificada. */
     public static AreaScenario build(RoadGraph graph, ServiceArea area, long seed) {
-        Operation operation = operationOf(area);
-        int count = operation.nonRecyclableContainers();
+        Operation operation = area.verified();
+        int count = area.nonRecyclableContainers();
         return build(graph, area, ServiceAreas.DISPOSAL_OSM_NODE, operation.base().osmNode(), count,
-                operation.meanKgPerCollection(count), seed);
+                area.meanKgPerCollection(count), seed);
     }
 
     static AreaScenario build(RoadGraph graph, ServiceArea area, long gateNode, long depotNode, int count,
             double meanKg, long seed) {
         return build(graph, area, WasteStream.NON_RECYCLABLE, vertex(graph, depotNode, "la base"),
-                vertex(graph, gateNode, "la portería del relleno"), operationOf(area).compactorKg(), count, meanKg,
+                vertex(graph, gateNode, "la portería del relleno"), area.verified().compactorKg(), count, meanKg,
                 seed, prefix(area) + "Base");
     }
 
@@ -78,11 +78,10 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
      * los negros.
      */
     public static AreaScenario buildRecyclable(RoadGraph graph, ServiceArea area, long seed) {
-        Operation operation = operationOf(area);
-        int count = operation.recyclableContainers();
+        int count = area.recyclableContainers();
         int eca = BogotaFigures.ecaVertex(graph);
         return build(graph, area, WasteStream.RECYCLABLE, eca, eca, BogotaFigures.RECYCLABLE_VEHICLE_KG, count,
-                operation.meanRecyclableKgPerCollection(count), seed * 31 + 17, prefix(area) + "Reciclaje");
+                area.meanRecyclableKgPerCollection(count), seed * 31 + 17, prefix(area) + "Reciclaje");
     }
 
     static AreaScenario build(RoadGraph graph, ServiceArea area, WasteStream stream, int depot, int gate,
@@ -112,7 +111,7 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
     }
 
     public Operation operation() {
-        return area.operation().orElseThrow();
+        return area.verified();
     }
 
     public WasteStream stream() {
@@ -131,11 +130,6 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     public int returnSeconds() {
         return travel.seconds(gate(), 0);
-    }
-
-    private static Operation operationOf(ServiceArea area) {
-        return area.operation().orElseThrow(() -> new IllegalArgumentException("la ASE " + area.number()
-                + " no tiene la operación del operador (base y cifras): está PENDIENTE_VERIFICAR en docs/datos.md"));
     }
 
     /** Prefijo del nombre de la instancia: "Suba" da {@code SubaBase-n807-s1}. */

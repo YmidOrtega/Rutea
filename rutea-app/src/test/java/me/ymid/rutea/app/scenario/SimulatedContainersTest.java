@@ -91,7 +91,7 @@ class SimulatedContainersTest {
 
     @Test
     void figuresFollowTheirSources() {
-        ServiceAreas.Operation suba = ServiceAreas.ASE_5.operation().orElseThrow();
+        ServiceAreas.ServiceArea suba = ServiceAreas.ASE_5;
 
         assertThat(suba.nonRecyclableContainers()).isEqualTo(806);
         assertThat(suba.containerKgPerDay()).isEqualTo(110_760);

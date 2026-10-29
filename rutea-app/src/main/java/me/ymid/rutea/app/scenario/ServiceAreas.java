@@ -17,7 +17,9 @@ import java.util.Optional;
  *
  * <p>Reparto y operadores: "Así está dividido el esquema de aseo en las localidades de Bogotá" (Bogotá.gov.co,
  * 7 de febrero de 2026). Relaciones de OSM: {@code admin_level=8}, en el extracto de {@code data/osm}; su
- * etiqueta {@code ref} es el número oficial de la localidad.
+ * etiqueta {@code ref} es el número oficial de la localidad. Suelo urbano por ASE: "Línea base Plan de Gestión
+ * Integral de Residuos Sólidos Bogotá D.C., PGIRS", agosto de 2018, Tabla 3, parámetro 1 (UAESP, en el
+ * Observatorio del Hábitat): 24, 31, 18, 12 y 15 % de 37.969 ha.
  */
 public final class ServiceAreas {
 
@@ -56,7 +58,6 @@ public final class ServiceAreas {
     /**
      * Lo que declara el operador de una ASE, según su inspección de la Superservicios.
      *
-     * @param tonnageShare parte de la ASE en las toneladas de la ciudad (PGIRS)
      * @param sideLoadingShare parte de las toneladas domiciliarias que se recoge por cargue lateral, es decir, con
      *     contenedores
      * @param collectionsPerWeek veces por semana que se recoge
@@ -64,55 +65,24 @@ public final class ServiceAreas {
      * @param compactorKg capacidad del compactador más común de la flota
      * @param containerLiters tamaños de los contenedores de no aprovechables en vía pública
      */
-    public record Operation(Base base, double tonnageShare, double sideLoadingShare, int collectionsPerWeek,
-            String shiftStart, int shiftSeconds, int compactorKg, List<Integer> containerLiters) {
+    public record Operation(Base base, double sideLoadingShare, int collectionsPerWeek, String shiftStart,
+            int shiftSeconds, int compactorKg, List<Integer> containerLiters) {
 
         public Operation {
             Objects.requireNonNull(base, "base");
             Objects.requireNonNull(shiftStart, "shiftStart");
             containerLiters = List.copyOf(containerLiters);
         }
-
-        /**
-         * Contenedores negros: los de la ciudad × la parte de la ASE × 1/2. Supone que los contenedores se reparten
-         * entre las ASE como las toneladas, porque no hay inventario por ASE publicado.
-         */
-        public int nonRecyclableContainers() {
-            return (int) Math.round(BogotaFigures.BOGOTA_CONTAINERS * tonnageShare
-                    * BogotaFigures.NON_RECYCLABLE_CONTAINER_SHARE);
-        }
-
-        /** Contenedores blancos: la otra mitad, "la mitad para promover el reciclaje" (UAESP, 2025). */
-        public int recyclableContainers() {
-            return (int) Math.round(BogotaFigures.BOGOTA_CONTAINERS * tonnageShare
-                    * (1 - BogotaFigures.NON_RECYCLABLE_CONTAINER_SHARE));
-        }
-
-        /** Kilos por día que pasan por los contenedores negros: toneladas de la ciudad × parte × cargue lateral. */
-        public long containerKgPerDay() {
-            return Math.round(BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * tonnageShare * sideLoadingShare);
-        }
-
-        public double meanKgPerCollection(int containers) {
-            return containerKgPerDay() * 7.0 / collectionsPerWeek / containers;
-        }
-
-        /**
-         * Supuesto: kilos de aprovechables por día en los contenedores blancos, con la misma proporción que en la
-         * ciudad: lo aprovechado frente a lo dispuesto, sobre lo que pasa por los negros.
-         */
-        public long recyclableKgPerDay() {
-            return Math.round(containerKgPerDay() * BogotaFigures.RECOVERED_SHARE
-                    / (1 - BogotaFigures.RECOVERED_SHARE));
-        }
-
-        public double meanRecyclableKgPerCollection(int containers) {
-            return recyclableKgPerDay() * 7.0 / collectionsPerWeek / containers;
-        }
     }
 
-    /** @param operation vacía mientras la base y las cifras del operador sean {@code PENDIENTE_VERIFICAR} */
-    public record ServiceArea(int number, String operator, List<Locality> localities, Optional<Operation> operation) {
+    /**
+     * @param urbanAreaShare parte del suelo urbano de Bogotá que cubre la ASE ("cobertura de recolección área
+     *     urbana" del PGIRS). Es la única participación por ASE publicada; Rutea la usa como aproximación de la parte
+     *     de las toneladas y de los contenedores de la ciudad, un supuesto
+     * @param operation vacía mientras la base y las cifras del operador sean {@code PENDIENTE_VERIFICAR}
+     */
+    public record ServiceArea(int number, String operator, List<Locality> localities, double urbanAreaShare,
+            Optional<Operation> operation) {
 
         public ServiceArea {
             Objects.requireNonNull(operator, "operator");
@@ -126,6 +96,53 @@ public final class ServiceAreas {
         /** La localidad, si la ASE tiene una sola; si no, "ASE n". */
         public String name() {
             return localities.size() == 1 ? localities.getFirst().name() : "ASE " + number;
+        }
+
+        /**
+         * Supuesto: contenedores negros, los de la ciudad × la parte del suelo urbano × 1/2. No hay inventario por ASE
+         * publicado.
+         */
+        public int nonRecyclableContainers() {
+            return (int) Math.round(BogotaFigures.BOGOTA_CONTAINERS * urbanAreaShare
+                    * BogotaFigures.NON_RECYCLABLE_CONTAINER_SHARE);
+        }
+
+        /** Contenedores blancos: la otra mitad, "la mitad para promover el reciclaje" (UAESP, 2025). */
+        public int recyclableContainers() {
+            return (int) Math.round(BogotaFigures.BOGOTA_CONTAINERS * urbanAreaShare
+                    * (1 - BogotaFigures.NON_RECYCLABLE_CONTAINER_SHARE));
+        }
+
+        /**
+         * Supuesto: kilos por día que pasan por los contenedores negros, las toneladas de la ciudad × la parte del
+         * suelo urbano × el cargue lateral del operador.
+         */
+        public long containerKgPerDay() {
+            return Math.round(BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * urbanAreaShare
+                    * verified().sideLoadingShare());
+        }
+
+        public double meanKgPerCollection(int containers) {
+            return containerKgPerDay() * 7.0 / verified().collectionsPerWeek() / containers;
+        }
+
+        /**
+         * Supuesto: kilos de aprovechables por día en los contenedores blancos, con la misma proporción que en la
+         * ciudad: lo aprovechado frente a lo dispuesto, sobre lo que pasa por los negros.
+         */
+        public long recyclableKgPerDay() {
+            return Math.round(containerKgPerDay() * BogotaFigures.RECOVERED_SHARE
+                    / (1 - BogotaFigures.RECOVERED_SHARE));
+        }
+
+        public double meanRecyclableKgPerCollection(int containers) {
+            return recyclableKgPerDay() * 7.0 / verified().collectionsPerWeek() / containers;
+        }
+
+        /** @throws IllegalStateException si la operación del operador sigue {@code PENDIENTE_VERIFICAR} */
+        public Operation verified() {
+            return operation.orElseThrow(() -> new IllegalStateException("la ASE " + number + " no tiene la"
+                    + " operación del operador (base y cifras): está PENDIENTE_VERIFICAR en docs/datos.md"));
         }
     }
 
@@ -144,7 +161,7 @@ public final class ServiceAreas {
             new Locality(5, "Usme", 4740233, false),
             new Locality(17, "La Candelaria", 2218276, false),
             new Locality(20, "Sumapaz", 5579632, true)),
-            Optional.empty());
+            0.24, Optional.empty());
 
     /** Limpieza Metropolitana S.A. E.S.P. (LIME). */
     public static final ServiceArea ASE_2 = new ServiceArea(2, "LIME", List.of(
@@ -156,19 +173,19 @@ public final class ServiceAreas {
             new Locality(16, "Puente Aranda", 2216655, false),
             new Locality(18, "Rafael Uribe Uribe", 4740230, false),
             new Locality(19, "Ciudad Bolívar", 4740228, false)),
-            Optional.empty());
+            0.31, Optional.empty());
 
     /** Ciudad Limpia Bogotá S.A. E.S.P. */
     public static final ServiceArea ASE_3 = new ServiceArea(3, "Ciudad Limpia", List.of(
             new Locality(8, "Kennedy", 4740229, false),
             new Locality(9, "Fontibón", 2216630, false)),
-            Optional.empty());
+            0.18, Optional.empty());
 
     /** Bogotá Limpia S.A.S. E.S.P. */
     public static final ServiceArea ASE_4 = new ServiceArea(4, "Bogotá Limpia", List.of(
             new Locality(10, "Engativá", 2214883, false),
             new Locality(12, "Barrios Unidos", 2214882, false)),
-            Optional.empty());
+            0.12, Optional.empty());
 
     /**
      * Área Limpia Distrito Capital S.A.S. E.S.P., según la inspección de la Superservicios del 9 al 13 de marzo de
@@ -177,7 +194,6 @@ public final class ServiceAreas {
      * <ul>
      *   <li>Base: Avenida Calle 17 # 124-81, Fontibón. El nodo es la esquina de la Av. Calle 17 con la Carrera 124,
      *       a unos 81 m de ella.
-     *   <li>"Área Limpia corresponde al ASE 5 con el 15% del total de la ciudad" (PGIRS).
      *   <li>Cargue lateral: al menos el 13 % de las toneladas domiciliarias (PPSA); se usa el mínimo.
      *   <li>Frecuencia: el operador declara de 3 a 6 veces por semana. Se toma 6, de lunes a sábado, lo que da una
      *       carga típica de 7/6 días de generación por recolección.
@@ -188,8 +204,8 @@ public final class ServiceAreas {
      */
     public static final ServiceArea ASE_5 = new ServiceArea(5, "Área Limpia", List.of(
             new Locality(11, "Suba", 2214884, false)),
-            Optional.of(new Operation(new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
-                    0.15, 0.13, 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
+            0.15, Optional.of(new Operation(new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
+                    0.13, 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
 
     public static final List<ServiceArea> BOGOTA = List.of(ASE_1, ASE_2, ASE_3, ASE_4, ASE_5);
 
