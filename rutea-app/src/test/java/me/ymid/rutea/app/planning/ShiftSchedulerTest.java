@@ -93,6 +93,23 @@ class ShiftSchedulerTest {
     }
 
     @Test
+    void searchesBeyondTheGroupsUntilItProvesTheFewestTrucks() {
+        // 41 viajes de un contenedor en grupos de 14, 14 y 13 dan 5 camiones por grupo; caben en 14.
+        int[][] routes = new int[41][];
+        for (int i = 0; i < routes.length; i++) {
+            routes[i] = new int[] {i % scenario.containers().size() + 1};
+        }
+
+        Schedule chained = ShiftScheduler.schedule(scenario, new Solution(routes), SERVICE, UNLOAD, SHIFT, 3);
+
+        assertThat(chained.trucks()).hasSize(14);
+        assertThat(chained.fewestTrucks()).isTrue();
+        int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
+        assertThat(covered).isEqualTo(IntStream.range(0, routes.length).toArray());
+        assertThat(chained.trucks()).allSatisfy(truck -> assertThat(truck.seconds()).isLessThanOrEqualTo(SHIFT));
+    }
+
+    @Test
     void chainsTripsWhenTheShiftAllowsIt() {
         // En el pueblo de prueba los viajes duran minutos: caben tres por camión.
         Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
