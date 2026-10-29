@@ -162,7 +162,7 @@
           <execution>
             <id>suba-instance</id>
             <configuration>
-              <mainClass>me.ymid.rutea.app.scenario.ExportSubaInstance</mainClass>
+              <mainClass>me.ymid.rutea.app.scenario.ExportAreaInstance</mainClass>
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/suba</argument>

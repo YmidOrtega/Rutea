@@ -14,7 +14,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import me.ymid.rutea.app.scenario.SubaFigures;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.domain.DieselEmissions;
 import me.ymid.rutea.domain.WasteStream;
 
@@ -38,8 +38,8 @@ class PlanReportTest {
         assertThat(report.total().km()).isEqualTo(120.0);
         assertThat(report.total().hours()).isEqualTo(2.0);
         assertThat(report.total().tonnes()).isEqualTo(15.0);
-        assertThat(report.total().liters()).isCloseTo(120 * SubaFigures.LITERS_PER_KM, offset(1e-9));
-        assertThat(report.total().kgCo2()).isCloseTo(DieselEmissions.kgCo2(120 * SubaFigures.LITERS_PER_KM), offset(1e-9));
+        assertThat(report.total().liters()).isCloseTo(120 * BogotaFigures.LITERS_PER_KM, offset(1e-9));
+        assertThat(report.total().kgCo2()).isCloseTo(DieselEmissions.kgCo2(120 * BogotaFigures.LITERS_PER_KM), offset(1e-9));
     }
 
     @Test

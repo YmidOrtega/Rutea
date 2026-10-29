@@ -13,9 +13,9 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
 
     /**
      * @param shiftStart hora a la que los camiones salen de la base, "HH:mm"
-     * @param serviceSeconds segundos detenido en cada contenedor (supuesto, ver SubaFigures)
-     * @param unloadSeconds segundos de cada descarga en el relleno (supuesto, ver SubaFigures)
-     * @param litersPerKm consumo supuesto de diésel (ver SubaFigures)
+     * @param serviceSeconds segundos detenido en cada contenedor (supuesto, ver BogotaFigures)
+     * @param unloadSeconds segundos de cada descarga en el relleno (supuesto, ver BogotaFigures)
+     * @param litersPerKm consumo supuesto de diésel (ver BogotaFigures)
      * @param kgCo2PerLiter factor del IPCC 2006 para el diésel (ver DieselEmissions)
      * @param attribution atribución obligatoria de los datos de OSM (ODbL)
      * @param assumptions lo que el plan supone sin dato publicado, en texto para mostrarlo tal cual

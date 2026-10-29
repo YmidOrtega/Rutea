@@ -5,11 +5,14 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
+import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.geo.geometry.Polygon;
@@ -17,8 +20,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Las UPZ de la localidad, los sectores en que se publican los horarios de paso (R04). Salen de OSM con
- * {@code mvn -pl rutea-app exec:java@sectors}, que reescribe {@code sectors/suba-upz.geojson}.
+ * Las UPZ de las localidades de una ASE, los sectores en que se publican los horarios de paso (R04). Cada localidad
+ * tiene las suyas en {@code sectors/<localidad>-upz.geojson}, que salen de OSM con
+ * {@code mvn -pl rutea-app exec:java@sectors}.
  */
 public final class Sectors {
 
@@ -39,12 +43,10 @@ public final class Sectors {
 
     private static final String RURAL_NAME = "Zona rural";
 
-    private static final String SUBA = "/sectors/suba-upz.geojson";
-
     private record Upz(String ref, String name, Polygon polygon, List<double[]> outline, int[] lat, int[] lon) {
     }
 
-    private static Sectors suba;
+    private static final Map<Integer, Sectors> BY_AREA = new HashMap<>();
 
     private final List<Upz> upz;
 
@@ -52,21 +54,33 @@ public final class Sectors {
         this.upz = List.copyOf(upz);
     }
 
-    public static synchronized Sectors suba() {
-        if (suba == null) {
-            try (InputStream in = Sectors.class.getResourceAsStream(SUBA)) {
-                if (in == null) {
-                    throw new IllegalStateException("falta " + SUBA + "; se genera con mvn -pl rutea-app exec:java@sectors");
+    public static synchronized Sectors of(ServiceArea area) {
+        Sectors sectors = BY_AREA.get(area.number());
+        if (sectors == null) {
+            List<Upz> upz = new ArrayList<>();
+            for (Locality locality : area.localities()) {
+                String resource = "/sectors/" + locality.slug() + "-upz.geojson";
+                try (InputStream in = Sectors.class.getResourceAsStream(resource)) {
+                    if (in == null) {
+                        throw new IllegalStateException(
+                                "falta " + resource + "; se genera con mvn -pl rutea-app exec:java@sectors");
+                    }
+                    upz.addAll(upz(JsonMapper.builder().build().readTree(in)));
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
                 }
-                suba = read(JsonMapper.builder().build().readTree(in));
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
             }
+            sectors = new Sectors(upz);
+            BY_AREA.put(area.number(), sectors);
         }
-        return suba;
+        return sectors;
     }
 
     static Sectors read(JsonNode geoJson) {
+        return new Sectors(upz(geoJson));
+    }
+
+    private static List<Upz> upz(JsonNode geoJson) {
         List<Upz> upz = new ArrayList<>();
         for (JsonNode feature : geoJson.get("features")) {
             JsonNode ring = feature.get("geometry").get("coordinates").get(0);
@@ -87,7 +101,7 @@ public final class Sectors {
             upz.add(new Upz(properties.get("ref").asString(), properties.get("name").asString(),
                     new Polygon(List.of(lat), List.of(lon)), outline, lat, lon));
         }
-        return new Sectors(upz);
+        return upz;
     }
 
     /** La UPZ que contiene el punto, la de borde más cercano a menos de {@link #NEAR_BORDER_METERS}, o {@link #RURAL}. */

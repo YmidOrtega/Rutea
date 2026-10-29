@@ -16,31 +16,31 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.alns.AlnsSolver;
 
-class SubaPlannerTest {
+class AreaPlannerTest {
 
     private static final int CONTAINERS = 20;
 
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
     private static DemoPlan plan;
 
     @BeforeAll
     static void planTown() throws IOException {
         // Cargas grandes para que el pueblo de prueba necesite varios viajes de 8 t.
-        scenario = SubaScenarioFixture.town(dir, CONTAINERS, 1_600);
+        scenario = AreaScenarioFixture.town(dir, CONTAINERS, 1_600);
         plan = plan(3);
     }
 
     private static DemoPlan plan(long seed) {
-        return SubaPlanner.plan(scenario, new AlnsSolver(), new SolverSettings(seed, Duration.ofMinutes(1), 200));
+        return AreaPlanner.plan(scenario, new AlnsSolver(), new SolverSettings(seed, Duration.ofMinutes(1), 200));
     }
 
     @Test

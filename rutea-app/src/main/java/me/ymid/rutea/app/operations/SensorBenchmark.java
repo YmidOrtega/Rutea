@@ -19,10 +19,11 @@ import java.util.OptionalDouble;
 import me.ymid.rutea.app.operations.ContainerSensors.Config;
 import me.ymid.rutea.app.operations.LiveOperation.Dispatch;
 import me.ymid.rutea.app.operations.LiveOperation.Pickup;
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
@@ -58,24 +59,24 @@ public final class SensorBenchmark {
                 default -> throw new IllegalArgumentException("argumento no reconocido: " + args[i]);
             }
         }
-        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), seed);
+        AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), ServiceAreas.ASE_5, seed);
         Solution solution = new AlnsSolver().solve(scenario.instance(),
-                new SolverSettings(seed, Duration.ofMinutes(10), SubaPlanner.ITERATIONS));
-        ShiftScheduler.Schedule schedule = SubaPlanner.fewestTrucks(scenario, solution, SubaFigures.UNLOAD_SECONDS_LOW);
+                new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
+        ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
         int n = scenario.containers().size();
         int[] planned = new int[n];
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, truck,
-                    SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
+                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
                 planned[visit.node() - 1] = (int) visit.arriveSeconds();
             }
         }
 
         List<List<Integer>> mixes = new ArrayList<>();
-        for (int liters : SubaFigures.CONTAINER_LITERS) {
+        for (int liters : scenario.operation().containerLiters()) {
             mixes.add(List.of(liters));
         }
-        mixes.add(SubaFigures.CONTAINER_LITERS);
+        mixes.add(scenario.operation().containerLiters());
         Path csv = outDir.resolve("sensors-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         Files.createDirectories(outDir);
         StringBuilder planTable = new StringBuilder();
@@ -86,7 +87,8 @@ public final class SensorBenchmark {
                 for (double density : DENSITIES) {
                     for (List<Integer> sizes : mixes) {
                         Config config = new Config(density, days, seed);
-                        ContainerSensors sensors = ContainerSensors.of(scenario.containers(), planned, sizes, config);
+                        ContainerSensors sensors = ContainerSensors.of(scenario.containers(), planned, sizes,
+                                scenario.operation().collectionsPerWeek(), config);
                         planTable.append(planRow(scenario, sensors, planned, sizes, config, out));
                         if (sizes.size() > 1) {
                             dispatchTable.append(dispatchRow(scenario, solution, schedule, sensors, sizes, config,
@@ -97,7 +99,7 @@ public final class SensorBenchmark {
             }
         }
         System.out.printf(Locale.ROOT, "%s: %d contenedores, semilla %d. Mezcla: un tamaño al azar entre %s L.%n",
-                scenario.instance().name(), n, seed, SubaFigures.CONTAINER_LITERS);
+                scenario.instance().name(), n, seed, scenario.operation().containerLiters());
         System.out.printf(Locale.ROOT, "%nLlenos antes de su visita del plan, sin despachar nada:%n%n"
                 + "| Día | kg/m³ | Contenedores | Se desbordan | Llenos P50 | P95 |%n|---|---:|---|---:|---:|---:|%n%s",
                 planTable);
@@ -109,7 +111,7 @@ public final class SensorBenchmark {
     }
 
     /** Sin despachar: cada contenedor espera su visita del plan. */
-    private static String planRow(SubaScenario scenario, ContainerSensors sensors, int[] planned, List<Integer> sizes,
+    private static String planRow(AreaScenario scenario, ContainerSensors sensors, int[] planned, List<Integer> sizes,
             Config config, BufferedWriter out) throws IOException {
         List<Long> full = new ArrayList<>();
         for (int i = 0; i < sensors.size(); i++) {
@@ -131,10 +133,10 @@ public final class SensorBenchmark {
      * Los sensores reportan cada desborde a la hora en que ocurre y se despacha con la regla en vivo. Después de
      * cada despacho cambian las horas de llegada, así que el siguiente desborde se busca otra vez sobre el plan nuevo.
      */
-    private static String dispatchRow(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+    private static String dispatchRow(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             ContainerSensors sensors, List<Integer> sizes, Config config, BufferedWriter out) throws IOException {
         LiveOperation operation = new LiveOperation(scenario, solution, schedule,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
         int n = sensors.size();
         List<List<Double>> reserve = new ArrayList<>();
         for (int i = 0; i < n; i++) {

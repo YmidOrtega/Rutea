@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.domain.WasteStream;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -56,10 +57,10 @@ class SectorsTest {
 
     @Test
     void theCommittedUpzOfSubaAreTheTwelveOfTheLocality() {
-        List<DemoPlan.Sector> sectors = Sectors.suba().schedule(List.of());
+        List<DemoPlan.Sector> sectors = Sectors.of(ServiceAreas.ASE_5).schedule(List.of());
 
         assertThat(sectors).isEmpty();
-        assertThat(Sectors.suba().locate(47_416_000, -740_833_000)).as("plaza fundacional de Suba").isEqualTo("27");
+        assertThat(Sectors.of(ServiceAreas.ASE_5).locate(47_416_000, -740_833_000)).as("plaza fundacional de Suba").isEqualTo("27");
     }
 
     private static DemoPlan.Container container(String id, String route, int visitSeconds, String sector) {

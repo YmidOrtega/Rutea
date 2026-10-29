@@ -15,12 +15,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.operations.LiveOperation.Dispatch;
 import me.ymid.rutea.app.operations.LiveOperation.Pickup;
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
@@ -32,21 +32,21 @@ class LiveOperationTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
     private static Solution solution;
     private static ShiftScheduler.Schedule schedule;
 
     @BeforeAll
     static void plan() throws IOException {
         // Cargas chicas: los viajes quedan con cupo para recogidas extra.
-        scenario = SubaScenarioFixture.town(dir, 24, 400);
+        scenario = AreaScenarioFixture.town(dir, 24, 400);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(4, Duration.ofMinutes(1), 200));
-        schedule = ShiftScheduler.schedule(scenario, solution, SubaFigures.SERVICE_SECONDS_PER_CONTAINER,
-                SubaFigures.UNLOAD_SECONDS_LOW, SubaFigures.SHIFT_SECONDS, 1);
+        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER,
+                BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 1);
     }
 
     private static LiveOperation fresh() {
-        return new LiveOperation(scenario, solution, schedule, SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        return new LiveOperation(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
     }
 
     @Test
@@ -67,7 +67,7 @@ class LiveOperationTest {
     void anOverflowAfterItsVisitGetsAnExtraPickupAndKeepsEveryPlannedVisit() {
         LiveOperation operation = fresh();
         ShiftScheduler.Visit first = firstVisit(0);
-        long after = first.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER;
+        long after = first.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER;
         long before = totalMeters(operation);
 
         Dispatch dispatch = operation.overflow(first.node(), after);
@@ -90,7 +90,7 @@ class LiveOperationTest {
         LiveOperation operation = fresh();
         ShiftScheduler.Visit first = firstVisit(0);
         Dispatch dispatch = operation.overflow(first.node(),
-                first.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                first.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
         int t = dispatch.truck();
 
         DemoPlan.Route route = operation.route(t, "C-01");
@@ -110,7 +110,7 @@ class LiveOperationTest {
 
         assertThat(dispatch.pickup()).isEqualTo(Pickup.RESERVE);
         assertThat(dispatch.pickupSeconds()).isEqualTo(
-                late + SubaFigures.RESERVE_DISPATCH_SECONDS + scenario.travel().seconds(0, node));
+                late + BogotaFigures.RESERVE_DISPATCH_SECONDS + scenario.travel().seconds(0, node));
         assertThat(dispatch.extraMeters()).isEqualTo(scenario.travel().meters(0, node)
                 + scenario.travel().meters(node, scenario.gate()) + scenario.returnMeters());
     }
@@ -119,7 +119,7 @@ class LiveOperationTest {
     void aBreakdownHandsItsPendingExtraPickupsToAnotherTruck() {
         LiveOperation operation = fresh();
         ShiftScheduler.Visit first = firstVisit(0);
-        long after = first.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER;
+        long after = first.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER;
         Dispatch extra = operation.overflow(first.node(), after);
         long meters = operation.meters(extra.truck());
 
@@ -137,7 +137,7 @@ class LiveOperationTest {
     void aClosureAheadOfATruckSendsItAroundAndTheDrawingAvoidsTheStreet() {
         LiveOperation operation = fresh();
         Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
 
         LiveOperation.Closure closure = operation.close(crossing.shape(), crossing.leg().departSeconds());
 
@@ -151,7 +151,7 @@ class LiveOperationTest {
     @Test
     void aTruckAlreadyOnItsWayWhenTheStreetClosesFinishesItsArcAndTurns() {
         LiveOperation operation = fresh();
-        LivePlan plan = LivePlan.of(scenario, solution, schedule, SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan plan = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
         Crossing crossing = firstCrossing(plan, 1);
         // Cerrar después de que arrancó: va por el primer arco cuando llega el aviso.
         long at = crossing.leg().departSeconds() + 1;
@@ -167,7 +167,7 @@ class LiveOperationTest {
     @Test
     void reorderingWhatIsLeftNeverDrivesMoreThanOnlyRerouting() {
         Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
         LiveOperation reroute = fresh();
         LiveOperation resequence = fresh();
         resequence.closurePolicy(LiveOperation.ClosurePolicy.RESEQUENCE);
@@ -227,7 +227,7 @@ class LiveOperationTest {
     private static Crossing firstCrossing(LivePlan plan, int fromArc) {
         for (int t = 0; t < plan.truckCount(); t++) {
             for (LivePlan.Leg leg : plan.legs(t)) {
-                List<SubaPlanner.Arc> arcs = plan.arcs(leg);
+                List<AreaPlanner.Arc> arcs = plan.arcs(leg);
                 for (int k = fromArc; k < arcs.size(); k++) {
                     int shape = arcs.get(k).graph().shape(arcs.get(k).edge());
                     int street = shape < 0 ? ~shape : shape;
@@ -244,7 +244,7 @@ class LiveOperationTest {
 
     private static ShiftScheduler.Visit firstVisit(int truck) {
         return ShiftScheduler.timeline(scenario, solution, schedule.trucks().get(truck),
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0).getFirst();
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0).getFirst();
     }
 
     private static long totalMeters(LiveOperation operation) {

@@ -18,10 +18,11 @@ import java.util.SplittableRandom;
 import me.ymid.rutea.app.operations.LiveOperation.Closure;
 import me.ymid.rutea.app.operations.LiveOperation.ClosurePolicy;
 import me.ymid.rutea.app.operations.LiveOperation.TruckChange;
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.geo.TravelMatrix;
@@ -60,11 +61,11 @@ public final class ClosureBenchmark {
             }
         }
 
-        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), seed);
+        AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), ServiceAreas.ASE_5, seed);
         Solution solution = new AlnsSolver().solve(scenario.instance(),
-                new SolverSettings(seed, Duration.ofMinutes(10), SubaPlanner.ITERATIONS));
-        ShiftScheduler.Schedule schedule = SubaPlanner.fewestTrucks(scenario, solution, SubaFigures.UNLOAD_SECONDS_LOW);
-        LivePlan original = LivePlan.of(scenario, solution, schedule, SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
+        ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
+        LivePlan original = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
         RoadGraph graph = scenario.graph();
         int[] vertices = new int[scenario.travel().size()];
         for (int i = 0; i < vertices.length; i++) {
@@ -116,7 +117,7 @@ public final class ClosureBenchmark {
 
                 for (ClosurePolicy policy : ClosurePolicy.values()) {
                     LiveOperation operation = new LiveOperation(scenario, solution, schedule,
-                            SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                            BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
                     operation.closurePolicy(policy);
                     Closure closure = operation.close(shape, at);
                     if (e == 0 && policy == ClosurePolicy.REROUTE) {
@@ -178,7 +179,7 @@ public final class ClosureBenchmark {
                 continue;
             }
             long clock = leg.departSeconds();
-            for (SubaPlanner.Arc arc : plan.arcs(leg)) {
+            for (AreaPlanner.Arc arc : plan.arcs(leg)) {
                 clock += arc.seconds();
                 int shape = arc.graph().shape(arc.edge());
                 if (clock > at && arc.graph().shapeInLocality(shape < 0 ? ~shape : shape)) {

@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
@@ -32,7 +32,7 @@ public final class QuadrantSweep {
         return "barrido-cuadrantes-" + cellMeters + "m";
     }
 
-    public static Solution solve(SubaScenario scenario, int cellMeters) {
+    public static Solution solve(AreaScenario scenario, int cellMeters) {
         if (cellMeters < LANE_METERS) {
             throw new IllegalArgumentException("el cuadrante (" + cellMeters + " m) debe ser al menos una franja ("
                     + LANE_METERS + " m)");

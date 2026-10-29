@@ -12,11 +12,11 @@ import me.ymid.rutea.domain.WasteStream;
 
 class ContainerSensorsTest {
 
-    /** 175 kg por recolección son 150 kg al día; 1.000 L a 150 kg/m³ caben 150 kg: se llena en un día justo. */
+    /** Con 6 recolecciones por semana, 175 kg por recolección son 150 kg al día; 1.000 L a 150 kg/m³ caben 150 kg: se llena en un día justo. */
     private static final Container BIN = new Container("N0001", WasteStream.NON_RECYCLABLE, 0, 0, 0, 0, 175);
 
     private static ContainerSensors sensors(int days) {
-        return ContainerSensors.of(List.of(BIN), new int[] {3_600}, List.of(1_000),
+        return ContainerSensors.of(List.of(BIN), new int[] {3_600}, List.of(1_000), 6,
                 new ContainerSensors.Config(150, days, 1));
     }
 
@@ -51,7 +51,7 @@ class ContainerSensorsTest {
     @Test
     void eachContainerTakesOneOfTheGivenSizes() {
         ContainerSensors sensors = ContainerSensors.of(List.of(BIN, BIN, BIN, BIN), new int[4],
-                List.of(1_100, 2_400, 3_200), ContainerSensors.Config.typical(7));
+                List.of(1_100, 2_400, 3_200), 6, ContainerSensors.Config.typical(7));
 
         for (int i = 0; i < sensors.size(); i++) {
             assertThat(sensors.liters(i)).isIn(1_100, 2_400, 3_200);

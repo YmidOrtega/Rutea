@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.OptionalDouble;
 import java.util.SplittableRandom;
 
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaFigures;
 import me.ymid.rutea.sim.FillSensor;
 
 /**
@@ -21,7 +21,7 @@ public final class ContainerSensors {
     public record Config(double densityKgPerM3, int daysSinceLastCollection, long seed) {
 
         public static Config typical(long seed) {
-            return new Config(SubaFigures.LOOSE_WASTE_KG_PER_M3, 1, seed);
+            return new Config(BogotaFigures.LOOSE_WASTE_KG_PER_M3, 1, seed);
         }
     }
 
@@ -38,9 +38,10 @@ public final class ContainerSensors {
     /**
      * @param plannedVisitSeconds hora de la visita del plan de cada contenedor, en el orden de {@code containers}
      * @param sizes litros posibles; cada contenedor toma uno al azar con la semilla de {@code config}
+     * @param collectionsPerWeek veces por semana que se recoge: la carga de cada contenedor es la de una recolección
      */
     public static ContainerSensors of(List<Container> containers, int[] plannedVisitSeconds, List<Integer> sizes,
-            Config config) {
+            int collectionsPerWeek, Config config) {
         SplittableRandom random = new SplittableRandom(config.seed());
         int n = containers.size();
         FillSensor[] sensors = new FillSensor[n];
@@ -48,7 +49,7 @@ public final class ContainerSensors {
         double[] previous = new double[n];
         for (int i = 0; i < n; i++) {
             liters[i] = sizes.get(random.nextInt(sizes.size()));
-            double kgPerDay = containers.get(i).kg() * (double) SubaFigures.COLLECTIONS_PER_WEEK / 7;
+            double kgPerDay = containers.get(i).kg() * (double) collectionsPerWeek / 7;
             sensors[i] = FillSensor.of(liters[i], config.densityKgPerM3(), kgPerDay);
             previous[i] = plannedVisitSeconds[i] - config.daysSinceLastCollection() * 86_400.0;
         }

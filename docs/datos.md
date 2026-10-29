@@ -1,6 +1,6 @@
 # Datos de la operación en Suba
 
-Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente. En el código viven en `rutea-app/.../scenario/SubaFigures.java` y en `rutea-geo/.../AreaSpec.java`; si cambia una, se actualizan los dos lugares en el mismo cambio.
+Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente. En el código, las de toda Bogotá y los supuestos generales viven en `rutea-app/.../scenario/BogotaFigures.java`; las del operador (base, participación, cargue lateral, frecuencia, turno, compactador y contenedores), en la `Operation` de su ASE en `ServiceAreas.java`; y los sitios del grafo, en `rutea-geo/.../AreaSpec.java`. Si cambia una, se actualizan todos los lugares en el mismo cambio.
 
 Las cifras de la Superservicios salen del [informe de inspección a Área Limpia](https://www.superservicios.gov.co/sites/default/files/inline-files/Area-Limpia-Distrito-Capital-SAS-ESP.pdf) (visita del 9 al 13 de marzo de 2026), que compara el PGIRS de Bogotá con el PPSA del operador.
 

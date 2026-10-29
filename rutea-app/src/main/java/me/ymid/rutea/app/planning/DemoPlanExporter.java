@@ -3,8 +3,9 @@ package me.ymid.rutea.app.planning;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.SensitiveSites;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.geo.RoadGraphFile;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -22,7 +23,7 @@ public final class DemoPlanExporter {
         Path graphFile = Path.of(args[0]);
         Path sitesFile = Path.of(args[1]);
         Path out = Path.of(args[2]);
-        long seed = args.length == 4 ? Long.parseLong(args[3]) : SubaPlanner.DEFAULT_SEED;
+        long seed = args.length == 4 ? Long.parseLong(args[3]) : AreaPlanner.DEFAULT_SEED;
         if (!Files.exists(graphFile)) {
             System.err.println("No existe " + graphFile + ". Constrúyelo con: mvn -pl rutea-geo compile exec:java"
                     + " (requiere el extracto; ver data/osm/README.md)");
@@ -35,10 +36,10 @@ public final class DemoPlanExporter {
         }
 
         long start = System.nanoTime();
-        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(graphFile).graph(), seed)
+        AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(graphFile).graph(), ServiceAreas.ASE_5, seed)
                 .withSites(SensitiveSites.read(sitesFile));
-        DemoPlan plan = SubaPlanner.planBoth(scenario,
-                SubaScenario.buildRecyclable(scenario.graph(), seed).withSites(scenario.sites()), seed);
+        DemoPlan plan = AreaPlanner.planBoth(scenario,
+                AreaScenario.buildRecyclable(scenario.graph(), scenario.area(), seed).withSites(scenario.sites()), seed);
         Files.createDirectories(out.toAbsolutePath().getParent());
         JsonMapper.builder().build().writeValue(out.toFile(), plan);
 

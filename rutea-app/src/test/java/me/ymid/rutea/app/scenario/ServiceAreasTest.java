@@ -33,11 +33,25 @@ class ServiceAreasTest {
     @Test
     void subaMatchesTheRoadGraphArea() {
         Locality suba = ServiceAreas.locality(11).orElseThrow();
-        long depot = AreaSpec.SUBA.sites().stream().filter(site -> site.name().equals(AreaSpec.DEPOT))
-                .findFirst().orElseThrow().osmNode();
 
         assertThat(suba.osmRelation()).isEqualTo(AreaSpec.SUBA.localityRelation());
-        assertThat(ServiceAreas.ASE_5.base()).hasValueSatisfying(base -> assertThat(base.osmNode()).isEqualTo(depot));
+        assertThat(ServiceAreas.ASE_5.operation()).hasValueSatisfying(
+                operation -> assertThat(operation.base().osmNode()).isEqualTo(site(AreaSpec.DEPOT)));
+        assertThat(ServiceAreas.DISPOSAL_OSM_NODE).isEqualTo(site(AreaSpec.DISPOSAL));
+    }
+
+    @Test
+    void onlyTheVerifiedAreaHasItsOperation() {
+        assertThat(ServiceAreas.BOGOTA).filteredOn(area -> area.operation().isPresent())
+                .containsExactly(ServiceAreas.ASE_5);
+    }
+
+    @Test
+    void namesAreaAndLocalitiesForFilesAndInstances() {
+        assertThat(ServiceAreas.ASE_5.name()).isEqualTo("Suba");
+        assertThat(ServiceAreas.ASE_3.name()).isEqualTo("ASE 3");
+        assertThat(ServiceAreas.locality(17).orElseThrow().slug()).isEqualTo("la-candelaria");
+        assertThat(ServiceAreas.locality(19).orElseThrow().slug()).isEqualTo("ciudad-bolivar");
     }
 
     @Test
@@ -65,5 +79,10 @@ class ServiceAreasTest {
         assertThatThrownBy(() -> ServiceAreas.split(List.of())).hasMessageContaining("no hay localidades");
         assertThatThrownBy(() -> ServiceAreas.split(List.of(new Locality(11, "Suba", 1, false))))
                 .hasMessageContaining("no es del catálogo");
+    }
+
+    private static long site(String name) {
+        return AreaSpec.SUBA.sites().stream().filter(site -> site.name().equals(name)).findFirst().orElseThrow()
+                .osmNode();
     }
 }

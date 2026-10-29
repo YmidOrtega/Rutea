@@ -12,23 +12,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SensitiveSites.Kind;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
 
 class ComplianceTest {
 
     @TempDir
     static Path dir;
 
-    private static SubaScenario town;
+    private static AreaScenario town;
     private static Container first;
 
     @BeforeAll
     static void town() throws IOException {
-        SubaScenario plain = SubaScenarioFixture.town(dir, 10, 160);
+        AreaScenario plain = AreaScenarioFixture.town(dir, 10, 160);
         first = plain.containers().getFirst();
         // Un colegio a 10 m del primer contenedor y un hotel justo encima del segundo.
         Container second = plain.containers().get(1);

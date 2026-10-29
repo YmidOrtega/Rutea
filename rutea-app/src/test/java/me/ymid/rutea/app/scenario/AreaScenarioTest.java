@@ -16,7 +16,7 @@ import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.cvrplib.CvrplibReader;
 import me.ymid.rutea.solver.cvrplib.CvrplibWriter;
 
-class SubaScenarioTest {
+class AreaScenarioTest {
 
     @TempDir
     Path dir;
@@ -25,13 +25,13 @@ class SubaScenarioTest {
     void leavesFromTheBaseAndArrivesAtTheLandfillGate() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        SubaScenario scenario = SubaScenario.build(town, 30, 24, 12, 160, 4);
+        AreaScenario scenario = AreaScenario.build(town, ServiceAreas.ASE_5, 30, 24, 12, 160, 4);
         Instance instance = scenario.instance();
 
         assertThat(instance.name()).isEqualTo("SubaBase-n13-s4");
         assertThat(instance.size()).isEqualTo(13);
         assertThat(instance.demand(0)).isZero();
-        assertThat(instance.capacity()).isEqualTo(SubaFigures.COMPACTOR_CAPACITY_KG);
+        assertThat(instance.capacity()).isEqualTo(8_000);
         int gate = town.vertexOf(30).orElseThrow();
         int base = town.vertexOf(24).orElseThrow();
         int firstContainer = SimulatedContainers.place(town, WasteStream.NON_RECYCLABLE, 12, 160, 4)
@@ -46,7 +46,7 @@ class SubaScenarioTest {
 
     @Test
     void survivesTheRoundTripThroughCvrplib() throws IOException {
-        Instance instance = SubaScenario.build(SampleTown.graph(dir), 30, 24, 12, 160, 4).instance();
+        Instance instance = AreaScenario.build(SampleTown.graph(dir), ServiceAreas.ASE_5, 30, 24, 12, 160, 4).instance();
         Path file = dir.resolve(instance.name() + ".vrp");
 
         CvrplibWriter.writeExplicit(file, instance, "prueba");

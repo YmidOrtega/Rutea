@@ -23,7 +23,7 @@ import me.ymid.rutea.geo.geometry.Haversine;
  * tramo, que es donde el camión lo visita en el grafo.
  *
  * <p>La carga de cada contenedor varía al azar entre la mitad y vez y media de la media. Es un supuesto:
- * no hay datos de llenado por contenedor. La media sale de {@link SubaFigures}.
+ * no hay datos de llenado por contenedor. La media sale de {@link BogotaFigures}.
  */
 public final class SimulatedContainers {
 

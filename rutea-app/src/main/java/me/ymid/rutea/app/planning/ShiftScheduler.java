@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 
@@ -52,7 +52,7 @@ public final class ShiftScheduler {
     private ShiftScheduler() {
     }
 
-    public static Schedule schedule(SubaScenario scenario, Solution solution, int serviceSeconds, int unloadSeconds,
+    public static Schedule schedule(AreaScenario scenario, Solution solution, int serviceSeconds, int unloadSeconds,
             int shiftSeconds, int maxTripsPerTruck) {
         int n = solution.routeCount();
         if (n > MAX_EXACT_TRIPS) {
@@ -127,7 +127,7 @@ public final class ShiftScheduler {
      * A qué hora llega el camión a cada contenedor, con la misma cuenta que {@link #schedule}: manejo por la
      * matriz, paradas y descargas. La última hora es la del regreso a la base.
      */
-    public static List<Visit> timeline(SubaScenario scenario, Solution solution, Truck truck, int serviceSeconds,
+    public static List<Visit> timeline(AreaScenario scenario, Solution solution, Truck truck, int serviceSeconds,
             int unloadSeconds, long startSeconds) {
         TravelMatrix travel = scenario.travel();
         int gate = scenario.gate();
@@ -164,7 +164,7 @@ public final class ShiftScheduler {
         private final int[][] stops;
         private final int serviceSeconds;
 
-        Trips(SubaScenario scenario, Solution solution, int serviceSeconds) {
+        Trips(AreaScenario scenario, Solution solution, int serviceSeconds) {
             this.travel = scenario.travel();
             this.gate = scenario.gate();
             this.serviceSeconds = serviceSeconds;

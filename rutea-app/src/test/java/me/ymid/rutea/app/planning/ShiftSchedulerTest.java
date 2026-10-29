@@ -14,8 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.planning.ShiftScheduler.Schedule;
 import me.ymid.rutea.app.planning.ShiftScheduler.Truck;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
@@ -30,12 +30,12 @@ class ShiftSchedulerTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
     private static Solution solution;
 
     @BeforeAll
     static void plan() throws IOException {
-        scenario = SubaScenarioFixture.town(dir, 20, 1_600);
+        scenario = AreaScenarioFixture.town(dir, 20, 1_600);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(3, Duration.ofMinutes(1), 200));
     }
 
