@@ -131,6 +131,15 @@
             </configuration>
           </execution>
           <execution>
+            <id>operator-containers</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractOperatorContainers</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>localities</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExtractLocalities</mainClass>

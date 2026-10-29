@@ -35,6 +35,7 @@ rutea/
 ├── web/                      frontend React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/cvrplib/             instancias X de Uchoa et al. con sus BKS (ver data/cvrplib/README.md)
 ├── data/osm/                 extracto de OpenStreetMap fijo, se descarga (ver data/osm/README.md)
+├── data/ase/                 contenedores reales de los operadores, se descargan (ver data/ase/README.md)
 ├── data/suba/                instancias CVRP reales de Suba, se generan (ver data/suba/README.md)
 └── docs/                     normativa, arquitectura, contrato de la API, roadmap, diseño, ADRs
 ```
@@ -74,6 +75,7 @@ mvn -pl rutea-app exec:java@graphs           # Suba sobre el grafo de Suba y el 
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
 mvn -pl rutea-app exec:java@sectors          # las 12 UPZ de Suba de OSM (R04) → rutea-app/src/main/resources/sectors/suba-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@localities       # límites de las 20 localidades de OSM → rutea-app/src/main/resources/localities/bogota-localidades.geojson (se versiona)
+mvn -pl rutea-app exec:java@operator-containers  # contenedores negros "en campo" de las ASE 1, 2 y 4 (ArcGIS de los operadores) → data/ase/*.csv (ADR 0013; se descarga)
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
