@@ -60,6 +60,15 @@ class OsmBoundariesTest {
     }
 
     @Test
+    void readsBoundariesByIdWithoutAParent() throws IOException {
+        Path pbf = twoUpz(new Block());
+
+        assertThat(OsmBoundaries.of(pbf, List.of(100L, 101L))).extracting(OsmBoundaries.Boundary::ref)
+                .containsExactly("1", "2");
+        assertThatThrownBy(() -> OsmBoundaries.of(pbf, List.of(100L, 999L))).hasMessageContaining("no está el límite 999");
+    }
+
+    @Test
     void saysWhichRelationIsMissing() throws IOException {
         Path pbf = twoUpz(new Block().relation(200, new int[] {RELATION}, new long[] {999}, new String[] {"subarea"},
                 "type", "boundary", "name", "UPZs de la localidad"));

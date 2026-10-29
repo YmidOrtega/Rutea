@@ -56,6 +56,33 @@ public final class OsmBoundaries {
      * @throws IOException si falta la relación, una subárea, una vía o un nodo, o un anillo no cierra
      */
     public static List<Boundary> subareas(Path pbf, long parent) throws IOException {
+        Map<Long, Relation> relations = relations(pbf);
+        Relation group = relations.get(parent);
+        if (group == null) {
+            throw new IOException(pbf.getFileName() + ": no está la relación " + parent);
+        }
+        if (group.subareas().isEmpty()) {
+            throw new IOException(pbf.getFileName() + ": la relación " + parent + " no tiene subáreas");
+        }
+        for (long id : group.subareas()) {
+            if (!relations.containsKey(id)) {
+                throw new IOException(pbf.getFileName() + ": falta la subárea " + id + " de la relación " + parent);
+            }
+        }
+        return boundaries(pbf, relations, group.subareas());
+    }
+
+    /**
+     * Los límites de las relaciones {@code ids}, en ese orden: las localidades de Bogotá, por ejemplo, que la relación
+     * del Distrito no lista como subáreas.
+     *
+     * @throws IOException si falta una relación, una vía o un nodo, o un anillo no cierra
+     */
+    public static List<Boundary> of(Path pbf, List<Long> ids) throws IOException {
+        return boundaries(pbf, relations(pbf), ids);
+    }
+
+    private static Map<Long, Relation> relations(Path pbf) throws IOException {
         Map<Long, Relation> relations = new HashMap<>();
         PbfReader.read(pbf, EnumSet.of(Element.RELATIONS), block -> {
             for (OsmRelation relation : block.relations()) {
@@ -75,20 +102,18 @@ public final class OsmBoundaries {
                 relations.put(relation.id(), new Relation(relation.tags(), ways, subareas));
             }
         });
-        Relation group = relations.get(parent);
-        if (group == null) {
-            throw new IOException(pbf.getFileName() + ": no está la relación " + parent);
-        }
-        if (group.subareas().isEmpty()) {
-            throw new IOException(pbf.getFileName() + ": la relación " + parent + " no tiene subáreas");
-        }
+        return relations;
+    }
+
+    private static List<Boundary> boundaries(Path pbf, Map<Long, Relation> relations, List<Long> ids)
+            throws IOException {
         Set<Long> wanted = new HashSet<>();
-        for (long id : group.subareas()) {
-            Relation subarea = relations.get(id);
-            if (subarea == null) {
-                throw new IOException(pbf.getFileName() + ": falta la subárea " + id + " de la relación " + parent);
+        for (long id : ids) {
+            Relation boundary = relations.get(id);
+            if (boundary == null) {
+                throw new IOException(pbf.getFileName() + ": no está el límite " + id);
             }
-            wanted.addAll(subarea.ways());
+            wanted.addAll(boundary.ways());
         }
 
         Map<Long, long[]> wayNodes = new HashMap<>();
@@ -121,7 +146,7 @@ public final class OsmBoundaries {
         });
 
         List<Boundary> boundaries = new ArrayList<>();
-        for (long id : group.subareas()) {
+        for (long id : ids) {
             Relation subarea = relations.get(id);
             List<long[]> ways = subarea.ways().stream().map(wayNodes::get).toList();
             List<int[]> ringLat = new ArrayList<>();

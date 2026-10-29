@@ -59,6 +59,30 @@ public final class Polygon {
         return inside;
     }
 
+    /** Metros del punto al borde más cercano, esté adentro o afuera; plano local, que basta a escala de ciudad. */
+    public double borderMeters(int latE7, int lonE7) {
+        double cosLat = Math.cos(Math.toRadians(latE7 / 1e7));
+        double best = Double.POSITIVE_INFINITY;
+        for (int r = 0; r < ringLat.length; r++) {
+            int[] lat = ringLat[r];
+            int[] lon = ringLon[r];
+            for (int i = 0, j = lat.length - 1; i < lat.length; j = i++) {
+                double ax = (lon[j] - lonE7) * cosLat;
+                double ay = lat[j] - latE7;
+                double bx = (lon[i] - lonE7) * cosLat;
+                double by = lat[i] - latE7;
+                double dx = bx - ax;
+                double dy = by - ay;
+                double length = dx * dx + dy * dy;
+                double t = length == 0 ? 0 : Math.clamp(-(ax * dx + ay * dy) / length, 0, 1);
+                double x = ax + t * dx;
+                double y = ay + t * dy;
+                best = Math.min(best, x * x + y * y);
+            }
+        }
+        return Math.sqrt(best) / 1e7 * Math.toRadians(1) * Haversine.EARTH_RADIUS_METERS;
+    }
+
     /** Une las vías de un límite de OSM en anillos cerrados de ids de nodo. */
     public static List<long[]> assembleRings(List<long[]> ways) {
         List<long[]> open = new ArrayList<>();

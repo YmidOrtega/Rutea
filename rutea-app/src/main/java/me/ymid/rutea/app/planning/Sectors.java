@@ -14,7 +14,6 @@ import java.util.TreeMap;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.domain.WasteStream;
-import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.geo.geometry.Polygon;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,7 +42,7 @@ public final class Sectors {
 
     private static final String RURAL_NAME = "Zona rural";
 
-    private record Upz(String ref, String name, Polygon polygon, List<double[]> outline, int[] lat, int[] lon) {
+    private record Upz(String ref, String name, Polygon polygon, List<double[]> outline) {
     }
 
     private static final Map<Integer, Sectors> BY_AREA = new HashMap<>();
@@ -99,7 +98,7 @@ public final class Sectors {
             }
             JsonNode properties = feature.get("properties");
             upz.add(new Upz(properties.get("ref").asString(), properties.get("name").asString(),
-                    new Polygon(List.of(lat), List.of(lon)), outline, lat, lon));
+                    new Polygon(List.of(lat), List.of(lon)), outline));
         }
         return upz;
     }
@@ -111,36 +110,16 @@ public final class Sectors {
                 return sector.ref();
             }
         }
-        double cosLat = Math.cos(Math.toRadians(latE7 / 1e7));
         Upz nearest = null;
         double best = Double.POSITIVE_INFINITY;
         for (Upz sector : upz) {
-            double d = squaredToRing(sector.lat(), sector.lon(), latE7, lonE7, cosLat);
-            if (d < best) {
-                best = d;
+            double meters = sector.polygon().borderMeters(latE7, lonE7);
+            if (meters < best) {
+                best = meters;
                 nearest = sector;
             }
         }
-        double meters = Math.sqrt(best) / 1e7 * Math.toRadians(1) * Haversine.EARTH_RADIUS_METERS;
-        return nearest != null && meters <= NEAR_BORDER_METERS ? nearest.ref() : RURAL;
-    }
-
-    private static double squaredToRing(int[] lat, int[] lon, int latE7, int lonE7, double cosLat) {
-        double best = Double.POSITIVE_INFINITY;
-        for (int i = 0, j = lat.length - 1; i < lat.length; j = i++) {
-            double ax = (lon[j] - lonE7) * cosLat;
-            double ay = lat[j] - latE7;
-            double bx = (lon[i] - lonE7) * cosLat;
-            double by = lat[i] - latE7;
-            double dx = bx - ax;
-            double dy = by - ay;
-            double length = dx * dx + dy * dy;
-            double t = length == 0 ? 0 : Math.clamp(-(ax * dx + ay * dy) / length, 0, 1);
-            double x = ax + t * dx;
-            double y = ay + t * dy;
-            best = Math.min(best, x * x + y * y);
-        }
-        return best;
+        return nearest != null && best <= NEAR_BORDER_METERS ? nearest.ref() : RURAL;
     }
 
     /**
@@ -156,7 +135,7 @@ public final class Sectors {
                     .add(container);
         }
         List<Upz> all = new ArrayList<>(upz);
-        all.add(new Upz(RURAL, RURAL_NAME, null, List.of(), new int[0], new int[0]));
+        all.add(new Upz(RURAL, RURAL_NAME, null, List.of()));
         List<DemoPlan.Sector> sectors = new ArrayList<>();
         for (Upz sector : all) {
             if (bySector.get(sector.ref()).isEmpty()) {
