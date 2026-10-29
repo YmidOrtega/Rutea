@@ -3,13 +3,18 @@ package me.ymid.rutea.app.planning;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
@@ -51,6 +56,71 @@ public final class CityPlanner {
         public Plan {
             areas = List.copyOf(areas);
             skipped = List.copyOf(skipped);
+        }
+
+        /** La flota de cada ASE planificada, con los turnos repartidos con la descarga de 40 min. */
+        public List<Fleet> fleets() {
+            Map<ServiceArea, List<AreaPlan>> byArea = new LinkedHashMap<>();
+            for (AreaPlan plan : areas) {
+                byArea.computeIfAbsent(plan.scenario().area(), area -> new ArrayList<>()).add(plan);
+            }
+            List<Fleet> fleets = new ArrayList<>();
+            byArea.forEach((area, plans) -> fleets.add(Fleet.of(area,
+                    plans.stream().map(AreaPlan::shift).toList(), plans.stream().map(AreaPlan::schedule).toList())));
+            return fleets;
+        }
+    }
+
+    /**
+     * Los camiones de cargue lateral que necesita una ASE en el día. Si sus turnos no se cruzan, un mismo camión
+     * trabaja en todos (supuesto: con otra cuadrilla) y la flota es la del turno que más pide; si se cruzan, se suman.
+     *
+     * @param trucks los del reparto de viajes de cada turno
+     * @param lowerBound ningún reparto de esos viajes usa menos; igual a {@code trucks} si el reparto es el mínimo
+     * @param declared compactadores de cargue lateral que declara el operador; vacío si no los declara
+     */
+    public record Fleet(ServiceArea area, int trucks, int lowerBound, boolean sharedAcrossShifts,
+            OptionalInt declared) {
+
+        public static Fleet of(ServiceArea area, List<SideLoading.Shift> shifts,
+                List<ShiftScheduler.Schedule> schedules) {
+            boolean shared = true;
+            for (int a = 0; a < shifts.size(); a++) {
+                for (int b = a + 1; b < shifts.size(); b++) {
+                    shared &= !overlap(shifts.get(a), shifts.get(b));
+                }
+            }
+            IntStream trucks = schedules.stream().mapToInt(schedule -> schedule.trucks().size());
+            IntStream bounds = schedules.stream().mapToInt(ShiftScheduler.Schedule::lowerBound);
+            return new Fleet(area, shared ? trucks.max().orElse(0) : trucks.sum(),
+                    shared ? bounds.max().orElse(0) : bounds.sum(), shared, SideLoading.of(area).sideLoaders());
+        }
+
+        /** Camiones que pide el plan por encima de los que declara el operador; 0 si alcanzan o no declara. */
+        public int beyondDeclared() {
+            return declared.isPresent() ? Math.max(0, trucks - declared.getAsInt()) : 0;
+        }
+
+        public Optional<String> warning() {
+            if (beyondDeclared() == 0) {
+                return Optional.empty();
+            }
+            return Optional.of(String.format(Locale.ROOT, "%s: el plan pide %d camiones de cargue lateral y %s declara"
+                    + " %d", area.name(), trucks, area.operator(), declared.getAsInt()));
+        }
+
+        /** Los dos turnos se cruzan en el reloj de 24 h, también si uno pasa de medianoche. */
+        static boolean overlap(SideLoading.Shift a, SideLoading.Shift b) {
+            int day = 24 * 3600;
+            int startA = seconds(a.start());
+            int startB = seconds(b.start());
+            int fromAToB = Math.floorMod(startB - startA, day);
+            int fromBToA = Math.floorMod(startA - startB, day);
+            return fromAToB < a.seconds() || fromBToA < b.seconds();
+        }
+
+        private static int seconds(String hhmm) {
+            return Integer.parseInt(hhmm.substring(0, 2)) * 3600 + Integer.parseInt(hhmm.substring(3, 5)) * 60;
         }
     }
 

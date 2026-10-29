@@ -172,6 +172,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>fleet</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.MeasureFleet</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f7-fleet</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>side-loading</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.CompareSideLoading</mainClass>

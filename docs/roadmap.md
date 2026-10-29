@@ -327,7 +327,20 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 
     En paralelo, la latencia es la de la instancia más grande, el ASE 4 con sus 763 contenedores (4,1 s de escenario y 7,8 s de ALNS). Pasar de 5 a 20 localidades no la sube. La aceleración se queda en 2,7× con 16 hilos porque las 7 instancias están muy desparejas: las del ASE 1 de noche y el ASE 3 terminan en menos de 1,2 s. Con 5 localidades, el ASE 1 no tiene contenedores de noche en Usme, y ese turno sale como "sin contenedores", no como un plan vacío.
   - **Lo que pesa:** un tercio de la latencia es armar el escenario del ASE 4, casi todo en ubicar cada contenedor en su trazo más cercano, que recorre todos los trazos del grafo. Un índice espacial en `rutea-geo` lo bajaría. La latencia no incluye dibujar el plan ni revisar la normativa, que llegan con el paso de normativa por ASE.
-- [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.
+- [x] Flota como resultado (2026-10-29; `mvn -pl rutea-app exec:java@fleet`; las 20 localidades, ALNS con semilla 7 y 2.000 iteraciones, determinista; CSV en `docs/benchmarks/f7-fleet/`): `CityPlanner.Fleet` da los camiones de cargue lateral de cada ASE y los compara con los que declara su operador. Si se pasa, el plan sale igual, con un aviso. Si los turnos de una ASE no se cruzan, un mismo camión trabaja en todos (supuesto: con otra cuadrilla), y la flota es la del turno que más pide; si se cruzan, se suman. En las cinco ASE los turnos no se cruzan.
+  - **El mínimo, demostrado:** con más de 20 viajes, `ShiftScheduler` ya no se queda con el reparto por grupos. Si pasa de la cota inferior, una ramificación y poda sobre los conjuntos de viajes que caben en un turno busca uno con menos camiones. La cota también es más ajustada: solo el primer viaje de cada camión sale de la base, cada camión paga el regreso, el tope de viajes es el del conjunto más grande que cabe, y los camiones llenos solo pueden llevar viajes que aparecen en algún conjunto lleno. Los 30 repartos de la tabla (5 ASE × 3 llenados × 2 descargas) son el mínimo demostrado, es decir, iguales a su cota. Antes, el ASE 2 de día al 100 % salía con 8 y 9 camiones frente a una cota de 7. Ahora salen 7 y 9, y el 9 está demostrado. En el ASE 4 la cota antigua daba 9 por dividir entre 4 viajes, pero allí no caben ni 4 viajes en 9 h (cada uno dura unas 2½ h con la descarga) y con 90 min no caben ni 3. Con 20 viajes o menos el reparto no cambia, y los artefactos de Suba salen con los mismos SHA-256.
+
+    | ASE | Declarada | 50 %, 40 min | 50 %, 90 min | 75 %, 40 min | 75 %, 90 min | 100 %, 40 min | 100 %, 90 min |
+    |---|---:|---:|---:|---:|---:|---:|---:|
+    | 1 | 3 | 1 | 1 | 1 | 1 | 1 | 2 |
+    | 2 | 5 | 4 | 5 | 5 | **7** | **7** | **9** |
+    | 3 | – | 1 | 1 | 1 | 2 | 1 | 2 |
+    | 4 | – | 6 | 9 | 9 | 14 | 12 | 18 |
+    | 5 | – | 5 | 7 | 6 | 9 | 7 | 9 |
+
+  - **Avisos:** solo en el ASE 2, que es el único con flota declarada que no alcanza. Con 40 min de descarga, los 5 compactadores de LIME bastan hasta el 75 % de llenado, y con 90 min, hasta el 50 %. Al 100 % hacen falta 7 o 9. Promoambiental declara 3 y el plan pide 1 o 2. Las ASE 3, 4 y 5 no declaran cuántos compactadores de cargue lateral tienen, así que no hay aviso posible.
+  - **Lo que no resuelve:** el mínimo es el de los viajes que dio ALNS, que minimiza km, no camiones. En Suba de 2026, con 90 min de descarga, al 75 % hacen falta 9 camiones y al 100 %, 8 (paso «Suba de 2026»). Que el solver tenga en cuenta los turnos al armar los viajes es otro problema (VRP con varios viajes por vehículo) y queda para "Después".
+  - **Costo:** la búsqueda tarda a lo sumo 0,2 s. El reparto más lento sigue siendo la programación dinámica exacta con 20 viajes: 1,5 s en el ASE 2 de día al 75 %.
 - [ ] Normativa por ASE: sectores (UPZ) y sitios sensibles de toda Bogotá; R02, R03, R04 y R07 revisadas en cada plan.
 - [ ] API y WebSocket: la selección viaja en la petición, el plan responde por ASE, los eventos llevan su ASE y `docs/api.md` se actualiza con su test.
 - [ ] Mapa: selector de localidades y cada ASE con su flota, según `docs/diseno.md`.
@@ -346,3 +359,4 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 - App móvil para conductores.
 - Integración con sensores IoT reales.
 - Facturación, usuarios y roles.
+- Viajes pensados para los turnos (VRP con varios viajes por vehículo): que el solver arme los viajes minimizando camiones y no solo km. Hoy la flota es el mínimo para los viajes que da ALNS (F7, «Flota como resultado»).
