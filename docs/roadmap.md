@@ -267,7 +267,21 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 - [x] Carga por capacidad (ADR 0013, 2026-10-29): `SideLoading` da la carga de cada contenedor, litros × 150 kg/m³ × llenado medio al recoger (`PENDIENTE_VERIFICAR`). Los planes usan el 100 %, la cota alta, y se reportan también con 50 y 75 %. Las ASE 2 y 4 no publican la frecuencia de sus contenedores: se supone 3 veces por semana y se mide también con 6. `mvn -pl rutea-app exec:java@side-loading` escribe la tabla en `docs/benchmarks/f7-side-loading/`.
   - **Resultado:** el cargue lateral cubre poco de las toneladas. Con llenado del 100 %, el 1,1 % en el ASE 1 y el 1,2 % en el ASE 3. En el ASE 2 cubre el 7,8 % con 3 veces por semana y el 15,5 % con 6. En el ASE 4, el 16,2 % y el 32,5 %. La tabla completa está en `docs/datos.md`.
   - **Contraste con el ASE 5:** el 13 % declarado no acota el llenado. Con los 320 contenedores del plan haría falta un llenado del 84 % si todos fueran de 3.200 L y del 245 % si fueran de 1.100 L, y no se publica la mezcla.
-- [ ] Segunda ASE: el ASE 2, con sus 990 contenedores reales, cerca de Doña Juana: el extremo opuesto a Suba (muchos viajes cortos en lugar de pocos largos). Prueba `ShiftScheduler` y el encadenamiento de viajes con otra forma de problema, y si los 5 camiones de cargue lateral que declara LIME alcanzan.
+- [x] Segunda ASE (2026-10-29; `mvn -pl rutea-app exec:java@second-area`; ALNS con semilla 7 y 2.000 iteraciones, determinista; CSV en `docs/benchmarks/f7-second-area/`): el ASE 2 con sus 990 contenedores reales, cerca de Doña Juana. Es el extremo opuesto a Suba: muchos viajes cortos en lugar de pocos largos. `AreaScenario.buildReal` ubica cada contenedor en el extremo más cercano de su trazo de calle más cercano, con el código del operador y la carga por capacidad. Cada turno de LIME es una instancia, con los contenedores que su capa le asigna. Los compactadores son de 8 t (`PENDIENTE_VERIFICAR`). `ShiftScheduler` ya no se limita a 20 viajes: con más, los parte en grupos que asigna exactos por separado y reporta una cota inferior de camiones. Los artefactos de Suba salen con los mismos SHA-256.
+
+  | Turno | Contenedores | Llenado | t | Viajes | Camiones (cota inferior) | km |
+  |---|---:|---:|---:|---:|---:|---:|
+  | Día, 10 h | 609 | 50 % | 100,5 | 13 | 5 (5) | 391,5 |
+  | | | 75 % | 151,0 | 20 | 7 (7) | 564,2 |
+  | | | 100 % | 201,0 | 26 | 10 (9) | 746,2 |
+  | Noche, 10 h | 381 | 50 % | 62,9 | 9 | 3 (3) | 241,5 |
+  | | | 75 % | 94,5 | 12 | 4 (4) | 318,1 |
+  | | | 100 % | 125,7 | 16 | 6 (6) | 422,8 |
+
+  - **¿Alcanzan los 5 de LIME?** Solo si los contenedores llegan a la mitad de llenos, y con cada camión trabajando los dos turnos (5 de día y 3 de noche). Al 75 % hacen falta 7 de día, y al 100 %, 10 de día y 6 de noche. Con un turno por camión, ni al 50 % alcanzan (5 + 3 = 8).
+  - **La descarga no cambia la flota, y el límite de 3 viajes por camión sí.** Con 40 o con 90 min de descarga salen los mismos camiones, porque en un turno de 10 h, con viajes cortos, lo que limita es el máximo de 3 viajes por camión que viene de F4, no el reloj: al 50 % de día, los 5 camiones suman 31 h de 50 posibles con 40 min de descarga. En Suba los viajes largos hacían que el turno limitara primero. Ese máximo se revisa antes de dar una flota como resultado.
+  - **Partir en grupos cuesta a lo sumo un camión:** con 26 viajes de día al 100 %, el reparto en dos grupos da 10 camiones y la cota inferior, 9. En los demás casos coinciden.
+  - **Escenario:** de 2,0 a 3,1 s por turno, casi todo en ubicar cada contenedor en su trazo, que recorre todos los trazos del grafo. La matriz del ASE 2 de `exec:java@graphs`, con la base de LIME, salió a 3–5 % de la medida anterior con un núcleo ocupado por el navegador. No se reemplaza la cifra publicada.
 - [ ] Suba de 2026 (ADR 0013): instancia nueva con los 320 contenedores del plan aprobado. `SubaBase-n807-s1` queda congelada en el arnés, las cifras de F3 a F6 se rotulan como de 806 contenedores simulados, y la diferencia entre las dos se mide y se publica.
 - [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
 - [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.

@@ -2,6 +2,8 @@ package me.ymid.rutea.app.scenario;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 
 /**
  * Carga por capacidad del cargue lateral (ADR 0013): no hay datos de llenado por contenedor, así que cada
@@ -20,6 +22,22 @@ public final class SideLoading {
     /** Los llenados que se miden: el plan se reporta con cada uno. */
     public static final List<Double> FILLS = List.of(0.5, 0.75, 1.0);
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: kilos que carga un compactador de cargue lateral de 32 yd³. Ningún operador publica
+     * los kilos de los suyos; se toman los 8.000 kg que Área Limpia declara para sus compactadores de 32 yd.
+     */
+    public static final int SIDE_LOADER_KG = 8_000;
+
+    /**
+     * Un turno de cargue lateral: es una instancia aparte, con los contenedores que el operador le asigna en su capa.
+     *
+     * @param name nombre corto para la instancia
+     * @param operatorName como lo escribe el operador en su capa
+     * @param start hora de inicio, {@code HH:mm}
+     */
+    public record Shift(String name, String operatorName, String start, int seconds) {
+    }
+
     /** Frecuencia que se mide al lado cuando el operador no publica la de sus contenedores. */
     public static final int SENSITIVITY_COLLECTIONS_PER_WEEK = 6;
 
@@ -31,9 +49,24 @@ public final class SideLoading {
      * @param collectionsPerWeek veces por semana que se recogen sus contenedores
      * @param frequencyPublished el operador publica esa frecuencia; si no, es un supuesto y se mide también
      *     {@link #SENSITIVITY_COLLECTIONS_PER_WEEK}
+     * @param sideLoaders compactadores de cargue lateral que declara el operador; vacío si no los declara
+     * @param shifts turnos en que el operador reparte sus contenedores; vacío si su capa no los trae
      */
     public record Area(ServiceAreas.ServiceArea area, Optional<Double> tonnesPerDay, int collectionsPerWeek,
-            boolean frequencyPublished) {
+            boolean frequencyPublished, OptionalInt sideLoaders, List<Shift> shifts) {
+
+        public Area {
+            shifts = List.copyOf(shifts);
+        }
+
+        /** La operación con que se planifica un turno: no declara qué parte de las toneladas va por cargue lateral. */
+        public ServiceAreas.Operation operation(Shift shift) {
+            if (!shifts.contains(shift)) {
+                throw new IllegalArgumentException(shift.name() + " no es un turno de " + area.name());
+            }
+            return new ServiceAreas.Operation(OptionalDouble.empty(), collectionsPerWeek, shift.start(),
+                    shift.seconds(), SIDE_LOADER_KG, List.of());
+        }
 
         public List<Integer> frequencies() {
             return frequencyPublished || collectionsPerWeek == SENSITIVITY_COLLECTIONS_PER_WEEK
@@ -54,13 +87,21 @@ public final class SideLoading {
      *   <li>ASE 3: "6 para la atención de contenedores" (Superservicios).
      *   <li>ASE 5: 6, la de su {@link ServiceAreas.Operation}; sus toneladas son {@code PENDIENTE_VERIFICAR}.
      * </ul>
+     *
+     * Compactadores de cargue lateral: 3 en el ASE 1 y 5 de 32 yd³ en el ASE 2 (Superservicios). Turnos del ASE 2: su
+     * capa asigna cada contenedor al de día o al de noche, de 06:00–16:00 y 18:30–04:30 según su informe.
      */
+    public static final Shift ASE_2_DAY = new Shift("Dia", "DIA", "06:00", 10 * 3600);
+
+    public static final Shift ASE_2_NIGHT = new Shift("Noche", "NOCHE", "18:30", 10 * 3600);
+
     public static final List<Area> AREAS = List.of(
-            new Area(ServiceAreas.ASE_1, Optional.of(1_169.0), 3, true),
-            new Area(ServiceAreas.ASE_2, Optional.of(1_804.7), 3, false),
-            new Area(ServiceAreas.ASE_3, Optional.of(1_075.0), 6, true),
-            new Area(ServiceAreas.ASE_4, Optional.of(725.1), 3, false),
-            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true));
+            new Area(ServiceAreas.ASE_1, Optional.of(1_169.0), 3, true, OptionalInt.of(3), List.of()),
+            new Area(ServiceAreas.ASE_2, Optional.of(1_804.7), 3, false, OptionalInt.of(5),
+                    List.of(ASE_2_DAY, ASE_2_NIGHT)),
+            new Area(ServiceAreas.ASE_3, Optional.of(1_075.0), 6, true, OptionalInt.empty(), List.of()),
+            new Area(ServiceAreas.ASE_4, Optional.of(725.1), 3, false, OptionalInt.empty(), List.of()),
+            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true, OptionalInt.empty(), List.of()));
 
     /** Contenedores negros del Plan de Contenerización de 2026 del ASE 3: 91 de 1.100 L, sin ubicación publicada. */
     public static final int ASE_3_CONTAINERS = 91;

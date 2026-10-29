@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.IntPredicate;
 
@@ -16,6 +18,7 @@ import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.TravelMatrix;
+import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
 
@@ -26,23 +29,26 @@ import me.ymid.rutea.solver.Instance;
  * sale de la base y su columna llega a la portería. El regreso de la portería a la base es igual para todos los
  * camiones, así que no cambia la optimización: va en {@code returnMeters}.
  *
- * @param area la ASE, con la operación de su operador
+ * @param area la ASE
+ * @param operation turno, frecuencia y compactador con que se planifica: la de su operador, o la de uno de sus turnos de
+ *     cargue lateral ({@link SideLoading})
  * @param points vértice del grafo de cada nodo de la instancia; el del nodo 0 es la base
  * @param travel metros y segundos entre todos los lugares: 0 es la base, {@code i} el nodo {@code i} y
  *     {@link #gate()} la portería
  * @param sites sitios sensibles para R02 y R07; vacío si no se cargaron
  */
-public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, int depotVertex,
+public record AreaScenario(ServiceArea area, Operation operation, RoadGraph graph, int gateVertex, int depotVertex,
         List<Container> containers, int[] points, Instance instance, TravelMatrix travel, List<SensitiveSites.Site> sites) {
 
     public AreaScenario {
-        area.verified();
+        Objects.requireNonNull(operation, "operation");
         containers = List.copyOf(containers);
         sites = List.copyOf(sites);
     }
 
     public AreaScenario withSites(List<SensitiveSites.Site> sensitive) {
-        return new AreaScenario(area, graph, gateVertex, depotVertex, containers, points, instance, travel, sensitive);
+        return new AreaScenario(area, operation, graph, gateVertex, depotVertex, containers, points, instance, travel,
+                sensitive);
     }
 
     /** Un contenedor aislado por un cierre queda a {@link TravelMatrix#UNREACHABLE}. */
@@ -59,8 +65,8 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
             demands[i] = instance.demand(i);
         }
         Instance closed = new Instance(instance.name(), instance.capacity(), demands, DistanceMatrix.of(distances));
-        return new AreaScenario(area, matrix.graph(), gateVertex, depotVertex, containers, points, closed, matrix,
-                sites);
+        return new AreaScenario(area, operation, matrix.graph(), gateVertex, depotVertex, containers, points, closed,
+                matrix, sites);
     }
 
     /** Con la base y las cifras del operador de la ASE, que tiene que tener la operación verificada. */
@@ -126,7 +132,66 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
             throw new IllegalArgumentException("ningún contenedor cae en " + names(chosen)
                     + ": en el suelo rural no se ubican contenedores");
         }
-        count = containers.size();
+        String prefix = chosen.size() == area.localities().size() ? area.name() : names(chosen);
+        // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
+        String name = prefix.replace(" ", "") + kind + "-n" + (containers.size() + 1) + "-s" + seed;
+        return assemble(graph, area, area.verified(), containers, depot, gate, capacityKg, name);
+    }
+
+    /**
+     * Los contenedores reales que el operador asigna a uno de sus turnos de cargue lateral, con la carga por capacidad
+     * ({@link SideLoading#kgAtCollection}). Cada contenedor se visita en el extremo más cercano del trazo de calle más
+     * cercano, y lleva el código del operador.
+     */
+    public static AreaScenario buildReal(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
+            List<OperatorContainers.Container> real, double fill) {
+        return buildReal(graph, area, shift, real, fill, area.base().osmNode(), ServiceAreas.DISPOSAL_OSM_NODE);
+    }
+
+    static AreaScenario buildReal(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
+            List<OperatorContainers.Container> real, double fill, long depotNode, long gateNode) {
+        Operation operation = SideLoading.of(area).operation(shift);
+        int[][] ends = shapeEnds(graph);
+        List<Container> containers = new ArrayList<>();
+        for (OperatorContainers.Container c : real) {
+            if (!c.shift().equals(shift.operatorName())) {
+                continue;
+            }
+            int shape = graph.nearestShape(c.latE7(), c.lonE7());
+            int start = ends[shape][0];
+            int end = ends[shape][1];
+            int vertex = Haversine.meters(c.latE7(), c.lonE7(), graph.latE7(start), graph.lonE7(start))
+                    <= Haversine.meters(c.latE7(), c.lonE7(), graph.latE7(end), graph.lonE7(end)) ? start : end;
+            containers.add(new Container(c.code(), WasteStream.NON_RECYCLABLE, c.latE7(), c.lonE7(), vertex, shape,
+                    SideLoading.kgAtCollection(c.liters(), fill)));
+        }
+        if (containers.isEmpty()) {
+            throw new IllegalArgumentException("ningún contenedor de " + area.name() + " es del turno "
+                    + shift.operatorName());
+        }
+        String name = String.format(Locale.ROOT, "%s%s-n%d-f%d", area.name().replace(" ", ""), shift.name(),
+                containers.size() + 1, Math.round(fill * 100));
+        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
+                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+    }
+
+    /** Los extremos de cada trazo en su sentido de dibujo: un trazo de doble sentido aparece en dos arcos. */
+    private static int[][] shapeEnds(RoadGraph graph) {
+        int[][] ends = new int[graph.shapeCount()][];
+        for (int e = 0; e < graph.edgeCount(); e++) {
+            int shape = graph.shape(e);
+            int base = shape >= 0 ? shape : ~shape;
+            if (ends[base] == null) {
+                ends[base] = shape >= 0 ? new int[] {graph.source(e), graph.target(e)}
+                        : new int[] {graph.target(e), graph.source(e)};
+            }
+        }
+        return ends;
+    }
+
+    private static AreaScenario assemble(RoadGraph graph, ServiceArea area, Operation operation,
+            List<Container> containers, int depot, int gate, int capacityKg, String name) {
+        int count = containers.size();
         int[] points = new int[count + 1];
         int[] demands = new int[count + 1];
         points[0] = depot;
@@ -144,11 +209,8 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
                 distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? count + 1 : j);
             }
         }
-        // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
-        String prefix = chosen.size() == area.localities().size() ? area.name() : names(chosen);
-        String name = prefix.replace(" ", "") + kind + "-n" + (count + 1) + "-s" + seed;
         Instance instance = new Instance(name, capacityKg, demands, DistanceMatrix.of(distances));
-        return new AreaScenario(area, graph, gate, depot, containers, points, instance, matrix, List.of());
+        return new AreaScenario(area, operation, graph, gate, depot, containers, points, instance, matrix, List.of());
     }
 
     /**
@@ -182,10 +244,6 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     private static String names(Set<Locality> localities) {
         return String.join("-", localities.stream().map(Locality::name).toList());
-    }
-
-    public Operation operation() {
-        return area.verified();
     }
 
     public WasteStream stream() {

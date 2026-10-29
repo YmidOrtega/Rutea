@@ -55,6 +55,29 @@ class AreaScenarioTest {
     }
 
     @Test
+    void realContainersOfAShiftCarryTheirCapacityLoadAndKeepTheOperatorCode() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        int a = town.vertexOf(20).orElseThrow();
+        int b = town.vertexOf(22).orElseThrow();
+        List<OperatorContainers.Container> real = List.of(
+                new OperatorContainers.Container("L1", town.latE7(a), town.lonE7(a), 2_200, "BOSA", "1", "DIA"),
+                new OperatorContainers.Container("L2", town.latE7(b), town.lonE7(b), 2_200, "BOSA", "1", "NOCHE"),
+                new OperatorContainers.Container("L3", town.latE7(b), town.lonE7(b), 1_100, "BOSA", "1", "DIA"));
+
+        AreaScenario day = AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_DAY, real, 0.5, 24, 30);
+
+        assertThat(day.containers()).extracting(Container::id).containsExactly("L1", "L3");
+        assertThat(day.containers()).extracting(Container::vertex).containsExactly(a, b);
+        assertThat(day.containers()).extracting(Container::kg).containsExactly(165, 83);
+        assertThat(day.instance().name()).isEqualTo("ASE2Dia-n3-f50");
+        assertThat(day.instance().capacity()).isEqualTo(SideLoading.SIDE_LOADER_KG);
+        assertThat(day.operation().shiftStart()).isEqualTo("06:00");
+        assertThat(day.operation().sideLoadingShare()).isEmpty();
+        assertThatThrownBy(() -> AreaScenario.buildReal(town, ServiceAreas.ASE_2, SideLoading.ASE_2_NIGHT,
+                real.subList(0, 1), 1.0, 24, 30)).hasMessageContaining("turno NOCHE");
+    }
+
+    @Test
     void survivesTheRoundTripThroughCvrplib() throws IOException {
         Instance instance = AreaScenarioFixture.town(dir, 12, 160).instance();
         Path file = dir.resolve(instance.name() + ".vrp");

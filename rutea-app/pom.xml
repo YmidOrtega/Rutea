@@ -140,6 +140,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>second-area</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.PlanSecondArea</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f7-second-area</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>side-loading</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.CompareSideLoading</mainClass>

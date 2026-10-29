@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Las 20 localidades de Bogotá y las 5 Áreas de Servicio Exclusivo (ASE) que las atienden (ADR 0012). La
@@ -59,16 +60,17 @@ public final class ServiceAreas {
      * Lo que declara el operador de una ASE, según su inspección de la Superservicios.
      *
      * @param sideLoadingShare parte de las toneladas domiciliarias que se recoge por cargue lateral, es decir, con
-     *     contenedores
+     *     contenedores; vacía si el operador no la declara
      * @param collectionsPerWeek veces por semana que se recoge
      * @param shiftStart inicio del turno que se planifica, {@code HH:mm}
      * @param compactorKg capacidad del compactador más común de la flota
      * @param containerLiters tamaños de los contenedores de no aprovechables en vía pública
      */
-    public record Operation(double sideLoadingShare, int collectionsPerWeek, String shiftStart, int shiftSeconds,
+    public record Operation(OptionalDouble sideLoadingShare, int collectionsPerWeek, String shiftStart, int shiftSeconds,
             int compactorKg, List<Integer> containerLiters) {
 
         public Operation {
+            Objects.requireNonNull(sideLoadingShare, "sideLoadingShare");
             Objects.requireNonNull(shiftStart, "shiftStart");
             containerLiters = List.copyOf(containerLiters);
         }
@@ -120,7 +122,8 @@ public final class ServiceAreas {
          */
         public long containerKgPerDay() {
             return Math.round(BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * urbanAreaShare
-                    * verified().sideLoadingShare());
+                    * verified().sideLoadingShare().orElseThrow(() -> new IllegalStateException("el operador de la"
+                            + " ASE " + number + " no declara qué parte recoge por cargue lateral")));
         }
 
         public double meanKgPerCollection(int containers) {
@@ -206,7 +209,7 @@ public final class ServiceAreas {
     public static final ServiceArea ASE_5 = new ServiceArea(5, "Área Limpia", List.of(
             new Locality(11, "Suba", 2214884, false)),
             0.15, new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
-            Optional.of(new Operation(0.13, 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
+            Optional.of(new Operation(OptionalDouble.of(0.13), 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
 
     public static final List<ServiceArea> BOGOTA = List.of(ASE_1, ASE_2, ASE_3, ASE_4, ASE_5);
 

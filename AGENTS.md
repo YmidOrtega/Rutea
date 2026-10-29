@@ -76,6 +76,7 @@ mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de
 mvn -pl rutea-app exec:java@sectors          # las 12 UPZ de Suba de OSM (R04) → rutea-app/src/main/resources/sectors/suba-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@localities       # límites de las 20 localidades de OSM → rutea-app/src/main/resources/localities/bogota-localidades.geojson (se versiona)
 mvn -pl rutea-app exec:java@operator-containers  # contenedores negros "en campo" de las ASE 1, 2 y 4 (ArcGIS de los operadores) → data/ase/*.csv (ADR 0013; se descarga)
+mvn -pl rutea-app exec:java@second-area      # cargue lateral del ASE 2 con sus contenedores reales: camiones por turno, llenado y descarga → docs/benchmarks/f7-second-area/*.csv
 mvn -pl rutea-app exec:java@side-loading     # toneladas que cubre el cargue lateral de cada ASE con llenado de 50, 75 y 100 % → docs/benchmarks/f7-side-loading/*.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
