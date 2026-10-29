@@ -67,8 +67,10 @@ mvn -pl rutea-solver compile exec:java      # arnés de benchmarks → rutea-sol
 mvn -pl rutea-bench -am compile exec:java@compare   # el mismo arnés con Timefold disponible (--solver timefold)
 mvn -pl rutea-bench -am compile exec:exec@jmh       # microbenchmarks JMH de evaluación de movimientos
 mvn -pl rutea-geo compile exec:java          # grafo vial de Suba → data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
+mvn -pl rutea-geo compile exec:java@bogota   # grafo vial de todo Bogotá → data/osm/bogota.rgraph (F7)
 mvn -pl rutea-app exec:java@suba-instance    # instancia real de Suba → data/suba/SubaBase-n807-s1.vrp (ver data/suba/README.md)
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
+mvn -pl rutea-app exec:java@graphs           # Suba sobre el grafo de Suba y sobre el de Bogotá → docs/benchmarks/f7-bogota-graph/*.csv
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
 mvn -pl rutea-app exec:java@sectors          # las 12 UPZ de Suba de OSM (R04) → rutea-app/src/main/resources/sectors/suba-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
