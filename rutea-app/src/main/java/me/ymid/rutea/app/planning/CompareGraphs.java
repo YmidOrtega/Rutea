@@ -118,14 +118,14 @@ public final class CompareGraphs {
                     + onBogotaGraph.violations());
         }
 
-        // El ASE 2 aún no tiene base verificada: la matriz sale de la base de Suba, que solo cambia una fila.
         ServiceArea largest = ServiceAreas.ASE_2;
         int scaleCount = largest.nonRecyclableContainers();
         List<Container> spread = SimulatedContainers.place(bogota,
                 AreaScenario.streets(bogota, largest, Localities.bogota()), WasteStream.NON_RECYCLABLE, scaleCount, 160,
                 seed);
         int[] scalePoints = new int[scaleCount + 2];
-        scalePoints[0] = onBogota[0];
+        scalePoints[0] = bogota.vertexOf(largest.base().osmNode()).orElseThrow(() -> new IllegalStateException(
+                "el grafo de Bogotá no tiene la base del ASE " + largest.number() + "; reconstrúyelo"));
         for (int i = 0; i < scaleCount; i++) {
             scalePoints[i + 1] = spread.get(i).vertex();
         }

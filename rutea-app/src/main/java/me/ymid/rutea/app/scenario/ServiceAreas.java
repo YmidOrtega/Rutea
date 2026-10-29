@@ -65,11 +65,10 @@ public final class ServiceAreas {
      * @param compactorKg capacidad del compactador más común de la flota
      * @param containerLiters tamaños de los contenedores de no aprovechables en vía pública
      */
-    public record Operation(Base base, double sideLoadingShare, int collectionsPerWeek, String shiftStart,
-            int shiftSeconds, int compactorKg, List<Integer> containerLiters) {
+    public record Operation(double sideLoadingShare, int collectionsPerWeek, String shiftStart, int shiftSeconds,
+            int compactorKg, List<Integer> containerLiters) {
 
         public Operation {
-            Objects.requireNonNull(base, "base");
             Objects.requireNonNull(shiftStart, "shiftStart");
             containerLiters = List.copyOf(containerLiters);
         }
@@ -79,13 +78,15 @@ public final class ServiceAreas {
      * @param urbanAreaShare parte del suelo urbano de Bogotá que cubre la ASE ("cobertura de recolección área
      *     urbana" del PGIRS). Es la única participación por ASE publicada; Rutea la usa como aproximación de la parte
      *     de las toneladas y de los contenedores de la ciudad, un supuesto
-     * @param operation vacía mientras la base y las cifras del operador sean {@code PENDIENTE_VERIFICAR}
+     * @param base base de operaciones del operador, según su informe de la Superservicios
+     * @param operation vacía mientras las cifras del operador sean {@code PENDIENTE_VERIFICAR}
      */
     public record ServiceArea(int number, String operator, List<Locality> localities, double urbanAreaShare,
-            Optional<Operation> operation) {
+            Base base, Optional<Operation> operation) {
 
         public ServiceArea {
             Objects.requireNonNull(operator, "operator");
+            Objects.requireNonNull(base, "base");
             Objects.requireNonNull(operation, "operation");
             localities = List.copyOf(localities);
             if (localities.isEmpty()) {
@@ -141,8 +142,8 @@ public final class ServiceAreas {
 
         /** @throws IllegalStateException si la operación del operador sigue {@code PENDIENTE_VERIFICAR} */
         public Operation verified() {
-            return operation.orElseThrow(() -> new IllegalStateException("la ASE " + number + " no tiene la"
-                    + " operación del operador (base y cifras): está PENDIENTE_VERIFICAR en docs/datos.md"));
+            return operation.orElseThrow(() -> new IllegalStateException("la ASE " + number + " no tiene las cifras"
+                    + " de operación del operador: están PENDIENTE_VERIFICAR en docs/datos.md"));
         }
     }
 
@@ -152,7 +153,7 @@ public final class ServiceAreas {
      */
     public static final long DISPOSAL_OSM_NODE = 1013564592;
 
-    /** Promoambiental Distrito S.A.S. E.S.P. */
+    /** Promoambiental Distrito S.A.S. E.S.P. Base: Carrera 60 # 15-07, Puente Aranda. */
     public static final ServiceArea ASE_1 = new ServiceArea(1, "Promoambiental Distrito", List.of(
             new Locality(1, "Usaquén", 2214885, false),
             new Locality(2, "Chapinero", 1379547, false),
@@ -161,9 +162,9 @@ public final class ServiceAreas {
             new Locality(5, "Usme", 4740233, false),
             new Locality(17, "La Candelaria", 2218276, false),
             new Locality(20, "Sumapaz", 5579632, true)),
-            0.24, Optional.empty());
+            0.24, new Base("Carrera 60 # 15-07", "Puente Aranda", 8483428972L), Optional.empty());
 
-    /** Limpieza Metropolitana S.A. E.S.P. (LIME). */
+    /** Limpieza Metropolitana S.A. E.S.P. (LIME). Base: Carrera 62 # 19-04 Int. 4, Puente Aranda. */
     public static final ServiceArea ASE_2 = new ServiceArea(2, "LIME", List.of(
             new Locality(6, "Tunjuelito", 2216689, false),
             new Locality(7, "Bosa", 4740227, false),
@@ -173,19 +174,19 @@ public final class ServiceAreas {
             new Locality(16, "Puente Aranda", 2216655, false),
             new Locality(18, "Rafael Uribe Uribe", 4740230, false),
             new Locality(19, "Ciudad Bolívar", 4740228, false)),
-            0.31, Optional.empty());
+            0.31, new Base("Carrera 62 # 19-04 Int. 4", "Puente Aranda", 3868073372L), Optional.empty());
 
-    /** Ciudad Limpia Bogotá S.A. E.S.P. */
+    /** Ciudad Limpia Bogotá S.A. E.S.P. Base: Calle 59C Sur # 51-50, Ciudad Bolívar, fuera de su ASE. */
     public static final ServiceArea ASE_3 = new ServiceArea(3, "Ciudad Limpia", List.of(
             new Locality(8, "Kennedy", 4740229, false),
             new Locality(9, "Fontibón", 2216630, false)),
-            0.18, Optional.empty());
+            0.18, new Base("Calle 59C Sur # 51-50", "Ciudad Bolívar", 6580796244L), Optional.empty());
 
-    /** Bogotá Limpia S.A.S. E.S.P. */
+    /** Bogotá Limpia S.A.S. E.S.P. Base: Calle 63 # 96-05, Engativá. */
     public static final ServiceArea ASE_4 = new ServiceArea(4, "Bogotá Limpia", List.of(
             new Locality(10, "Engativá", 2214883, false),
             new Locality(12, "Barrios Unidos", 2214882, false)),
-            0.12, Optional.empty());
+            0.12, new Base("Calle 63 # 96-05", "Engativá", 5769034872L), Optional.empty());
 
     /**
      * Área Limpia Distrito Capital S.A.S. E.S.P., según la inspección de la Superservicios del 9 al 13 de marzo de
@@ -204,8 +205,8 @@ public final class ServiceAreas {
      */
     public static final ServiceArea ASE_5 = new ServiceArea(5, "Área Limpia", List.of(
             new Locality(11, "Suba", 2214884, false)),
-            0.15, Optional.of(new Operation(new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
-                    0.13, 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
+            0.15, new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
+            Optional.of(new Operation(0.13, 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100))));
 
     public static final List<ServiceArea> BOGOTA = List.of(ASE_1, ASE_2, ASE_3, ASE_4, ASE_5);
 

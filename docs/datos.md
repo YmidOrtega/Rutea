@@ -1,6 +1,6 @@
 # Datos de la operación en Suba
 
-Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente. En el código, las de toda Bogotá y los supuestos generales viven en `rutea-app/.../scenario/BogotaFigures.java`; las del operador (base, participación, cargue lateral, frecuencia, turno, compactador y contenedores), en la `Operation` de su ASE en `ServiceAreas.java`; y los sitios del grafo, en `rutea-geo/.../AreaSpec.java`. Si cambia una, se actualizan todos los lugares en el mismo cambio.
+Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente. En el código, las de toda Bogotá y los supuestos generales viven en `rutea-app/.../scenario/BogotaFigures.java`; la base de cada ASE, en su `ServiceArea`, y las cifras del operador (participación, cargue lateral, frecuencia, turno, compactador y contenedores), en su `Operation`, las dos en `ServiceAreas.java`; y los sitios del grafo, en `rutea-geo/.../AreaSpec.java`. Si cambia una, se actualizan todos los lugares en el mismo cambio.
 
 Las cifras de la Superservicios salen del [informe de inspección a Área Limpia](https://www.superservicios.gov.co/sites/default/files/inline-files/Area-Limpia-Distrito-Capital-SAS-ESP.pdf) (visita del 9 al 13 de marzo de 2026), que compara el PGIRS de Bogotá con el PPSA del operador.
 
@@ -13,10 +13,10 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
 
 | ASE | Operador | Localidades (número oficial) | Base |
 |---|---|---|---|
-| 1 | Promoambiental Distrito | Usaquén (1), Chapinero (2), Santa Fe (3), San Cristóbal (4), Usme (5), La Candelaria (17), Sumapaz (20) | Carrera 60 # 15-07, Puente Aranda (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo de OSM `PENDIENTE_VERIFICAR` |
-| 2 | LIME | Tunjuelito (6), Bosa (7), Teusaquillo (13), Los Mártires (14), Antonio Nariño (15), Puente Aranda (16), Rafael Uribe Uribe (18), Ciudad Bolívar (19) | Carrera 62 # 19-04 Int. 4, Puente Aranda (informe de la Superservicios, marzo de 2026); nodo de OSM `PENDIENTE_VERIFICAR` |
-| 3 | Ciudad Limpia | Kennedy (8), Fontibón (9) | Calle 59C Sur # 51-50 (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo de OSM `PENDIENTE_VERIFICAR` |
-| 4 | Bogotá Limpia | Engativá (10), Barrios Unidos (12) | Calle 63 # 96-05, Engativá (informe de la Superservicios, marzo de 2026); nodo de OSM `PENDIENTE_VERIFICAR` |
+| 1 | Promoambiental Distrito | Usaquén (1), Chapinero (2), Santa Fe (3), San Cristóbal (4), Usme (5), La Candelaria (17), Sumapaz (20) | Carrera 60 # 15-07, Puente Aranda (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 8483428972 |
+| 2 | LIME | Tunjuelito (6), Bosa (7), Teusaquillo (13), Los Mártires (14), Antonio Nariño (15), Puente Aranda (16), Rafael Uribe Uribe (18), Ciudad Bolívar (19) | Carrera 62 # 19-04 Int. 4, Puente Aranda (informe de la Superservicios, marzo de 2026); nodo OSM 3868073372 |
+| 3 | Ciudad Limpia | Kennedy (8), Fontibón (9) | Calle 59C Sur # 51-50, Ciudad Bolívar (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 6580796244 |
+| 4 | Bogotá Limpia | Engativá (10), Barrios Unidos (12) | Calle 63 # 96-05, Engativá (informe de la Superservicios, marzo de 2026); nodo OSM 5769034872 |
 | 5 | Área Limpia | Suba (11) | Av. Calle 17 # 124-81, Fontibón; nodo OSM 865490722 (ver abajo) |
 
 | Localidad | Relación OSM | Localidad | Relación OSM |
@@ -58,7 +58,15 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
   | 4 | 725,1 | 12,8 % | 12 % |
 
   Salvo en el ASE 1, el suelo urbano aproxima bien la parte de las toneladas.
-- **Bases y flotas:** las cinco bases y las flotas de las ASE 1 a 4 tienen fuente (ver "Inventario de fuentes por ASE"). Falta ubicar en OSM el nodo de las bases de las ASE 1 a 4.
+- **Bases y flotas:** las cinco bases y las flotas de las ASE 1 a 4 tienen fuente (ver "Inventario de fuentes por ASE").
+- **Nodo de cada base:** las bases de las ASE 1 a 4 están mapeadas en OSM, con el nombre del operador. El nodo es donde la vía del predio sale a la calle pública. Si no hay vía mapeada, es el punto de la calle más cercano al edificio. La localidad se comprobó con los polígonos de OSM.
+
+  | ASE | Predio en OSM | Nodo | Dónde |
+  |---|---|---:|---|
+  | 1 | Vía 458791813, "Promoambiental Distrito S.A E.S.P" (`building=industrial`) | 8483428972 | Salida a la Carrera 60, a unos 8 m de la esquina con la Calle 15 |
+  | 2 | Vía 881770228, "LIME S.A E.S.P" (`landuse=industrial`, `addr:street=Carrera 62`, `addr:housenumber=19-04`) | 3868073372 | Salida del patio a la Carrera 62 con Calle 20 |
+  | 3 | Vía 700784521, "Ciudad Limpia" (`landuse=industrial`) | 6580796244 | Salida del patio a la Calle 59C Sur (Av. Madelena). Queda en Ciudad Bolívar, fuera del ASE 3 |
+  | 4 | Vía 1210674921, "Bogota Limpia ESP SAS" (`building=yes`, `addr:street=Avenida Calle 63`) | 5769034872 | Calzada sur de la Av. Calle 63, a unos 31 m del edificio; no hay vía de acceso mapeada |
 - Sumapaz es toda rural. Su modelo de recolección es `PENDIENTE_VERIFICAR`.
 
 ### Inventario de fuentes por ASE (consultado el 2026-10-29)
@@ -254,6 +262,5 @@ Desde el centroide del PGIRS (Calle 145 cerca de la Carrera 84B, nodo OSM 515077
 
 - Población de Suba frente a la de Bogotá en la serie oficial DANE–SDP–RMBC (agosto de 2025). Hoy no se usa: se usa el 15 % del PGIRS.
 - Ubicación de los contenedores de Suba: la UAESP publica el total (320 aprobados), no dónde están.
-- Nodo de OSM de las bases de las ASE 1 a 4.
 - Toneladas del ASE 5 con la misma fuente que las demás.
 - Texto oficial de la Resolución CRA 1027 de 2026.

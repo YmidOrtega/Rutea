@@ -79,9 +79,8 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     static AreaScenario build(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
             Localities localities, long seed) {
-        Operation operation = area.verified();
         int count = area.nonRecyclableContainers();
-        return build(graph, area, selection, localities, ServiceAreas.DISPOSAL_OSM_NODE, operation.base().osmNode(),
+        return build(graph, area, selection, localities, ServiceAreas.DISPOSAL_OSM_NODE, area.base().osmNode(),
                 count, area.meanKgPerCollection(count), seed);
     }
 

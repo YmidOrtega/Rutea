@@ -36,9 +36,15 @@ class ServiceAreasTest {
         Locality suba = ServiceAreas.locality(11).orElseThrow();
 
         assertThat(suba.osmRelation()).isEqualTo(AreaSpec.SUBA.localityRelation());
-        assertThat(ServiceAreas.ASE_5.operation()).hasValueSatisfying(
-                operation -> assertThat(operation.base().osmNode()).isEqualTo(site(AreaSpec.DEPOT)));
-        assertThat(ServiceAreas.DISPOSAL_OSM_NODE).isEqualTo(site(AreaSpec.DISPOSAL));
+        assertThat(ServiceAreas.ASE_5.base().osmNode()).isEqualTo(site(AreaSpec.SUBA, AreaSpec.DEPOT));
+        assertThat(ServiceAreas.DISPOSAL_OSM_NODE).isEqualTo(site(AreaSpec.SUBA, AreaSpec.DISPOSAL));
+    }
+
+    @Test
+    void everyBaseIsASiteOfTheBogotaGraph() {
+        assertThat(ServiceAreas.BOGOTA).allSatisfy(area -> assertThat(area.base().osmNode())
+                .isEqualTo(site(AreaSpec.BOGOTA, AreaSpec.depot(area.number()))));
+        assertThat(ServiceAreas.DISPOSAL_OSM_NODE).isEqualTo(site(AreaSpec.BOGOTA, AreaSpec.DISPOSAL));
     }
 
     @Test
@@ -95,8 +101,8 @@ class ServiceAreasTest {
                 .hasMessageContaining("no es del catálogo");
     }
 
-    private static long site(String name) {
-        return AreaSpec.SUBA.sites().stream().filter(site -> site.name().equals(name)).findFirst().orElseThrow()
+    private static long site(AreaSpec spec, String name) {
+        return spec.sites().stream().filter(site -> site.name().equals(name)).findFirst().orElseThrow()
                 .osmNode();
     }
 }

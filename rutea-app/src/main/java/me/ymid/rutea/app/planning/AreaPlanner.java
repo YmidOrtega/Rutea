@@ -138,7 +138,7 @@ public final class AreaPlanner {
                 ? List.of(
                         new DemoPlan.Site("relleno", "Relleno Doña Juana · portería",
                                 lonLat(graph.latE7(scenario.gateVertex()), graph.lonE7(scenario.gateVertex()))),
-                        new DemoPlan.Site("base", "Base de " + area.operator() + " · " + operation.base().locality(),
+                        new DemoPlan.Site("base", "Base de " + area.operator() + " · " + area.base().locality(),
                                 lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))))
                 : List.of(new DemoPlan.Site("eca", "ECA supuesta · centro de " + area.name(),
                         lonLat(graph.latE7(scenario.depotVertex()), graph.lonE7(scenario.depotVertex()))));

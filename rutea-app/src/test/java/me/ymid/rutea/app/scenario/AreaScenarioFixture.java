@@ -27,7 +27,7 @@ public final class AreaScenarioFixture {
     static final Locality EAST = new Locality(2, "Este", 92, false);
     static final Locality FARM = new Locality(20, "Campo", 93, true);
     static final ServiceArea TWO_HALVES = new ServiceArea(9, "Prueba", List.of(WEST, EAST, FARM), 1,
-            ServiceAreas.ASE_5.operation());
+            ServiceAreas.ASE_5.base(), ServiceAreas.ASE_5.operation());
     static final Localities HALVES_TOWN = new Localities(Map.of(WEST, rectangle(-1, -1, 11, 6), EAST,
             rectangle(-1, 6, 11, 11), FARM, rectangle(-30, 30, -20, 50)));
 

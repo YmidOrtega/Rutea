@@ -47,7 +47,7 @@ public final class ExportAreaInstance {
                 + " el regreso a la base (%d m por camión) no entra; distancias en metros por la red vial del extracto"
                 + " OSM con SHA-256 %s; cifras y fuentes en docs/datos.md. Datos © colaboradores de OpenStreetMap,"
                 + " ODbL 1.0", scenario.area().name(), scenario.area().number(), instance.customerCount(), seed,
-                scenario.operation().base().locality(), scenario.returnMeters(),
+                scenario.area().base().locality(), scenario.returnMeters(),
                 RoadGraphFile.hex(stored.sourceSha256()));
         CvrplibWriter.writeExplicit(file, instance, comment);
         System.out.printf(Locale.ROOT, "%s: %d nodos, capacidad %d kg, %d kg en total (%,d bytes)%n", file,
