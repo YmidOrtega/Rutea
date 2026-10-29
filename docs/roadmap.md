@@ -12,7 +12,8 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F3 | Mapa real: Suba completa | Completa |
 | F4 | Restricciones del dominio | Completa |
 | F5 | Operación en tiempo real | Completa |
-| F6 | Producto y publicación | **Siguiente** |
+| F6 | Producto y publicación | Completa |
+| F7 | Bogotá por ASE | **Siguiente** |
 
 ## F0 — Fundamentos (1–2 semanas)
 
@@ -220,13 +221,32 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 **Criterio de cierre:** alguien clona el repo, ejecuta un comando y ve la zona piloto funcionando. **Cumplido** el 2026-10-22: un clon nuevo de `main` (7ab1c2c), con volúmenes vacíos, levanta con `docker compose up`; los datos de OSM se descargan y pasan el SHA-256, Flyway crea el esquema en PostGIS, `GET /api/plan` responde con las 15 rutas y los 1.612 contenedores, y el mapa se dibuja en http://localhost:8080. La imagen salió de la caché de Docker de esta máquina, así que el tiempo de la primera construcción no quedó medido.
 
+## F7 — Bogotá por ASE (4–6 semanas)
+
+Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planifica por ASE: cada ASE con al menos una localidad elegida es una instancia CVRP independiente, con su base, su flota y sus cifras, y todas se resuelven en paralelo (ADR 0012). Nunca se resuelve un CVRP de toda la ciudad, porque ningún camión recoge fuera de su ASE.
+
+- [ ] Catálogo versionado: las 20 localidades con su relación de OSM y su ASE, y cada ASE con su operador y su base (nodo de OSM). Hay que verificar el reparto contra la UAESP; hasta entonces, `PENDIENTE_VERIFICAR`. Sumapaz entra marcada como rural.
+- [ ] Refactor sin cambio de comportamiento: `AreaSpec` admite varias relaciones, y `BuildRoadGraph`, el escenario, el planificador, los sectores y los sitios sensibles reciben el área en lugar de suponer Suba. Se cumple si `suba.rgraph`, `SubaBase-n807-s1.vrp` y `plan-suba.json` salen con los mismos bytes que hoy.
+- [ ] Grafo de Bogotá: las calles públicas de las 20 localidades y los sitios de todas las ASE. Se miden los vértices, los arcos, el tamaño, el tiempo de construcción y el tiempo de la matriz de la ASE más grande. Suba sobre este grafo: la diferencia en km frente a F3, medida y publicada, sin reescribir las cifras anteriores.
+- [ ] Cifras por ASE en `docs/datos.md`: la participación de cada ASE en el PGIRS, y la flota, la base y los turnos de cada operador (informes de inspección de la Superservicios). Lo que no tenga fuente queda `PENDIENTE_VERIFICAR`.
+- [ ] Contenedores por ASE completa, con semilla, y la selección solo filtra. Tests: un contenedor queda en el mismo lugar y con la misma carga con cualquier selección, y elegir todas las localidades de una ASE reproduce la instancia de esa ASE.
+- [ ] Segunda ASE: una del sur, cerca de Doña Juana, el extremo opuesto a Suba (muchos viajes cortos en lugar de pocos largos). Prueba `ShiftScheduler` y el encadenamiento de viajes con otra forma de problema.
+- [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
+- [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.
+- [ ] Normativa por ASE: sectores (UPZ) y sitios sensibles de toda Bogotá; R02, R03, R04 y R07 revisadas en cada plan.
+- [ ] API y WebSocket: la selección viaja en la petición, el plan responde por ASE, los eventos llevan su ASE y `docs/api.md` se actualiza con su test.
+- [ ] Mapa: selector de localidades y cada ASE con su flota, según `docs/diseno.md`.
+- [ ] Benchmarks: una instancia `.vrp` por ASE y una fila por ASE en la tabla del arnés, en frío y en caliente.
+- [ ] Release de datos de Bogotá con `SHA256SUMS`; `docker compose up` sigue siendo un solo comando.
+
+**Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada.
+
 ## Más adelante (sin fase asignada)
 
-- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá.
+- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Pendiente de verificar con la UAESP y el operador de cada zona qué esquema aplica hoy en Bogotá. Con F7, si una ASE recoge casa por casa, su instancia cambia de modelo, no solo de datos.
 
 ## Después (fuera de alcance por ahora)
 
-- Toda Bogotá o varias localidades a la vez.
 - Tráfico en tiempo real de un proveedor externo.
 - App móvil para conductores.
 - Integración con sensores IoT reales.

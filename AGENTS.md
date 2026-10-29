@@ -143,4 +143,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F6 — Producto y publicación.** Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F7 — Bogotá por ASE.** Seleccionar localidades, planificar por ASE (ADR 0012). Ver `docs/roadmap.md` para el estado y el criterio de cierre.
