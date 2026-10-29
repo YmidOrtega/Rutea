@@ -241,6 +241,20 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Las vías privadas solo entran al grafo cerca de un sitio: las del relleno son privadas para el público, no para los compactadores.
 - `PENDIENTE_VERIFICAR`: **150 kg/m³ de residuos sueltos en el contenedor**. No hay cifra publicada para Bogotá: el estudio de caracterización de la UAESP (Consorcio NCU, 2017) reporta producción per cápita, no densidad. 150 kg/m³ es el valor de manual para "basura suelta en recipientes" (Tchobanoglous, 1993), citado en el [estudio de caracterización de CONAMA RM y la PUCV (2006)](https://santiagorecicla.mma.gob.cl/wp-content/uploads/2016/04/infor_residuos_conama2011.pdf). `SensorBenchmark` mide qué pasa con 100 y 200 kg/m³.
 - Supuesto: **cada contenedor tiene uno de los tres tamaños que declara el operador, al azar**. No se conoce la mezcla.
+- `PENDIENTE_VERIFICAR`: **llenado medio al recoger del 100 %** (ADR 0013; `SideLoading`). La carga de cada contenedor real es litros × 150 kg/m³ × el llenado. No hay dato de llenado. Los planes usan la cota alta para no quedarse cortos de camiones, y el plan se reporta también con 50 y 75 %. El 13 % de toneladas por cargue lateral que declara Área Limpia no acota el llenado: con los 320 contenedores aprobados haría falta un llenado del 84 % si todos fueran de 3.200 L, del 112 % si fueran de 2.400 L y del 245 % si fueran de 1.100 L, y no se publica la mezcla.
+- Supuesto: **los contenedores de las ASE 2 y 4 se recogen 3 veces por semana**, la frecuencia residencial que declaran los dos operadores. Sus capas no traen la frecuencia (en la de LIME, el campo `FRECUENCIA` está vacío), así que también se mide con 6. El ASE 1 publica 3 para sus 168 contenedores (campo `Frecuencia` de su capa), y el ASE 3 declara 6 para la atención de contenedores.
+- **Cuánto cubre el cargue lateral** (`mvn -pl rutea-app exec:java@side-loading`, CSV en `docs/benchmarks/f7-side-loading/`), en toneladas por día y parte de las toneladas de la ASE:
+
+  | ASE | Contenedores | Veces por semana | 50 % | 75 % | 100 % |
+  |---|---|---|---:|---:|---:|
+  | 1 | 168 reales, 201 m³ | 3 | 6,5 · 0,6 % | 9,7 · 0,8 % | 12,9 · 1,1 % |
+  | 2 | 990 reales, 2.178 m³ | 3 (supuesto) | 70,0 · 3,9 % | 105,2 · 5,8 % | 140,0 · 7,8 % |
+  | 2 | | 6 (supuesto) | 140,0 · 7,8 % | 210,4 · 11,7 % | 280,0 · 15,5 % |
+  | 3 | 91 del plan, 100 m³ | 6 | 6,5 · 0,6 % | 9,7 · 0,9 % | 12,9 · 1,2 % |
+  | 4 | 763 reales, 1.831 m³ | 3 (supuesto) | 58,9 · 8,1 % | 88,3 · 12,2 % | 117,7 · 16,2 % |
+  | 4 | | 6 (supuesto) | 117,7 · 16,2 % | 176,6 · 24,4 % | 235,4 · 32,5 % |
+
+  En las ASE 1 y 3, el cargue lateral es cerca del 1 % de las toneladas con cualquier llenado. Las toneladas son las de la Superservicios (ver "Toneladas por ASE"); las del ASE 5 son `PENDIENTE_VERIFICAR`.
 - Supuesto: **la generación es pareja a lo largo del día**. No se encontró una curva horaria de presentación de residuos para Bogotá, y una inventada no sería honesta.
 - **Patrón por día:** se recoge de lunes a sábado (6 veces por semana), así que el lunes cada contenedor carga dos días. Sale de la frecuencia declarada, no es un supuesto aparte.
 - **Patrón por zona:** el estudio de la UAESP (2017) midió la producción per cápita por estrato y localidad, pero la tabla no está publicada en lo que se encontró (solo el promedio de la ciudad, 0,855 kg/hab-día). Sin ella, los sensores no distinguen zonas.

@@ -140,6 +140,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>side-loading</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.CompareSideLoading</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f7-side-loading</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>localities</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExtractLocalities</mainClass>
