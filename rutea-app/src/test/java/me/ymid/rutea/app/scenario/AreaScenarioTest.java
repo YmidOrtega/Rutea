@@ -78,6 +78,24 @@ class AreaScenarioTest {
     }
 
     @Test
+    void anOfficialCountIsPlacedLikeF3AndLoadsByCapacity() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        List<Integer> liters = List.of(3_200, 1_100);
+
+        AreaScenario planned = AreaScenario.buildPlanned(town, ServiceAreas.ASE_5, SideLoading.ASE_5_NIGHT, 12,
+                liters, 1.0, 4, AreaScenarioFixture.SUBA_TOWN, 24, 30);
+        AreaScenario simulated = AreaScenarioFixture.town(dir, 12, 160);
+
+        assertThat(planned.instance().name()).isEqualTo("SubaNoche-n13-s4-f100");
+        assertThat(planned.containers()).extracting(Container::vertex)
+                .containsExactlyElementsOf(simulated.containers().stream().map(Container::vertex).toList());
+        assertThat(planned.containers()).extracting(Container::kg).allMatch(kg -> kg == 480 || kg == 165)
+                .contains(480, 165);
+        assertThat(planned.operation().maxTripsPerTruck()).isEqualTo(SideLoading.MAX_TRIPS_PER_TRUCK);
+        assertThat(planned.operation().shiftStart()).isEqualTo("18:00");
+    }
+
+    @Test
     void survivesTheRoundTripThroughCvrplib() throws IOException {
         Instance instance = AreaScenarioFixture.town(dir, 12, 160).instance();
         Path file = dir.resolve(instance.name() + ".vrp");

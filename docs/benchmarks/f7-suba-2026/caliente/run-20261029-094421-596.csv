@@ -1,0 +1,4 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+SubaNoche-n321-s1-f100,320,alns,1,60000,,791849,,,true,60000.008,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaNoche-n321-s1-f100,320,alns,2,60000,,791774,,,true,60000.009,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaNoche-n321-s1-f100,320,alns,3,60000,,792347,,,true,60000.636,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13

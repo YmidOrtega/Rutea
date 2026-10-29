@@ -105,13 +105,19 @@ public final class SideLoading {
 
     public static final Shift ASE_2_NIGHT = new Shift("Noche", "NOCHE", "18:30", 10 * 3600);
 
+    /**
+     * El turno de 18:00 a 02:00 del ASE 5, el mismo de su {@link ServiceAreas.Operation}. Sus contenedores no tienen
+     * ubicación publicada: todos se simulan en este turno.
+     */
+    public static final Shift ASE_5_NIGHT = new Shift("Noche", "", "18:00", 8 * 3600);
+
     public static final List<Area> AREAS = List.of(
             new Area(ServiceAreas.ASE_1, Optional.of(1_169.0), 3, true, OptionalInt.of(3), List.of()),
             new Area(ServiceAreas.ASE_2, Optional.of(1_804.7), 3, false, OptionalInt.of(5),
                     List.of(ASE_2_DAY, ASE_2_NIGHT)),
             new Area(ServiceAreas.ASE_3, Optional.of(1_075.0), 6, true, OptionalInt.empty(), List.of()),
             new Area(ServiceAreas.ASE_4, Optional.of(725.1), 3, false, OptionalInt.empty(), List.of()),
-            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true, OptionalInt.empty(), List.of()));
+            new Area(ServiceAreas.ASE_5, Optional.empty(), 6, true, OptionalInt.empty(), List.of(ASE_5_NIGHT)));
 
     /** Contenedores negros del Plan de Contenerización de 2026 del ASE 3: 91 de 1.100 L, sin ubicación publicada. */
     public static final int ASE_3_CONTAINERS = 91;

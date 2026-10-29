@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.function.IntPredicate;
 
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
@@ -171,6 +172,36 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         }
         String name = String.format(Locale.ROOT, "%s%s-n%d-f%d", area.name().replace(" ", ""), shift.name(),
                 containers.size() + 1, Math.round(fill * 100));
+        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
+                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+    }
+
+    /**
+     * La cantidad oficial de contenedores de una ASE que no publica su ubicación, como el ASE 5 (ADR 0013). Se ubican
+     * con el método de F3 sobre las calles de la ASE, cada uno con un tamaño al azar entre {@code liters}, y cargan
+     * por capacidad ({@link SideLoading#kgAtCollection}).
+     */
+    public static AreaScenario buildPlanned(RoadGraph graph, ServiceArea area, SideLoading.Shift shift, int count,
+            List<Integer> liters, double fill, long seed) {
+        return buildPlanned(graph, area, shift, count, liters, fill, seed, Localities.bogota(), area.base().osmNode(),
+                ServiceAreas.DISPOSAL_OSM_NODE);
+    }
+
+    static AreaScenario buildPlanned(RoadGraph graph, ServiceArea area, SideLoading.Shift shift, int count,
+            List<Integer> liters, double fill, long seed, Localities localities, long depotNode, long gateNode) {
+        Operation operation = SideLoading.of(area).operation(shift);
+        // La carga media no importa: cada carga se reemplaza por la de la capacidad.
+        List<Container> placed = SimulatedContainers.place(graph, streets(graph, area, localities),
+                WasteStream.NON_RECYCLABLE, count, 1, seed);
+        SplittableRandom sizes = new SplittableRandom(seed * 31 + 29);
+        List<Container> containers = new ArrayList<>(placed.size());
+        for (Container c : placed) {
+            int size = liters.get(sizes.nextInt(liters.size()));
+            containers.add(new Container(c.id(), c.stream(), c.latE7(), c.lonE7(), c.vertex(), c.shape(),
+                    SideLoading.kgAtCollection(size, fill)));
+        }
+        String name = String.format(Locale.ROOT, "%s%s-n%d-s%d-f%d", area.name().replace(" ", ""), shift.name(),
+                count + 1, seed, Math.round(fill * 100));
         return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
                 vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
     }

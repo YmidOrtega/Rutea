@@ -76,6 +76,8 @@ Pendiente de F2: comparar contra Timefold afinado (aquí va con su configuració
 
 ## F3 — Mapa real: Suba completa (3–4 semanas)
 
+> **806 contenedores simulados (supuesto de 2022).** Las cifras de Suba de esta fase salen de los 806 contenedores negros simulados con la base de 2022 (`SubaBase-n807-s1`, o la semilla 7 en el plan de demo). La Suba de 2026 tiene 320 en su Plan de Contenerización, y la diferencia está medida en F7 (ADR 0013).
+
 Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre instancias de prueba y pasa a ser una solución que funcione en el mundo real, para tomar decisiones con base en ella. Por eso F3 cubre toda la localidad y adelanta de F4 los viajes de descarga.
 
 - Contenedores **simulados realistas** en toda Suba: unos 1.700, sobre calles residenciales reales y con densidad según la vivienda. La cifra sale de repartir por población los 10.746 contenedores que tenía Bogotá en 2022. Se reemplazan cuando aparezca un inventario oficial (UAESP o Área Limpia, operador del ASE 5).
@@ -135,6 +137,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 ## F4 — Restricciones del dominio (3 semanas)
 
+> **806 contenedores simulados (supuesto de 2022).** Las cifras de Suba de esta fase salen de los 806 contenedores negros simulados con la base de 2022 (`SubaBase-n807-s1`, o la semilla 7 en el plan de demo). La Suba de 2026 tiene 320 en su Plan de Contenerización, y la diferencia está medida en F7 (ADR 0013).
+
 - Ventanas horarias y turnos (R02).
 - Varios viajes por turno: ruta → descarga → ruta.
 - Flota heterogénea: compactadores para no aprovechables, vehículos de carga para aprovechables (R06, R10).
@@ -182,6 +186,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 
 ## F5 — Operación en tiempo real (3 semanas)
 
+> **806 contenedores simulados (supuesto de 2022).** Las cifras de Suba de esta fase salen de los 806 contenedores negros simulados con la base de 2022 (`SubaBase-n807-s1`, o la semilla 7 en el plan de demo). La Suba de 2026 tiene 320 en su Plan de Contenerización, y la diferencia está medida en F7 (ADR 0013).
+
 - Reloj de simulación acelerable.
 - Sensores de llenado simulados, con patrones por zona y día.
 - Eventos: avería (R05), vía cerrada, contenedor desbordado.
@@ -211,6 +217,8 @@ Decidido el 2026-10-20: el objetivo deja de ser la solución perfecta sobre inst
 - [x] Sensores de llenado simulados (ADR 0009). Cada contenedor de no aprovechables tiene un sensor que transmite su llenado en pasos de 5 %. Si llega al 100 % antes de que un camión llegue a él, el servidor lo despacha solo, como un desborde. El modelo usa la carga simulada, los tamaños que declara el operador y 150 kg/m³ de densidad (`PENDIENTE_VERIFICAR`). El patrón por día sale de la frecuencia: el lunes se acumulan dos días. No hay patrón por zona, porque no se encontró la producción por estrato. Medido con `mvn -pl rutea-app exec:java@sensors`: un día cualquiera se desborda el 8,6 % de los contenedores (29,5 % de los de 1.100 L); un lunes, el 34,5 %. Con turno nocturno, los sensores no acortan el desborde (P50 de 3:28 a 3:26), porque casi la mitad ocurre antes de las 18:00. Lo que decide es el tamaño del contenedor y la recolección del domingo.
 
 ## F6 — Producto y publicación (2–3 semanas)
+
+> **806 contenedores simulados (supuesto de 2022).** Las cifras de Suba de esta fase salen de los 806 contenedores negros simulados con la base de 2022 (`SubaBase-n807-s1`, o la semilla 7 en el plan de demo). La Suba de 2026 tiene 320 en su Plan de Contenerización, y la diferencia está medida en F7 (ADR 0013).
 
 - [x] Docker Compose: `docker compose up` levanta los datos de OSM (de un release, verificados por SHA-256), PostGIS y la app con el mapa (ADR 0010).
 - [x] Persistencia en PostgreSQL + PostGIS (ADR 0010). Se guardan las órdenes de cada turno y, al reiniciar, se repiten: 52 órdenes en 433 ms, con los mismos 53 eventos. Cada posición transmitida queda como punto de PostGIS (R08).
@@ -284,7 +292,29 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
   - **La descarga en Doña Juana pesa tanto como el llenado:** al 75 %, pasar de 40 a 90 min sube la flota de día de 5 a 7 camiones.
   - **Partir en grupos:** solo hace falta con 26 viajes, de día al 100 %. Ahí el reparto da 8 y 9 camiones, y la cota inferior, 7. La cota es la mayor entre el tiempo de los viajes y el número de viajes entre 4, y con 4 viajes por camión ninguna de las dos es ajustada. En los demás casos el reparto es exacto.
   - **Escenario:** de 2,0 a 3,1 s por turno, casi todo en ubicar cada contenedor en su trazo, que recorre todos los trazos del grafo. La matriz del ASE 2 de `exec:java@graphs`, con la base de LIME, salió a 3–5 % de la medida anterior con un núcleo ocupado por el navegador. No se reemplaza la cifra publicada.
-- [ ] Suba de 2026 (ADR 0013): instancia nueva con los 320 contenedores del plan aprobado. `SubaBase-n807-s1` queda congelada en el arnés, las cifras de F3 a F6 se rotulan como de 806 contenedores simulados, y la diferencia entre las dos se mide y se publica.
+- [x] Suba de 2026 (ADR 0013, 2026-10-29): `SubaNoche-n321-s1-f100`, con los 320 contenedores del plan aprobado. Su ubicación no se publica, así que se simulan con el método de F3 y la misma semilla. Cada uno tiene un tamaño al azar entre los tres de Área Limpia y carga por capacidad, en el turno de 18:00 a 02:00 y con hasta 4 viajes por camión (`AreaScenario.buildPlanned`). `mvn -pl rutea-app exec:java@suba-instance` escribe las dos instancias. `SubaBase-n807-s1` queda congelada, con los mismos bytes, y las cifras de F3 a F6 llevan su rótulo al comienzo de cada fase.
+  - **Diferencia** (`mvn -pl rutea-app exec:java@suba-2026`; mismo grafo y misma ubicación; ALNS con semilla 1 y 2.000 iteraciones, la de F4, determinista; CSV en `docs/benchmarks/f7-suba-2026/`). La fila de los 806 reproduce las cifras de F4: 9 y 16 camiones.
+
+    | Instancia | Contenedores | t/día | Parte de las 852 t/día supuestas | Viajes | km del solver | Camiones, 40 / 90 min |
+    |---|---:|---:|---:|---:|---:|---:|
+    | `SubaBase-n807-s1` (2022) | 806 | 110,1 | 12,9 % | 17 | 1.017,5 | 9 / 16 |
+    | 2026, llenado del 50 % | 320 | 47,4 | 5,6 % | 7 | 492,5 | 5 / 7 |
+    | 2026, llenado del 75 % | 320 | 71,0 | 8,3 % | 11 | 654,2 | 6 / 9 |
+    | 2026, llenado del 100 % | 320 | 94,7 | 11,1 % | 14 | 796,6 | 7 / 8 |
+
+    Con 320 contenedores llenos, Suba recoge por cargue lateral un 14 % menos que con los 806 de 2022, con un 22 % menos de km del solver y 2 camiones menos con 40 min de descarga. El 11,1 % queda por debajo del 13 % mínimo que declara el PPSA: o los contenedores llegan más llenos o más densos, o la mezcla de tamaños es más grande que la supuesta. Con 90 min de descarga, al 75 % hacen falta más camiones que al 100 % (9 frente a 8): ALNS minimiza km, no camiones, y sus viajes cambian con la carga. La flota como resultado (paso siguiente) lo tiene que tener en cuenta.
+  - **Arnés** (60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.12; 6 procesos a la vez, con el navegador abierto; CSV en `docs/benchmarks/f7-suba-2026/frio` y `caliente`):
+
+    | Solver | En frío (prom.; mín.–máx.) | En caliente (prom.; mín.–máx.) | Viajes |
+    |---|---:|---:|---:|
+    | `nearest-neighbor` | 889,2 km | 889,2 km | 14 |
+    | `clarke-wright` | 863,9 km | 863,9 km | 15 |
+    | `local-search` | 840,6 km; 839,6–841,2 | igual | 15 |
+    | `alns` | 791,5 km; 791,0–792,3 | 792,0 km; 791,8–792,3 | 14 |
+    | `alns-x4` | **790,5 km**; 789,8–791,1 | **791,5 km**; 790,6–792,7 | 14 |
+    | `timefold` 2.7.1, configuración por defecto | 832,7 km; 827,2–838,8 | 832,4 km; 829,5–836,9 | 14 |
+
+    Las 36 soluciones son factibles según el `Evaluator`. Con 321 nodos, Timefold queda un 5 % por encima de `alns-x4`, frente al 35 % con los 807 de `SubaBase-n807-s1`. Entre `alns` y `alns-x4`, y entre frío y caliente, las diferencias (≤ 0,2 %) están dentro de la dispersión entre semillas.
 - [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
 - [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.
 - [ ] Normativa por ASE: sectores (UPZ) y sitios sensibles de toda Bogotá; R02, R03, R04 y R07 revisadas en cada plan.

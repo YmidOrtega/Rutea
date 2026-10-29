@@ -3,6 +3,7 @@ package me.ymid.rutea.app.scenario;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 
 import me.ymid.rutea.geo.RoadGraphFile;
@@ -38,16 +39,29 @@ public final class ExportAreaInstance {
         }
 
         RoadGraphFile.Stored stored = RoadGraphFile.read(graphFile);
-        AreaScenario scenario = AreaScenario.build(stored.graph(), ServiceAreas.ASE_5, seed);
-        Instance instance = scenario.instance();
         Files.createDirectories(outDir);
+        AreaScenario frozen = AreaScenario.build(stored.graph(), ServiceAreas.ASE_5, seed);
+        // El texto de la instancia congelada no cambia: sus bytes son la referencia del arnés (ADR 0013).
+        write(stored, frozen, outDir, String.format(Locale.ROOT, "%d contenedores negros simulados (semilla %d)",
+                frozen.instance().customerCount(), seed));
+        List<Integer> liters = ServiceAreas.ASE_5.verified().containerLiters();
+        AreaScenario planned = AreaScenario.buildPlanned(stored.graph(), ServiceAreas.ASE_5, SideLoading.ASE_5_NIGHT,
+                SideLoading.ASE_5_CONTAINERS, liters, SideLoading.MEAN_FILL, seed);
+        write(stored, planned, outDir, String.format(Locale.ROOT, "los %d contenedores negros del Plan de"
+                + " Contenerización de 2026, con ubicación simulada (semilla %d) y un tamaño al azar entre %s L; carga"
+                + " por capacidad con llenado del %.0f %%", SideLoading.ASE_5_CONTAINERS, seed, liters,
+                SideLoading.MEAN_FILL * 100));
+    }
+
+    private static void write(RoadGraphFile.Stored stored, AreaScenario scenario, Path outDir, String containers)
+            throws IOException {
+        Instance instance = scenario.instance();
         Path file = outDir.resolve(instance.name() + ".vrp");
-        String comment = String.format(Locale.ROOT, "%s (ASE %d): %d contenedores negros simulados (semilla %d);"
-                + " el depósito sale de la base de %s (fila 1) y llega a la portería de Doña Juana (columna 1);"
-                + " el regreso a la base (%d m por camión) no entra; distancias en metros por la red vial del extracto"
-                + " OSM con SHA-256 %s; cifras y fuentes en docs/datos.md. Datos © colaboradores de OpenStreetMap,"
-                + " ODbL 1.0", scenario.area().name(), scenario.area().number(), instance.customerCount(), seed,
-                scenario.area().base().locality(), scenario.returnMeters(),
+        String comment = String.format(Locale.ROOT, "%s (ASE %d): %s; el depósito sale de la base de %s (fila 1) y"
+                + " llega a la portería de Doña Juana (columna 1); el regreso a la base (%d m por camión) no entra;"
+                + " distancias en metros por la red vial del extracto OSM con SHA-256 %s; cifras y fuentes en"
+                + " docs/datos.md. Datos © colaboradores de OpenStreetMap, ODbL 1.0", scenario.area().name(),
+                scenario.area().number(), containers, scenario.area().base().locality(), scenario.returnMeters(),
                 RoadGraphFile.hex(stored.sourceSha256()));
         CvrplibWriter.writeExplicit(file, instance, comment);
         System.out.printf(Locale.ROOT, "%s: %d nodos, capacidad %d kg, %d kg en total (%,d bytes)%n", file,

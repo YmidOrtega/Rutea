@@ -105,7 +105,7 @@ Every figure comes from the benchmark harness, with instance, seed, time limit a
 | `alns` | 0.35% | 2.02% | 8 |
 | Timefold 2.7.1, default configuration | 2.01% | 6.11% | 0 |
 
-**Suba vs. a quadrant sweep** — the 806 non-recyclable containers, one truck per trip in both plans:
+**Suba vs. a quadrant sweep** — the 806 simulated non-recyclable containers (2022 assumption; see below), one truck per trip in both plans:
 
 | Method | km | Hours | t CO₂ |
 |---|---:|---:|---:|
@@ -123,6 +123,15 @@ Every figure comes from the benchmark harness, with instance, seed, time limit a
 | Repair the matrix after a road closure | 9.2 ms | 41.7 ms |
 
 The 3-hour service-restoration rule (R05) holds in all 500 breakdowns: in the worst case the reserve truck arrives in 76 min.
+
+**Suba in 2026** — the figures above use 806 containers simulated from a 2022 city-wide count. In 2026 the operator's approved containerization plan has 320 ([ADR 0013](docs/adr/0013-contenedores-reales-de-2026.md), in Spanish). Their locations are not published, so they are simulated the same way; same graph, ALNS seed 1, 2,000 iterations:
+
+| Instance | Containers | t/day | Trips | Solver km | Trucks (40 / 90 min unload) |
+|---|---:|---:|---:|---:|---:|
+| 2022 assumption (`SubaBase-n807-s1`) | 806 | 110.1 | 17 | 1,017.5 | 9 / 16 |
+| 2026, containers full | 320 | 94.7 | 14 | 796.6 | 7 / 8 |
+
+On the 2026 instance, 60 s, seeds 1–3: `alns-x4` 790.5 km cold and 791.5 km warm; Timefold 2.7.1 832.7 km (5% above).
 
 ---
 
