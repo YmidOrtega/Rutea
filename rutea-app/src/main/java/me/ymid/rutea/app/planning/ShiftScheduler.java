@@ -13,8 +13,10 @@ import me.ymid.rutea.solver.Solution;
  * base → viaje → descarga en el relleno → viaje → descarga → base. El primer viaje de cada camión sale de la
  * base y los siguientes, de la portería; cada uno se recorre en el sentido que mide menos.
  *
- * <p>La asignación es exacta: programación dinámica sobre los subconjuntos de viajes, que minimiza primero los
- * camiones y después los km. Con {@code maxTripsPerTruck = 1} da un camión por viaje.
+ * <p>Hasta {@link #MAX_EXACT_TRIPS} viajes la asignación es exacta: programación dinámica sobre los subconjuntos de
+ * viajes, que minimiza primero los camiones y después los km. Con más, los viajes se parten en grupos que se asignan
+ * exactos por separado, y el reparto lleva una cota inferior de camiones para saber cuánto podría sobrar. Con
+ * {@code maxTripsPerTruck = 1} da un camión por viaje.
  *
  * <p>Varios viajes solo se encadenan si caben en el turno. Un viaje que ni solo cabe no se descarta: queda en
  * su propio camión, marcado como horas extra, porque eso también es un dato del plan.
@@ -33,10 +35,23 @@ public final class ShiftScheduler {
     public record Truck(int[] trips, boolean[] reversed, long meters, long seconds) {
     }
 
-    public record Schedule(List<Truck> trucks, int unloadSeconds, int shiftSeconds) {
+    /**
+     * @param lowerBound ningún reparto de estos viajes usa menos camiones; es {@code trucks.size()} cuando la
+     *     asignación es exacta
+     */
+    public record Schedule(List<Truck> trucks, int unloadSeconds, int shiftSeconds, int lowerBound) {
 
         public Schedule {
             trucks = List.copyOf(trucks);
+        }
+
+        public Schedule(List<Truck> trucks, int unloadSeconds, int shiftSeconds) {
+            this(trucks, unloadSeconds, shiftSeconds, trucks.size());
+        }
+
+        /** Se sabe que no hay reparto con menos camiones. */
+        public boolean fewestTrucks() {
+            return trucks.size() == lowerBound;
         }
 
         public long meters() {
@@ -54,38 +69,108 @@ public final class ShiftScheduler {
 
     public static Schedule schedule(AreaScenario scenario, Solution solution, int serviceSeconds, int unloadSeconds,
             int shiftSeconds, int maxTripsPerTruck) {
-        int n = solution.routeCount();
-        if (n > MAX_EXACT_TRIPS) {
-            throw new IllegalArgumentException(n + " viajes; la asignación exacta admite hasta " + MAX_EXACT_TRIPS);
-        }
         if (maxTripsPerTruck < 1 || maxTripsPerTruck > 3) {
             throw new IllegalArgumentException("de 1 a 3 viajes por camión, no " + maxTripsPerTruck);
         }
         Trips trips = new Trips(scenario, solution, serviceSeconds);
+        int n = solution.routeCount();
+        List<Truck> trucks = new ArrayList<>();
+        if (n <= MAX_EXACT_TRIPS) {
+            int[] all = new int[n];
+            Arrays.setAll(all, i -> i);
+            trucks.addAll(exact(trips, all, unloadSeconds, shiftSeconds, maxTripsPerTruck));
+        } else {
+            for (int[] group : groups(trips, n, unloadSeconds)) {
+                trucks.addAll(exact(trips, group, unloadSeconds, shiftSeconds, maxTripsPerTruck));
+            }
+        }
+        // El orden de salida sigue el del primer viaje de cada camión: es determinista y fácil de leer.
+        trucks.sort((x, y) -> Integer.compare(x.trips()[0], y.trips()[0]));
+        int lowerBound = n <= MAX_EXACT_TRIPS ? trucks.size()
+                : lowerBound(trips, n, unloadSeconds, shiftSeconds, maxTripsPerTruck);
+        return new Schedule(trucks, unloadSeconds, shiftSeconds, lowerBound);
+    }
 
-        // Todas las secuencias de viajes que caben en un turno, agrupadas por su viaje de menor índice.
+    /**
+     * Con más de {@link #MAX_EXACT_TRIPS} viajes, grupos de a lo sumo ese tamaño que se asignan exactos por separado.
+     * Los viajes se reparten por turnos de mayor a menor duración, para que cada grupo tenga largos y cortos que
+     * encadenar.
+     */
+    private static List<int[]> groups(Trips trips, int n, int unloadSeconds) {
+        Integer[] order = new Integer[n];
+        long[] alone = new long[n];
+        for (int t = 0; t < n; t++) {
+            order[t] = t;
+            alone[t] = trips.truck(new int[] {t}, unloadSeconds).seconds();
+        }
+        Arrays.sort(order, (a, b) -> alone[a] != alone[b] ? Long.compare(alone[b], alone[a]) : Integer.compare(a, b));
+        int count = (n + MAX_EXACT_TRIPS - 1) / MAX_EXACT_TRIPS;
+        List<List<Integer>> members = new ArrayList<>();
+        for (int g = 0; g < count; g++) {
+            members.add(new ArrayList<>());
+        }
+        for (int i = 0; i < n; i++) {
+            members.get(i % count).add(order[i]);
+        }
+        List<int[]> groups = new ArrayList<>();
+        for (List<Integer> group : members) {
+            groups.add(group.stream().mapToInt(Integer::intValue).sorted().toArray());
+        }
+        return groups;
+    }
+
+    /**
+     * Ningún reparto usa menos camiones: cada viaje que ni solo cabe va en su propio camión, cada camión hace a lo
+     * sumo {@code maxTripsPerTruck} viajes, y el turno de un camión dura al menos la suma de sus viajes, cada uno
+     * desde la base o la portería (lo más cercano) hasta descargar.
+     */
+    private static int lowerBound(Trips trips, int n, int unloadSeconds, int shiftSeconds, int maxTripsPerTruck) {
+        int overtime = 0;
+        long seconds = 0;
+        for (int t = 0; t < n; t++) {
+            if (trips.truck(new int[] {t}, unloadSeconds).seconds() > shiftSeconds) {
+                overtime++;
+            } else {
+                seconds += trips.shortestSeconds(t) + unloadSeconds;
+            }
+        }
+        int byShift = overtime + (int) ((seconds + shiftSeconds - 1) / shiftSeconds);
+        return Math.max(byShift, (n + maxTripsPerTruck - 1) / maxTripsPerTruck);
+    }
+
+    /** Programación dinámica sobre los subconjuntos de {@code ids}: primero menos camiones, después menos km. */
+    private static List<Truck> exact(Trips trips, int[] ids, int unloadSeconds, int shiftSeconds,
+            int maxTripsPerTruck) {
+        int n = ids.length;
+        // Todas las secuencias de viajes que caben en un turno, agrupadas por su viaje de menor posición en ids.
         List<List<Truck>> byLowest = new ArrayList<>();
+        List<List<Integer>> bitsByLowest = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             byLowest.add(new ArrayList<>());
+            bitsByLowest.add(new ArrayList<>());
         }
         for (int a = 0; a < n; a++) {
-            byLowest.get(a).add(trips.truck(new int[] {a}, unloadSeconds));
+            byLowest.get(a).add(trips.truck(new int[] {ids[a]}, unloadSeconds));
+            bitsByLowest.get(a).add(1 << a);
             for (int b = 0; maxTripsPerTruck >= 2 && b < n; b++) {
                 if (b == a) {
                     continue;
                 }
-                Truck pair = trips.truck(new int[] {a, b}, unloadSeconds);
+                Truck pair = trips.truck(new int[] {ids[a], ids[b]}, unloadSeconds);
                 if (pair.seconds() > shiftSeconds) {
                     continue;
                 }
                 byLowest.get(Math.min(a, b)).add(pair);
+                bitsByLowest.get(Math.min(a, b)).add(1 << a | 1 << b);
                 for (int c = 0; maxTripsPerTruck >= 3 && c < n; c++) {
                     if (c == a || c == b) {
                         continue;
                     }
-                    Truck triple = trips.truck(new int[] {a, b, c}, unloadSeconds);
+                    Truck triple = trips.truck(new int[] {ids[a], ids[b], ids[c]}, unloadSeconds);
                     if (triple.seconds() <= shiftSeconds) {
-                        byLowest.get(Math.min(a, Math.min(b, c))).add(triple);
+                        int lowest = Math.min(a, Math.min(b, c));
+                        byLowest.get(lowest).add(triple);
+                        bitsByLowest.get(lowest).add(1 << a | 1 << b | 1 << c);
                     }
                 }
             }
@@ -95,29 +180,31 @@ public final class ShiftScheduler {
         int full = (1 << n) - 1;
         long[] cost = new long[full + 1];
         Truck[] choice = new Truck[full + 1];
+        int[] choiceBits = new int[full + 1];
         Arrays.fill(cost, Long.MAX_VALUE);
         cost[0] = 0;
         for (int mask = 1; mask <= full; mask++) {
             int lowest = Integer.numberOfTrailingZeros(mask);
-            for (Truck truck : byLowest.get(lowest)) {
-                int bits = bits(truck.trips());
+            List<Truck> candidates = byLowest.get(lowest);
+            List<Integer> candidateBits = bitsByLowest.get(lowest);
+            for (int i = 0; i < candidates.size(); i++) {
+                int bits = candidateBits.get(i);
                 if ((bits & mask) != bits || cost[mask ^ bits] == Long.MAX_VALUE) {
                     continue;
                 }
-                long candidate = cost[mask ^ bits] + (1L << 40) + truck.meters();
+                long candidate = cost[mask ^ bits] + (1L << 40) + candidates.get(i).meters();
                 if (candidate < cost[mask]) {
                     cost[mask] = candidate;
-                    choice[mask] = truck;
+                    choice[mask] = candidates.get(i);
+                    choiceBits[mask] = bits;
                 }
             }
         }
         List<Truck> trucks = new ArrayList<>();
-        for (int mask = full; mask != 0; mask ^= bits(choice[mask].trips())) {
+        for (int mask = full; mask != 0; mask ^= choiceBits[mask]) {
             trucks.add(choice[mask]);
         }
-        // El orden de salida sigue el del primer viaje de cada camión: es determinista y fácil de leer.
-        trucks.sort((x, y) -> Integer.compare(x.trips()[0], y.trips()[0]));
-        return new Schedule(trucks, unloadSeconds, shiftSeconds);
+        return trucks;
     }
 
     public record Visit(int node, int trip, long arriveSeconds) {
@@ -147,14 +234,6 @@ public final class ShiftScheduler {
             clock += travel.seconds(previous, gate) + unloadSeconds;
         }
         return visits;
-    }
-
-    private static int bits(int[] trips) {
-        int bits = 0;
-        for (int t : trips) {
-            bits |= 1 << t;
-        }
-        return bits;
     }
 
     private static final class Trips {
@@ -194,6 +273,15 @@ public final class ShiftScheduler {
             meters += travel.meters(gate, 0);
             seconds += travel.seconds(gate, 0);
             return new Truck(sequence, reversed, meters, seconds);
+        }
+
+        /** Segundos del viaje desde la base o la portería, lo que sea más corto, y en su mejor sentido. */
+        long shortestSeconds(int trip) {
+            long best = Long.MAX_VALUE;
+            for (int from : new int[] {0, gate}) {
+                best = Math.min(best, Math.min(leg(stops[trip], from, false)[1], leg(stops[trip], from, true)[1]));
+            }
+            return best;
         }
 
         /** {metros, segundos} de {@code from} a la portería pasando por las paradas, con el servicio. */

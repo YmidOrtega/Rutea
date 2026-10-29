@@ -60,6 +60,31 @@ class ShiftSchedulerTest {
     }
 
     @Test
+    void anExactScheduleIsItsOwnLowerBound() {
+        Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
+
+        assertThat(chained.lowerBound()).isEqualTo(chained.trucks().size());
+        assertThat(chained.fewestTrucks()).isTrue();
+    }
+
+    @Test
+    void moreTripsThanTheExactLimitAreSplitInGroupsWithALowerBound() {
+        // Un viaje por contenedor: 20 viajes del pueblo dos veces, 40 en total, más de los que se asignan exactos.
+        int[][] routes = new int[2 * scenario.containers().size()][];
+        for (int i = 0; i < routes.length; i++) {
+            routes[i] = new int[] {i % scenario.containers().size() + 1};
+        }
+        Solution many = new Solution(routes);
+
+        Schedule chained = ShiftScheduler.schedule(scenario, many, SERVICE, UNLOAD, SHIFT, 3);
+
+        int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
+        assertThat(covered).isEqualTo(IntStream.range(0, routes.length).toArray());
+        assertThat(chained.trucks()).allSatisfy(truck -> assertThat(truck.seconds()).isLessThanOrEqualTo(SHIFT));
+        assertThat(chained.lowerBound()).isEqualTo(routes.length / 3 + 1).isLessThanOrEqualTo(chained.trucks().size());
+    }
+
+    @Test
     void chainsTripsWhenTheShiftAllowsIt() {
         // En el pueblo de prueba los viajes duran minutos: caben tres por camión.
         Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
