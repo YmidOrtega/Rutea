@@ -67,15 +67,17 @@ public final class ExtractOperatorContainers {
                     .append(sha).append(',').append(layer.url()).append(",\"").append(layer.where()).append("\"\n");
             Map<String, Integer> byLocality = new TreeMap<>();
             Map<Integer, Integer> byLiters = new TreeMap<>();
+            Map<String, Integer> byShift = new TreeMap<>();
             containers.forEach(c -> {
                 byLocality.merge(c.locality(), 1, Integer::sum);
                 byLiters.merge(c.liters(), 1, Integer::sum);
+                byShift.merge(c.shift(), 1, Integer::sum);
             });
             long distinct = containers.stream().map(Container::code).distinct().count();
             System.out.printf("ASE %d: %d contenedores (%d códigos distintos, %d fuera de la ASE) en %.1f s; litros %s;"
-                    + " %s; capa editada %s%n  → %s%n", layer.area(), containers.size(), distinct,
-                    outside(layer.area(), containers), (System.nanoTime() - start) / 1e9, byLiters, byLocality,
-                    layerEdited, csv);
+                    + " turnos %s; %s; capa editada %s%n  → %s%n", layer.area(), containers.size(), distinct,
+                    outside(layer.area(), containers), (System.nanoTime() - start) / 1e9, byLiters, byShift,
+                    byLocality, layerEdited, csv);
         }
         Path manifestFile = out.resolve(MANIFEST);
         Files.writeString(manifestFile, manifest);

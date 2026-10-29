@@ -19,33 +19,40 @@ public final class OperatorContainers {
     /**
      * Una capa de ArcGIS y qué campo trae cada dato. {@code where} deja solo los no aprovechables que están en la
      * calle: cada operador lo marca a su manera.
+     *
+     * @param shiftField vacío si la capa no trae el turno
      */
     public record Layer(int area, String url, String where, String codeField, String litersField,
-            String localityField, String routeField) {
+            String localityField, String routeField, String shiftField) {
 
         public String file() {
             return "ase" + area + "-contenedores-negros.csv";
         }
 
         List<String> fields() {
-            return List.of(codeField, litersField, localityField, routeField);
+            return shiftField.isEmpty() ? List.of(codeField, litersField, localityField, routeField)
+                    : List.of(codeField, litersField, localityField, routeField, shiftField);
         }
     }
 
-    /** La localidad y la microrruta van como las escribe el operador; la localidad del catálogo sale por polígono. */
-    public record Container(String code, int latE7, int lonE7, int liters, String locality, String route) {
+    /**
+     * La localidad, la microrruta y el turno van como los escribe el operador; la localidad del catálogo sale por
+     * polígono. {@code shift} queda vacío si la capa no lo trae.
+     */
+    public record Container(String code, int latE7, int lonE7, int liters, String locality, String route,
+            String shift) {
     }
 
     public static final List<Layer> LAYERS = List.of(
             new Layer(1, "https://services6.arcgis.com/hLZWCvqGnXcO7AAf/arcgis/rest/services/C0nt3n3d0r3s/FeatureServer/0",
-                    "NOVUBICACI='UC' AND APROVECHAB='N'", "CODINTERNO", "CAPACIDAD", "LOCALIDAD", "Micro"),
+                    "NOVUBICACI='UC' AND APROVECHAB='N'", "CODINTERNO", "CAPACIDAD", "LOCALIDAD", "Micro", "Turno"),
             // El servicio lleva la fecha de corte en el nombre: cada mes LIME publica uno nuevo.
             new Layer(2, "https://services8.arcgis.com/OJRjFyzrZGsrmOrJ/arcgis/rest/services/CONTENEDORES_OCTUBRE_2026/FeatureServer/0",
-                    "NOVUBICACI='UC' AND APROVECHAB='N'", "CODIGO", "CAPACIDAD", "LOCALIDAD", "MICRORRUTA"),
+                    "NOVUBICACI='UC' AND APROVECHAB='N'", "CODIGO", "CAPACIDAD", "LOCALIDAD", "MICRORRUTA", "TURNO"),
             new Layer(4, "https://services1.arcgis.com/ENZ399MMKDHf2s6t/arcgis/rest/services/Contenerizacion_ASE4_2400_Actualizacion/FeatureServer/0",
-                    "Definitivo='Ruta' AND APROVECHAB='N'", "CODINTERNO", "CAPACIDAD", "IDLOCALID", "MICRO"));
+                    "Definitivo='Ruta' AND APROVECHAB='N'", "CODINTERNO", "CAPACIDAD", "IDLOCALID", "MICRO", ""));
 
-    private static final String HEADER = "code,lat_e7,lon_e7,liters,locality,route";
+    private static final String HEADER = "code,lat_e7,lon_e7,liters,locality,route,shift";
 
     private OperatorContainers() {
     }
@@ -66,7 +73,8 @@ public final class OperatorContainers {
             containers.add(new Container(code, (int) Math.round(geometry.get("y").asDouble() * 1e7),
                     (int) Math.round(geometry.get("x").asDouble() * 1e7),
                     Integer.parseInt(text(attributes, layer.litersField())), text(attributes, layer.localityField()),
-                    text(attributes, layer.routeField())));
+                    text(attributes, layer.routeField()),
+                    layer.shiftField().isEmpty() ? "" : text(attributes, layer.shiftField())));
         }
         return containers;
     }
@@ -78,8 +86,8 @@ public final class OperatorContainers {
                 .thenComparingInt(Container::lonE7));
         StringBuilder out = new StringBuilder(HEADER).append('\n');
         for (Container c : sorted) {
-            out.append(String.format(Locale.ROOT, "%s,%d,%d,%d,%s,%s%n", csvField(c.code()), c.latE7(), c.lonE7(),
-                    c.liters(), csvField(c.locality()), csvField(c.route())));
+            out.append(String.format(Locale.ROOT, "%s,%d,%d,%d,%s,%s,%s%n", csvField(c.code()), c.latE7(),
+                    c.lonE7(), c.liters(), csvField(c.locality()), csvField(c.route()), csvField(c.shift())));
         }
         Files.writeString(csv, out);
     }
@@ -92,11 +100,11 @@ public final class OperatorContainers {
         List<Container> containers = new ArrayList<>(lines.size() - 1);
         for (String line : lines.subList(1, lines.size())) {
             String[] f = line.split(",", -1);
-            if (f.length != 6) {
+            if (f.length != 7) {
                 throw new IOException(csv + ": línea con " + f.length + " campos: " + line);
             }
             containers.add(new Container(f[0], Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]),
-                    f[4], f[5]));
+                    f[4], f[5], f[6]));
         }
         return containers;
     }

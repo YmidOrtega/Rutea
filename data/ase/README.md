@@ -8,15 +8,15 @@ Los archivos no se suben al repo, porque las capas no declaran licencia (`PENDIE
 mvn -pl rutea-app exec:java@operator-containers
 ```
 
-El comando escribe un CSV por ASE (`code,lat_e7,lon_e7,liters,locality,route`, ordenado por código) y `fuentes.csv`, con la URL, el filtro, la fecha de última edición de la capa, la fecha de descarga y el SHA-256 de cada archivo. También comprueba que cada contenedor caiga dentro de su ASE. La localidad y la microrruta van como las escribe el operador; la localidad del catálogo se asigna por polígono.
+El comando escribe un CSV por ASE (`code,lat_e7,lon_e7,liters,locality,route,shift`, ordenado por código) y `fuentes.csv`, con la URL, el filtro, la fecha de última edición de la capa, la fecha de descarga y el SHA-256 de cada archivo. También comprueba que cada contenedor caiga dentro de su ASE. La localidad, la microrruta y el turno van como los escribe el operador; la localidad del catálogo se asigna por polígono. La capa del ASE 4 no trae el turno.
 
 ## Extracto en uso
 
-| ASE | Archivo | Contenedores | Capacidad | Capa editada | SHA-256 |
-|---|---|---:|---|---|---|
-| 1 · Promoambiental | `ase1-contenedores-negros.csv` | 168 | 153 de 1.100 L, 15 de 2.200 L | 2026-10-27 | `88184de7b335818db036ab09939c1e98d6660fed280e3d6e776c879cdcf82f32` |
-| 2 · LIME | `ase2-contenedores-negros.csv` | 990 | 2.200 L | 2026-10-07 | `3cc847bcc961fb018dab2e4ba563cc6355345eb9d16e92416b30e096dabf39c4` |
-| 4 · Bogotá Limpia | `ase4-contenedores-negros.csv` | 763 | 2.400 L | 2026-10-02 | `e60479d2205989bce183cfff567547c8c037701eaa3c2a8c5a9da9f3faa9936a` |
+| ASE | Archivo | Contenedores | Capacidad | Turno | Capa editada | SHA-256 |
+|---|---|---:|---|---|---|---|
+| 1 · Promoambiental | `ase1-contenedores-negros.csv` | 168 | 153 de 1.100 L, 15 de 2.200 L | 155 de día, 13 de noche | 2026-10-27 | `8b50bbffbeb665d942f54043c66b36e99836fedaa7d7802885b3551de716eb52` |
+| 2 · LIME | `ase2-contenedores-negros.csv` | 990 | 2.200 L | 609 de día, 381 de noche | 2026-10-07 | `84883fe6c585ca97b0ade7519d828f8906758327d37e938d750058f02cf6b32b` |
+| 4 · Bogotá Limpia | `ase4-contenedores-negros.csv` | 763 | 2.400 L | – | 2026-10-02 | `d0dd5508e40ed2d54d85ac06cd3e09150c5a28108f807638c946055e1d99527d` |
 
 Descargado el 2026-10-29. Dos descargas seguidas dieron los mismos bytes, y ningún contenedor cayó fuera de su ASE.
 
