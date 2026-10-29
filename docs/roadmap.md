@@ -237,14 +237,28 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
     | Bogotá | 70.728 | 168.035 | 390 ms | 410 ms | **1.006,0 km** | 17 |
 
     Con el grafo de Bogotá, el plan de Suba mide **1,13 % menos**. El 4,9 % de las celdas de la matriz se acorta, porque los camiones pueden cortar por calles locales de las localidades vecinas: 6,8 m menos en promedio y hasta 1.934 m menos. Otro 0,4 % sale más largo, pero a lo sumo 4 m. Es el redondeo: cada arco guarda sus metros en entero, y en Bogotá un mismo tramo queda partido en más arcos por los cruces con calles que en el grafo de Suba no entraban. Las cifras de F3 a F6 siguen siendo las del grafo de Suba.
-  - Escala: aún no se puede medir la matriz de la ASE más grande, porque faltan sus cifras (paso de cifras por ASE). Como referencia, la matriz de 1.702 lugares (1.700 contenedores repartidos por toda Bogotá, más la base y la portería), donde F3 previó el primer ajuste del solver, sale en 929 ms en frío y 923 ms en caliente.
+  - Escala: la matriz de 1.702 lugares (1.700 contenedores repartidos por toda Bogotá, más la base y la portería), donde F3 previó el primer ajuste del solver, sale en 929 ms en frío y 923 ms en caliente. Con los contenedores por ASE (paso 5), la medición pasó a la ASE más grande.
 - [x] Cifras por ASE en `docs/datos.md` (2026-10-28):
   - **Con fuente:** el suelo urbano de cada ASE (línea base del PGIRS, 2018), los litros de contenedores exigidos a cada una (Anexo 11 de la licitación de 2017) y el centroide de cada ASE con su distancia a Doña Juana (estudios de costos de los prestadores, en la misma línea base).
   - **Corrección:** el 15 % del ASE 5 que Rutea usa desde F3 es la parte del suelo urbano, no de las toneladas. El valor no cambia, y Suba sale con los mismos bytes, pero ahora figura como supuesto: el suelo urbano aproxima la parte de las toneladas y de los contenedores. En el código pasó de la `Operation` de Área Limpia a `ServiceArea.urbanAreaShare`, con el valor de las cinco ASE.
   - **Con ese supuesto,** el ASE 2 es la más grande: 1.666 contenedores negros, por debajo de los ~1.700 del primer ajuste de escala de F3.
   - **Las participaciones no coinciden:** al ASE 5 le corresponde el 15 % del suelo urbano, pero el 25,8 % de los litros exigidos. Queda abierto cuál usar; cambiarla movería las cifras de Suba.
   - `PENDIENTE_VERIFICAR`: las toneladas por ASE, y la base, la flota, los turnos, la frecuencia y el cargue lateral de los operadores de las ASE 1 a 4. Están en sus informes de la Superservicios, que el portal no deja descargar de forma automática.
-- [ ] Contenedores por ASE completa, con semilla, y la selección solo filtra. Tests: un contenedor queda en el mismo lugar y con la misma carga con cualquier selección, y elegir todas las localidades de una ASE reproduce la instancia de esa ASE.
+- [x] Contenedores por ASE completa, con semilla, y la selección solo filtra (2026-10-29). Tests: un contenedor queda en el mismo lugar, con la misma carga y el mismo id con cualquier selección, y elegir todas las localidades de una ASE reproduce la instancia de esa ASE.
+  - **De qué localidad es cada calle:** el grafo de Bogotá solo sabe si una calle está en el Distrito. La localidad sale del punto medio del trazo, el mismo que usa el constructor del grafo, contra los límites de OSM de las 20 localidades (`mvn -pl rutea-app exec:java@localities`, 179 KB, bordes simplificados a 5 m; la `ref` de cada relación coincide con el catálogo). Una calle que queda fuera de todos los polígonos por la simplificación va a la localidad de borde más cercano.
+  - **Suba no cambia:** cada calle local de Suba cae en el polígono de Suba, así que los cinco artefactos salen con los mismos SHA-256.
+  - **Reparto en el grafo de Bogotá** (semilla 1; de 80 a 146 ms por ASE):
+
+    | ASE | Contenedores negros | Por localidad |
+    |---|---:|---|
+    | 1 | 1.290 | Usaquén 302 · Chapinero 178 · Santa Fe 110 · San Cristóbal 304 · Usme 373 · La Candelaria 23 · Sumapaz 0 |
+    | 2 | 1.666 | Tunjuelito 103 · Bosa 311 · Teusaquillo 151 · Los Mártires 89 · Antonio Nariño 87 · Puente Aranda 231 · Rafael Uribe Uribe 200 · Ciudad Bolívar 494 |
+    | 3 | 967 | Kennedy 703 · Fontibón 264 |
+    | 4 | 645 | Engativá 483 · Barrios Unidos 162 |
+    | 5 | 806 | Suba 806 |
+
+  - **Escala:** la matriz del ASE 2 (1.666 contenedores, más la base y la portería) sale en 941 ms en frío y 902 ms en caliente (`exec:java@graphs`; i5-14400F, 16 hilos). Como el ASE 2 aún no tiene base verificada, la matriz sale de la base de Suba, que solo cambia una fila.
+  - **Límite conocido:** Sumapaz no lleva contenedores porque es rural, pero el suelo rural de Usme, Ciudad Bolívar, Usaquén, Chapinero, Santa Fe y San Cristóbal sí los recibe. Los límites de OSM son los de la localidad, no el perímetro urbano, así que esas localidades quedan con más contenedores de los que les tocan. `PENDIENTE_VERIFICAR`: recortar con el perímetro urbano del POT.
 - [ ] Segunda ASE: una del sur, cerca de Doña Juana, el extremo opuesto a Suba (muchos viajes cortos en lugar de pocos largos). Prueba `ShiftScheduler` y el encadenamiento de viajes con otra forma de problema.
 - [ ] Planificación en paralelo, un hilo por ASE. Se mide la latencia del plan con 1, 5 y 20 localidades.
 - [ ] Flota como resultado: el mínimo de camiones por ASE, con la flota declarada del operador como tope y un aviso si se pasa de ella.

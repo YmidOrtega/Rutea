@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
+import java.util.function.IntPredicate;
 
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadClass;
@@ -41,12 +42,18 @@ public final class SimulatedContainers {
     }
 
     public static List<Container> place(RoadGraph graph, WasteStream stream, int count, double meanKg, long seed) {
+        return place(graph, graph::shapeInLocality, stream, count, meanKg, seed);
+    }
+
+    /** Solo sobre los trazos que acepta {@code area}: los de las localidades de una ASE, por ejemplo. */
+    public static List<Container> place(RoadGraph graph, IntPredicate area, WasteStream stream, int count,
+            double meanKg, long seed) {
         if (meanKg <= 0) {
             throw new IllegalArgumentException("carga media no positiva: " + meanKg);
         }
-        Streets streets = Streets.of(graph);
+        Streets streets = Streets.of(graph, area);
         if (streets.totalMeters == 0) {
-            throw new IllegalArgumentException("el grafo no tiene calles locales dentro de la localidad");
+            throw new IllegalArgumentException("el grafo no tiene calles locales dentro del área");
         }
         SplittableRandom random = new SplittableRandom(seed);
         SpacingGrid placed = new SpacingGrid(MIN_SPACING_METERS);
@@ -125,14 +132,14 @@ public final class SimulatedContainers {
             totalMeters = total;
         }
 
-        static Streets of(RoadGraph graph) {
+        static Streets of(RoadGraph graph, IntPredicate area) {
             // Un trazo de doble sentido aparece en dos arcos: se toma una vez, con sus extremos en su sentido.
             Map<Integer, int[]> endpoints = new HashMap<>();
             for (int e = 0; e < graph.edgeCount(); e++) {
                 int shape = graph.shape(e);
                 int base = shape >= 0 ? shape : ~shape;
-                if (endpoints.containsKey(base) || !graph.shapeInLocality(base)
-                        || !LOCAL_STREETS.contains(graph.roadClass(e))) {
+                if (endpoints.containsKey(base) || !LOCAL_STREETS.contains(graph.roadClass(e))
+                        || !area.test(base)) {
                     continue;
                 }
                 int source = graph.source(e);

@@ -70,7 +70,7 @@ public final class ExtractSectors {
         return json.append("]}\n").toString();
     }
 
-    private static String point(int latE7, int lonE7) {
+    static String point(int latE7, int lonE7) {
         return String.format(Locale.ROOT, "[%.5f,%.5f]", lonE7 / 1e7, latE7 / 1e7);
     }
 }

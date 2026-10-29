@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Locale;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.Localities;
 import me.ymid.rutea.app.scenario.ServiceAreas;
+import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SimulatedContainers;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.domain.WasteStream;
@@ -31,14 +33,13 @@ import me.ymid.rutea.solver.alns.AlnsSolver;
 /**
  * Suba sobre el grafo de Suba y sobre el de Bogotá (ADR 0012): los mismos contenedores, en los mismos nodos de OSM,
  * con la misma semilla e iteraciones de ALNS. En el grafo de Bogotá una ruta puede tomar calles locales de las
- * localidades vecinas, así que ninguna distancia debería crecer. También mide la matriz con 1.700 contenedores
- * repartidos por toda la ciudad, donde F3 previó el primer ajuste de escala del solver.
+ * localidades vecinas, así que ninguna distancia debería crecer. También mide la matriz de la ASE más grande, el ASE 2,
+ * cerca de los ~1.700 contenedores donde F3 previó el primer ajuste de escala del solver.
  *
  * <p>Uso: {@code CompareGraphs <suba.rgraph> <bogota.rgraph> <dir-salida> [--seed <n>] [--iterations <n>]}
  */
 public final class CompareGraphs {
 
-    static final int SCALE_CONTAINERS = 1_700;
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
 
     private record Timed(TravelMatrix matrix, double coldMs, double warmMs) {
@@ -117,14 +118,18 @@ public final class CompareGraphs {
                     + onBogotaGraph.violations());
         }
 
-        List<Container> spread = SimulatedContainers.place(bogota, WasteStream.NON_RECYCLABLE, SCALE_CONTAINERS, 160,
+        // El ASE 2 aún no tiene base verificada: la matriz sale de la base de Suba, que solo cambia una fila.
+        ServiceArea largest = ServiceAreas.ASE_2;
+        int scaleCount = largest.nonRecyclableContainers();
+        List<Container> spread = SimulatedContainers.place(bogota,
+                AreaScenario.streets(bogota, largest, Localities.bogota()), WasteStream.NON_RECYCLABLE, scaleCount, 160,
                 seed);
-        int[] scalePoints = new int[SCALE_CONTAINERS + 2];
+        int[] scalePoints = new int[scaleCount + 2];
         scalePoints[0] = onBogota[0];
-        for (int i = 0; i < SCALE_CONTAINERS; i++) {
+        for (int i = 0; i < scaleCount; i++) {
             scalePoints[i + 1] = spread.get(i).vertex();
         }
-        scalePoints[SCALE_CONTAINERS + 1] = onBogota[n - 1];
+        scalePoints[scaleCount + 1] = onBogota[n - 1];
         Timed scale = timed(bogota, scalePoints, threads);
 
         Files.createDirectories(outDir);
@@ -135,7 +140,7 @@ public final class CompareGraphs {
                     subaSolution.routeCount()));
             out.write(row("bogota", bogota, n, threads, bogotaMatrix, seed, iterations, onBogotaGraph.cost(),
                     bogotaSolution.routeCount()));
-            out.write(row("bogota-" + SCALE_CONTAINERS, bogota, scalePoints.length, threads, scale, seed, 0, -1, 0));
+            out.write(row("bogota-ase" + largest.number(), bogota, scalePoints.length, threads, scale, seed, 0, -1, 0));
         }
 
         System.out.printf(Locale.ROOT, "%s: %d contenedores, semilla %d, %d iteraciones de ALNS, %d hilos%n%n",
@@ -151,8 +156,8 @@ public final class CompareGraphs {
                 shorter, 100.0 * shorter / cells, longer, maxExtra, (double) savedMeters / cells, maxSaved);
         System.out.printf(Locale.ROOT, "Costo ALNS: %.2f %% menos en el grafo de Bogotá%n",
                 100.0 * (onSubaGraph.cost() - onBogotaGraph.cost()) / onSubaGraph.cost());
-        System.out.printf(Locale.ROOT, "Matriz de %,d lugares repartidos por Bogotá: %.0f ms en frío, %.0f ms en"
-                + " caliente%n", scalePoints.length, scale.coldMs(), scale.warmMs());
+        System.out.printf(Locale.ROOT, "Matriz del ASE %d (%,d contenedores, %,d lugares): %.0f ms en frío, %.0f ms"
+                + " en caliente%n", largest.number(), scaleCount, scalePoints.length, scale.coldMs(), scale.warmMs());
         System.out.println("CSV: " + csv.toAbsolutePath());
     }
 

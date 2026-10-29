@@ -1,13 +1,23 @@
 package me.ymid.rutea.app.scenario;
 
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.EAST;
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.FARM;
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.HALVES_TOWN;
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.TWO_HALVES;
+import static me.ymid.rutea.app.scenario.AreaScenarioFixture.WEST;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
+import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.SampleTown;
@@ -25,7 +35,7 @@ class AreaScenarioTest {
     void leavesFromTheBaseAndArrivesAtTheLandfillGate() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        AreaScenario scenario = AreaScenario.build(town, ServiceAreas.ASE_5, 30, 24, 12, 160, 4);
+        AreaScenario scenario = AreaScenarioFixture.town(dir, 12, 160);
         Instance instance = scenario.instance();
 
         assertThat(instance.name()).isEqualTo("SubaBase-n13-s4");
@@ -46,7 +56,7 @@ class AreaScenarioTest {
 
     @Test
     void survivesTheRoundTripThroughCvrplib() throws IOException {
-        Instance instance = AreaScenario.build(SampleTown.graph(dir), ServiceAreas.ASE_5, 30, 24, 12, 160, 4).instance();
+        Instance instance = AreaScenarioFixture.town(dir, 12, 160).instance();
         Path file = dir.resolve(instance.name() + ".vrp");
 
         CvrplibWriter.writeExplicit(file, instance, "prueba");
@@ -58,5 +68,54 @@ class AreaScenarioTest {
                 assertThat(read.distance(i, j)).isEqualTo(instance.distance(i, j));
             }
         }
+    }
+
+    @Test
+    void aContainerStaysPutWhateverTheSelection() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        List<Container> whole = halves(town, List.of(WEST, EAST, FARM)).containers();
+        List<Container> west = halves(town, List.of(WEST)).containers();
+        List<Container> east = halves(town, List.of(EAST)).containers();
+
+        assertThat(west).isNotEmpty();
+        assertThat(east).isNotEmpty();
+        assertThat(whole).containsAll(west).containsAll(east).hasSize(west.size() + east.size());
+        assertThat(halves(town, List.of(EAST, WEST)).containers()).containsExactlyElementsOf(whole);
+    }
+
+    @Test
+    void choosingEveryLocalityReproducesTheWholeArea() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+        Instance whole = halves(town, TWO_HALVES.localities()).instance();
+        Instance reversed = halves(town, TWO_HALVES.localities().reversed()).instance();
+
+        assertThat(reversed.name()).isEqualTo(whole.name()).isEqualTo("ASE9Base-n21-s4");
+        for (int i = 0; i < whole.size(); i++) {
+            assertThat(reversed.demand(i)).isEqualTo(whole.demand(i));
+            for (int j = 0; j < whole.size(); j++) {
+                assertThat(reversed.distance(i, j)).isEqualTo(whole.distance(i, j));
+            }
+        }
+    }
+
+    @Test
+    void namesAPartialSelectionAfterItsLocalities() throws IOException {
+        AreaScenario west = halves(SampleTown.graph(dir), List.of(WEST));
+
+        assertThat(west.instance().name()).isEqualTo("OesteBase-n" + (west.containers().size() + 1) + "-s4");
+    }
+
+    @Test
+    void rejectsAnEmptyForeignOrRuralOnlySelection() throws IOException {
+        RoadGraph town = SampleTown.graph(dir);
+
+        assertThatThrownBy(() -> halves(town, List.of())).hasMessageContaining("no hay localidades elegidas");
+        assertThatThrownBy(() -> halves(town, List.of(ServiceAreas.locality(11).orElseThrow())))
+                .hasMessageContaining("Suba no es de ASE 9");
+        assertThatThrownBy(() -> halves(town, List.of(FARM))).hasMessageContaining("suelo rural");
+    }
+
+    private static AreaScenario halves(RoadGraph town, List<Locality> selection) {
+        return AreaScenario.build(town, TWO_HALVES, new ArrayList<>(selection), HALVES_TOWN, 30, 24, 20, 160, 4);
     }
 }

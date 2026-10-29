@@ -131,6 +131,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>localities</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractLocalities</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/localities/bogota-localidades.geojson</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>breakdowns</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>

@@ -1,5 +1,7 @@
 package me.ymid.rutea.app.scenario;
 
+import java.util.function.IntPredicate;
+
 import me.ymid.rutea.geo.RoadGraph;
 
 /**
@@ -74,15 +76,15 @@ public final class BogotaFigures {
     /**
      * Supuesto: la ECA de la zona. No hay inventario público de ECA con coordenadas (está en las Resoluciones UAESP
      * 137 y 698 de 2023, no publicadas) ni ECA identificadas en OSM, así que se toma el vértice de calle local más
-     * cercano al centro del rectángulo de la localidad.
+     * cercano al centro del rectángulo de las calles de la zona ({@code area}).
      */
-    public static int ecaVertex(RoadGraph graph) {
+    public static int ecaVertex(RoadGraph graph, IntPredicate area) {
         int minLat = Integer.MAX_VALUE;
         int maxLat = Integer.MIN_VALUE;
         int minLon = Integer.MAX_VALUE;
         int maxLon = Integer.MIN_VALUE;
         for (int s = 0; s < graph.shapeCount(); s++) {
-            if (!graph.shapeInLocality(s)) {
+            if (!area.test(s)) {
                 continue;
             }
             for (int p = graph.firstShapePoint(s); p < graph.endShapePoint(s); p++) {

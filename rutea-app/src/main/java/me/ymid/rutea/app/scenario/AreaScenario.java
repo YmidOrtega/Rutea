@@ -1,8 +1,15 @@
 package me.ymid.rutea.app.scenario;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.IntPredicate;
 
+import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.ServiceAreas.Operation;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
@@ -58,17 +65,31 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     /** Con la base y las cifras del operador de la ASE, que tiene que tener la operación verificada. */
     public static AreaScenario build(RoadGraph graph, ServiceArea area, long seed) {
-        Operation operation = area.verified();
-        int count = area.nonRecyclableContainers();
-        return build(graph, area, ServiceAreas.DISPOSAL_OSM_NODE, operation.base().osmNode(), count,
-                area.meanKgPerCollection(count), seed);
+        return build(graph, area, area.localities(), seed);
     }
 
-    static AreaScenario build(RoadGraph graph, ServiceArea area, long gateNode, long depotNode, int count,
-            double meanKg, long seed) {
-        return build(graph, area, WasteStream.NON_RECYCLABLE, vertex(graph, depotNode, "la base"),
-                vertex(graph, gateNode, "la portería del relleno"), area.verified().compactorKg(), count, meanKg,
-                seed, prefix(area) + "Base");
+    /**
+     * Solo los contenedores de las localidades elegidas de la ASE. Los contenedores se ubican siempre sobre la ASE
+     * completa, con la misma semilla, y la selección solo filtra: un contenedor queda en el mismo lugar, con la misma
+     * carga y el mismo id, se elija lo que se elija.
+     */
+    public static AreaScenario build(RoadGraph graph, ServiceArea area, Collection<Locality> selection, long seed) {
+        return build(graph, area, selection, Localities.bogota(), seed);
+    }
+
+    static AreaScenario build(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
+            Localities localities, long seed) {
+        Operation operation = area.verified();
+        int count = area.nonRecyclableContainers();
+        return build(graph, area, selection, localities, ServiceAreas.DISPOSAL_OSM_NODE, operation.base().osmNode(),
+                count, area.meanKgPerCollection(count), seed);
+    }
+
+    static AreaScenario build(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
+            Localities localities, long gateNode, long depotNode, int count, double meanKg, long seed) {
+        return build(graph, area, selection, localities, WasteStream.NON_RECYCLABLE,
+                vertex(graph, depotNode, "la base"), vertex(graph, gateNode, "la portería del relleno"),
+                area.verified().compactorKg(), count, meanKg, seed, "Base");
     }
 
     /**
@@ -78,15 +99,35 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
      * los negros.
      */
     public static AreaScenario buildRecyclable(RoadGraph graph, ServiceArea area, long seed) {
-        int count = area.recyclableContainers();
-        int eca = BogotaFigures.ecaVertex(graph);
-        return build(graph, area, WasteStream.RECYCLABLE, eca, eca, BogotaFigures.RECYCLABLE_VEHICLE_KG, count,
-                area.meanRecyclableKgPerCollection(count), seed * 31 + 17, prefix(area) + "Reciclaje");
+        return buildRecyclable(graph, area, area.localities(), seed);
     }
 
-    static AreaScenario build(RoadGraph graph, ServiceArea area, WasteStream stream, int depot, int gate,
-            int capacityKg, int count, double meanKg, long seed, String namePrefix) {
-        List<Container> containers = SimulatedContainers.place(graph, stream, count, meanKg, seed);
+    public static AreaScenario buildRecyclable(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
+            long seed) {
+        Localities localities = Localities.bogota();
+        int count = area.recyclableContainers();
+        int eca = BogotaFigures.ecaVertex(graph, streets(graph, area, localities));
+        return build(graph, area, selection, localities, WasteStream.RECYCLABLE, eca, eca,
+                BogotaFigures.RECYCLABLE_VEHICLE_KG, count, area.meanRecyclableKgPerCollection(count), seed * 31 + 17,
+                "Reciclaje");
+    }
+
+    static AreaScenario build(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
+            Localities localities, WasteStream stream, int depot, int gate, int capacityKg, int count, double meanKg,
+            long seed, String kind) {
+        Set<Locality> chosen = chosen(area, selection);
+        List<Container> containers = new ArrayList<>();
+        for (Container container : SimulatedContainers.place(graph, streets(graph, area, localities), stream, count,
+                meanKg, seed)) {
+            if (chosen.contains(localities.ofShape(graph, container.shape()))) {
+                containers.add(container);
+            }
+        }
+        if (containers.isEmpty()) {
+            throw new IllegalArgumentException("ningún contenedor cae en " + names(chosen)
+                    + ": en el suelo rural no se ubican contenedores");
+        }
+        count = containers.size();
         int[] points = new int[count + 1];
         int[] demands = new int[count + 1];
         points[0] = depot;
@@ -105,9 +146,43 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
             }
         }
         // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
-        String name = namePrefix + "-n" + (count + 1) + "-s" + seed;
+        String prefix = chosen.size() == area.localities().size() ? area.name() : names(chosen);
+        String name = prefix.replace(" ", "") + kind + "-n" + (count + 1) + "-s" + seed;
         Instance instance = new Instance(name, capacityKg, demands, DistanceMatrix.of(distances));
         return new AreaScenario(area, graph, gate, depot, containers, points, instance, matrix, List.of());
+    }
+
+    /**
+     * Las calles donde la ASE pone contenedores: las de sus localidades, sin el suelo rural de Sumapaz. El resto del
+     * suelo rural del Distrito (en Usme o Ciudad Bolívar, por ejemplo) no se distingue todavía: los límites de OSM son
+     * los de la localidad, no el perímetro urbano.
+     */
+    public static IntPredicate streets(RoadGraph graph, ServiceArea area, Localities localities) {
+        Set<Locality> urban = new HashSet<>();
+        area.localities().stream().filter(locality -> !locality.rural()).forEach(urban::add);
+        return shape -> graph.shapeInLocality(shape) && urban.contains(localities.ofShape(graph, shape));
+    }
+
+    private static Set<Locality> chosen(ServiceArea area, Collection<Locality> selection) {
+        if (selection.isEmpty()) {
+            throw new IllegalArgumentException("no hay localidades elegidas en " + area.name());
+        }
+        Set<Locality> chosen = new LinkedHashSet<>();
+        for (Locality locality : area.localities()) {
+            if (selection.contains(locality)) {
+                chosen.add(locality);
+            }
+        }
+        for (Locality locality : selection) {
+            if (!chosen.contains(locality)) {
+                throw new IllegalArgumentException(locality.name() + " no es de " + area.name());
+            }
+        }
+        return chosen;
+    }
+
+    private static String names(Set<Locality> localities) {
+        return String.join("-", localities.stream().map(Locality::name).toList());
     }
 
     public Operation operation() {
@@ -130,11 +205,6 @@ public record AreaScenario(ServiceArea area, RoadGraph graph, int gateVertex, in
 
     public int returnSeconds() {
         return travel.seconds(gate(), 0);
-    }
-
-    /** Prefijo del nombre de la instancia: "Suba" da {@code SubaBase-n807-s1}. */
-    private static String prefix(ServiceArea area) {
-        return area.name().replace(" ", "");
     }
 
     private static int vertex(RoadGraph graph, long osmNode, String what) {
