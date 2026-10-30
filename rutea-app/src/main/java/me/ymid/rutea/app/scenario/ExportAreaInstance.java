@@ -53,15 +53,18 @@ public final class ExportAreaInstance {
                 SideLoading.MEAN_FILL * 100));
     }
 
-    private static void write(RoadGraphFile.Stored stored, AreaScenario scenario, Path outDir, String containers)
+    static void write(RoadGraphFile.Stored stored, AreaScenario scenario, Path outDir, String containers)
             throws IOException {
         Instance instance = scenario.instance();
         Path file = outDir.resolve(instance.name() + ".vrp");
-        String comment = String.format(Locale.ROOT, "%s (ASE %d): %s; el depósito sale de la base de %s (fila 1) y"
+        // Una ASE de varias localidades ya se llama "ASE n"; Suba conserva su texto, que es parte de sus bytes.
+        String area = scenario.area().localities().size() == 1
+                ? String.format(Locale.ROOT, "%s (ASE %d)", scenario.area().name(), scenario.area().number())
+                : scenario.area().name();
+        String comment = String.format(Locale.ROOT, "%s: %s; el depósito sale de la base de %s (fila 1) y"
                 + " llega a la portería de Doña Juana (columna 1); el regreso a la base (%d m por camión) no entra;"
                 + " distancias en metros por la red vial del extracto OSM con SHA-256 %s; cifras y fuentes en"
-                + " docs/datos.md. Datos © colaboradores de OpenStreetMap, ODbL 1.0", scenario.area().name(),
-                scenario.area().number(), containers, scenario.area().base().locality(), scenario.returnMeters(),
+                + " docs/datos.md. Datos © colaboradores de OpenStreetMap, ODbL 1.0", area, containers, scenario.area().base().locality(), scenario.returnMeters(),
                 RoadGraphFile.hex(stored.sourceSha256()));
         CvrplibWriter.writeExplicit(file, instance, comment);
         System.out.printf(Locale.ROOT, "%s: %d nodos, capacidad %d kg, %d kg en total (%,d bytes)%n", file,
