@@ -109,6 +109,8 @@ export default function App() {
   const [initialView] = useState(initialViewState)
   const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof graphiteBasemap>> | null>(null)
   const map = useRef<MapRef>(null)
+  // El ref llega después de los efectos del primer render: encuadrar antes de que cargue no hace nada.
+  const [mapReady, setMapReady] = useState(false)
 
   // La ciudad: elegir localidades y ver cada ASE con su flota. Necesita la API; el plan estático es solo Suba.
   const [mode, setMode] = useState<'live' | 'city'>(() => (selectionFromHash() === null ? 'live' : 'city'))
@@ -171,24 +173,31 @@ export default function App() {
   }, [cityResult, chosen])
   const cityDrawn = useMemo(() => (cityPlan ? mergePlans(cityPlan) : null), [cityPlan])
 
-  // Al entrar a la ciudad se ve el Distrito urbano; con un plan, lo elegido. Sumapaz, rural, alejaría todo al sur.
+  // Al entrar a la ciudad se ve el Distrito urbano (Sumapaz, rural, alejaría todo al sur). Con un plan, sus
+  // contenedores: el borde de Usme o de Ciudad Bolívar llega hasta el campo y dejaría el plan en un rincón.
   useEffect(() => {
-    if (mode !== 'city' || !localities || !map.current) return
+    if (mode !== 'city' || !localities || !mapReady || !map.current) return
     const framed = localities.filter((locality) =>
       cityPlan ? cityPlan.localities.includes(locality.number) : !locality.rural,
     )
     if (framed.length === 0) return
+    const rings =
+      cityDrawn && cityDrawn.containers.length > 0
+        ? [cityDrawn.containers.map((container) => container.position)]
+        : framed.flatMap((locality) => locality.outline)
     const narrow = window.matchMedia('(max-width: 640px)').matches
-    map.current.fitBounds(boundsOf(framed.flatMap((locality) => locality.outline)), {
+    map.current.fitBounds(boundsOf(rings), {
       // En el móvil la consola baja hasta el 55 % del alto (App.css): el mapa se encuadra debajo.
       padding: narrow
         ? { top: Math.round(window.innerHeight * 0.55) + 24, bottom: 40, left: 16, right: 16 }
         : { top: 24, bottom: 40, left: 368, right: 40 },
       pitch: 30,
       bearing: -15,
+      // Con un solo contenedor el rectángulo es un punto
+      maxZoom: 15,
       duration: reducedMotion ? 0 : 1200,
     })
-  }, [mode, localities, cityPlan, basemap, reducedMotion])
+  }, [mode, localities, cityPlan, cityDrawn, mapReady, reducedMotion])
 
   const enterLive = () => {
     setMode('live')
@@ -428,6 +437,7 @@ export default function App() {
           ref={map}
           initialViewState={initialView}
           mapStyle={basemap}
+          onLoad={() => setMapReady(true)}
           // deck.gl no siempre recibe la salida del puntero hacia la consola: sin esto el borde queda marcado
           onMouseOut={() => setHovered(null)}
           attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
@@ -476,7 +486,7 @@ export default function App() {
 
         {mode === 'city' && localities && (
           <>
-            <CityInstrument result={cityPlan} selected={chosen.size} />
+            <CityInstrument result={cityPlan} selected={chosen.size} planningSince={planningSince} />
             <CityPanel
               localities={localities}
               selected={chosen}

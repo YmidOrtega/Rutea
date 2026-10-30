@@ -66,9 +66,17 @@ export function CityPanel(props: Props) {
         {planningSince !== null ? (
           <Elapsed since={planningSince} />
         ) : current ? (
-          <span className="num city-status">
-            Calculado en {decimal(current.planMs / 1000, 1)} s · semilla 7
-          </span>
+          <>
+            <span className="num city-status">
+              Calculado en {decimal(current.planMs / 1000, 1)} s · semilla 7
+            </span>
+            {current.areas.every((area) => area.shifts.length === 0) && (
+              <span className="city-empty" role="status">
+                Ningún operador publica contenedores en {selected.size === 1 ? 'esta localidad' : 'estas localidades'},
+                así que no hay cargue lateral que planificar. El puerta a puerta todavía no se modela.
+              </span>
+            )}
+          </>
         ) : (
           <button className="control city-plan" onClick={props.onPlan} disabled={selected.size === 0}>
             {selected.size === 0
@@ -87,15 +95,34 @@ export function CityPanel(props: Props) {
 }
 
 /** El servidor no informa avance: lo honesto es contar el tiempo, no inventar un porcentaje. */
-function Elapsed({ since }: { since: number }) {
+function useElapsed(since: number) {
   const [now, setNow] = useState(() => performance.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(performance.now()), 100)
     return () => clearInterval(timer)
   }, [])
+  return (now - since) / 1000
+}
+
+/** Mientras se planifica, la lectura grande es el tiempo: es lo primero que se mira después del clic. */
+function PlanningReading({ since }: { since: number }) {
+  const seconds = useElapsed(since)
+  return (
+    <div className="instrument-reading" role="status">
+      <span className="num instrument-clock">{decimal(seconds, 1)}</span>
+      <span className="instrument-shift">
+        <span className="label">Planificando</span>
+        <span className="num">segundos</span>
+      </span>
+    </div>
+  )
+}
+
+function Elapsed({ since }: { since: number }) {
+  const seconds = useElapsed(since)
   return (
     <span className="num city-status" role="status">
-      Planificando · {decimal((now - since) / 1000, 1)} s
+      Planificando · {decimal(seconds, 1)} s
     </span>
   )
 }
@@ -248,13 +275,14 @@ function ShiftRow({ shift }: { shift: Shift }) {
 interface InstrumentProps {
   result: SelectionPlan | null
   selected: number
+  planningSince: number | null
 }
 
 /**
  * La lectura principal de la ciudad son los camiones: es lo que la flota de cada operador tiene que poner en la calle.
  * No va en el acento, porque no es algo que esté pasando ahora.
  */
-export function CityInstrument({ result, selected }: InstrumentProps) {
+export function CityInstrument({ result, selected, planningSince }: InstrumentProps) {
   const trucks = result?.areas.reduce((sum, area) => sum + area.fleet.trucks, 0)
   const containers = result?.areas.reduce(
     (sum, area) => sum + area.shifts.reduce((n, shift) => n + shift.plan.containers.length, 0),
@@ -274,15 +302,19 @@ export function CityInstrument({ result, selected }: InstrumentProps) {
         </span>
       </div>
 
-      <div className="instrument-reading">
-        <span className="num instrument-clock city-reading" aria-label="Camiones de cargue lateral">
-          {trucks ?? '--'}
-        </span>
-        <span className="instrument-shift">
-          <span className="label">Camiones</span>
-          <span className="num">cargue lateral</span>
-        </span>
-      </div>
+      {planningSince !== null ? (
+        <PlanningReading since={planningSince} />
+      ) : (
+        <div className="instrument-reading">
+          <span className="num instrument-clock city-reading" aria-label="Camiones de cargue lateral">
+            {trucks ?? '--'}
+          </span>
+          <span className="instrument-shift">
+            <span className="label">Camiones</span>
+            <span className="num">cargue lateral</span>
+          </span>
+        </div>
+      )}
 
       <dl className="instrument-figures">
         <div>

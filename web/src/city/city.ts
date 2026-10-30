@@ -64,7 +64,11 @@ export const fetchLocalities = (): Promise<Locality[] | null> =>
     .catch(() => null)
 
 export async function fetchSelection(localities: number[], signal: AbortSignal): Promise<SelectionPlan> {
-  const response = await fetch(`/api/areas?localities=${localities.join(',')}`, { signal })
+  const response = await fetch(`/api/areas?localities=${localities.join(',')}`, { signal }).catch((error: unknown) => {
+    // El navegador solo dice "Failed to fetch": lo que se puede hacer es revisar que la API siga arriba.
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new Error('No hubo respuesta de la API. Revisa que siga corriendo (mvn -pl rutea-app spring-boot:run).')
+  })
   if (!response.ok) {
     const problem = (await response.json().catch(() => null)) as { detail?: string } | null
     throw new Error(problem?.detail ?? `/api/areas respondió ${response.status}`)

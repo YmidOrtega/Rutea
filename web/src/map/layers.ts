@@ -95,11 +95,11 @@ export function localityLayers(
  */
 export function cityRoutesLayer(routes: CityRoute[], palette: Palette) {
   return new PathLayer<CityRoute>({
-    id: 'routes',
+    id: 'city-routes',
     data: routes,
     getPath: (route) => route.path,
     getColor: (route) => mix(palette.mapBg, operatorColor(palette, route.area), CITY_ROUTES),
-    getWidth: 1.5,
+    getWidth: 2.5,
     widthUnits: 'pixels',
     jointRounded: true,
     capRounded: true,
@@ -107,8 +107,8 @@ export function cityRoutesLayer(routes: CityRoute[], palette: Palette) {
   })
 }
 
-/** Sin estelas que brillen encima, en la ciudad el plan mismo es lo que se mira: va más claro que en vivo. */
-const CITY_ROUTES = 0.7
+/** Sin estelas que brillen encima, en la ciudad el plan mismo es lo que se mira: casi en su color pleno. */
+const CITY_ROUTES = 0.9
 
 /** El borde de la UPZ elegida en los horarios de paso: es una selección, va en el acento. */
 export function sectorLayer(outline: LonLat[], palette: Palette) {
