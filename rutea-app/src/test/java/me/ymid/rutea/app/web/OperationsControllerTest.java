@@ -102,6 +102,18 @@ class OperationsControllerTest {
     }
 
     @Test
+    void theLocalitiesToChooseFromNeedNoOsmData() throws Exception {
+        mvc.perform(get("/api/localities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(20))
+                .andExpect(jsonPath("$[10].name").value("Suba"))
+                .andExpect(jsonPath("$[10].area").value(5))
+                .andExpect(jsonPath("$[10].operator").value("Área Limpia"))
+                .andExpect(jsonPath("$[19].rural").value(true))
+                .andExpect(jsonPath("$[10].outline[0][0].length()").value(2));
+    }
+
+    @Test
     void theSelectionTravelsInTheRequestAndIsCheckedBeforeTheData() throws Exception {
         mvc.perform(get("/api/areas"))
                 .andExpect(status().isBadRequest())

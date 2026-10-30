@@ -1,6 +1,7 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
+import type { Locality } from '../city/city'
 import { isReserveId, type ClosureEvent, type OverflowEvent } from '../operations/live'
 import { fillState, type VehicleTrack } from '../operations/telemetry'
 import { strokeColor, type Palette, type RGB } from './colors'
@@ -45,6 +46,49 @@ export function zoneLayers(palette: Palette) {
   ]
 }
 
+/**
+ * El selector de localidades: las elegidas quedan bajo la luz de sodio, porque son una selección, y la que está bajo
+ * el puntero marca su borde para saber qué se va a elegir. Las demás dejan ver el mapa tal cual.
+ */
+export function localityLayers(
+  localities: Locality[],
+  selected: Set<number>,
+  hovered: number | null,
+  palette: Palette,
+) {
+  const parts = localities.flatMap((locality) => locality.outline.map((ring) => ({ locality, ring })))
+  const chosen = (part: { locality: Locality }) => selected.has(part.locality.number)
+  return [
+    new PolygonLayer<{ locality: Locality; ring: LonLat[] }>({
+      id: 'localities',
+      data: parts,
+      getPolygon: (part) => part.ring,
+      // Sin elegir, casi transparente pero no del todo: así también se puede hacer clic en ella.
+      getFillColor: (part) => (chosen(part) ? [...palette.sodium, 26] : [...palette.bg, 8]),
+      stroked: false,
+      pickable: true,
+      updateTriggers: { getFillColor: [...selected].join(',') },
+      parameters: FLAT,
+    }),
+    new PathLayer<{ locality: Locality; ring: LonLat[] }>({
+      id: 'locality-edges',
+      data: parts,
+      getPath: (part) => part.ring,
+      getColor: (part) =>
+        part.locality.number === hovered
+          ? palette.fg
+          : chosen(part)
+            ? [...palette.sodium, 150]
+            : [...palette.fgMuted, 90],
+      getWidth: (part) => (part.locality.number === hovered ? 2 : 1),
+      widthUnits: 'pixels',
+      jointRounded: true,
+      updateTriggers: { getColor: [hovered, [...selected].join(',')], getWidth: hovered },
+      parameters: FLAT,
+    }),
+  ]
+}
+
 /** El borde de la UPZ elegida en los horarios de paso: es una selección, va en el acento. */
 export function sectorLayer(outline: LonLat[], palette: Palette) {
   return new PathLayer<LonLat[]>({
@@ -68,7 +112,12 @@ const PLANNED = 0.22
 const mix = (from: RGB, to: RGB, t: number): RGB =>
   [0, 1, 2].map((i) => Math.round(from[i] + (to[i] - from[i]) * t)) as RGB
 
-export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Palette) {
+export function staticLayers(
+  plan: Pick<DemoPlan, 'routes' | 'sites'>,
+  visible: Set<string>,
+  palette: Palette,
+  planned = PLANNED,
+) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
 
   return [
@@ -76,7 +125,7 @@ export function staticLayers(plan: DemoPlan, visible: Set<string>, palette: Pale
       id: 'routes',
       data: routes,
       getPath: (route) => route.path,
-      getColor: (route) => mix(palette.bg, strokeColor(palette, route.stream), PLANNED),
+      getColor: (route) => mix(palette.bg, strokeColor(palette, route.stream), planned),
       getWidth: 1.5,
       widthUnits: 'pixels',
       jointRounded: true,

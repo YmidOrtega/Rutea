@@ -49,6 +49,12 @@ public class OperationsController {
         return operations.plan();
     }
 
+    /** Las 20 localidades con su borde y su ASE: lo que dibuja el selector. No necesita los datos de OSM. */
+    @GetMapping("/localities")
+    public List<LocalityOutline> localities() {
+        return LocalityOutline.bogota();
+    }
+
     /** {@code ?localities=11,10}: un plan por ASE de la selección. La primera vez tarda lo que tarda planificarla. */
     @GetMapping("/areas")
     public SelectionPlan areas(@RequestParam(name = "localities") List<Integer> localities) {

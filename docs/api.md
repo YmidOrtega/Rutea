@@ -35,6 +35,7 @@ Todo error sale en [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`applicat
 | Método y ruta | Cuerpo | Responde |
 |---|---|---|
 | `GET /api/plan` | | `DemoPlan` de la operación en vivo |
+| `GET /api/localities` | | Lista de `LocalityOutline`: las 20 localidades, por número, para elegirlas en el mapa |
 | `GET /api/areas?localities=11,10` | | `SelectionPlan`: el cargue lateral de las localidades elegidas, un plan por ASE |
 | `GET /api/events?after=N` | | `EventsPage`: los eventos con `seq` mayor a `N` (por defecto 0, todos) |
 | `POST /api/breakdowns` | `BreakdownRequest` | Lista de eventos: la avería y los desbordes que hubo que volver a despachar |
@@ -49,6 +50,8 @@ Lo que cambia la operación (averías, desbordes, cierres, el reloj) también ll
 Sin `atSeconds`, una orden ocurre a la hora del reloj compartido.
 
 ### La selección
+
+`GET /api/localities` no necesita los datos de OSM: sus bordes van dentro de la app, y son los mismos con que se ubica cada contenedor en su localidad.
 
 `GET /api/areas` recibe las localidades por su número oficial, separadas por coma, en cualquier orden y aunque se repitan. Cada ASE con al menos una elegida responde con un plan por turno de cargue lateral, con R02, R03, R04 y R07 revisadas. Semilla e iteraciones son fijas (7 y 2.000), así que una selección da siempre el mismo plan.
 
@@ -240,6 +243,12 @@ Campos: `id`, `citation`, `count`, `summary`, `status`
 Valores: `OK`, `ACTION`, `FAIL`
 
 ## La selección
+
+### `LocalityOutline`
+
+Campos: `number`, `name`, `area`, `operator`, `rural`, `outline`
+
+`area` es la ASE que la atiende y `operator`, su operador. `outline` trae el anillo exterior de cada parte, simplificado a 5 m y cerrado. Sumapaz es `rural`: su modelo de recolección es `PENDIENTE_VERIFICAR`.
 
 ### `SelectionPlan`
 
