@@ -367,7 +367,32 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
   - **Operadores sin razón social** (2026-10-29): cada uno lleva el nombre de un río de su zona: Arzobispo (ASE 1), Tunjuelo (2), Fucha (3), Salitre (4) y Torca (5). Así está en el código, la API, el mapa y los documentos. Las fuentes se siguen citando por su enlace, y algunos enlaces llevan el nombre de la empresa en su dirección. `plan-suba.json` cambió solo en la etiqueta de la base («Base de Torca · Fontibón»); el grafo, los sitios, las UPZ y las instancias `.vrp` de Suba siguen con los mismos bytes.
   - **Color por operador:** en el modo Ciudad, las rutas, la muestra y los camiones de cada ASE van en el color de su operador (`--operator-1` a `--operator-5`, en `docs/diseno.md`).
   - **Pendiente:** la ciudad no tiene operación en vivo, línea de tiempo ni horarios de paso por UPZ en el panel. El plan estático (`pnpm dev` sin la API) sigue siendo solo Suba.
-- [ ] Benchmarks: una instancia `.vrp` por ASE y una fila por ASE en la tabla del arnés, en frío y en caliente.
+- [x] Benchmarks (2026-10-29): `mvn -pl rutea-app exec:java@bogota-instances` exporta en `data/bogota/` una instancia `.vrp` por ASE y turno, las mismas que arma `CityPlanner` con las 20 localidades. Se comprobó corriendo `alns` con semilla 7 y 2.000 iteraciones, que da los mismos costos y viajes que el plan de la ciudad en las siete. El formato CVRPLIB solo tiene capacidad, así que el arnés mide los km; el turno, los viajes por camión y la descarga los agrega `CityPlanner` después. Las instancias de Suba siguen con los mismos SHA-256.
+  - **Arnés** (60 s; semillas 1, 2 y 3; i5-14400F, 16 hilos, Java 21.0.13; 6 procesos a la vez, uno por solver; CSV en `docs/benchmarks/f7-areas/frio` y `caliente`). Promedio de las tres semillas, en km del solver; el detalle por semilla está en los CSV:
+
+    | Instancia | Viajes | `nearest-neighbor` | `clarke-wright` | `local-search` | `alns` | `alns-x4` | `timefold` 2.7.1 |
+    |---|---:|---:|---:|---:|---:|---:|---:|
+    | ASE 1 día (155) | 4 | 192,9 | 119,5 | 119,4 | **118,8** | **118,8** | 118,9 |
+    | ASE 1 noche (13) | 1 | 55,0 | **54,8** | **54,8** | **54,8** | **54,8** | **54,8** |
+    | ASE 2 día (609) | 26 | 619,7 | 632,1 | 607,4 | **586,8** | 587,0 | 629,4 |
+    | ASE 2 noche (381) | 16 | 329,8 | 367,9 | 341,2 | 316,5 | **316,0** | 323,1 |
+    | ASE 3 día (91, simulados) | 2 | 157,9 | 134,3 | 122,9 | **119,5** | **119,5** | 120,6 |
+    | ASE 4 día (763) | 35 | 1.022,9 | 1.053,4 | 1.030,2 | 991,2 | **990,3** | 1.104,0 |
+    | ASE 5 noche (320, simulados) | 14 | 862,3 | 798,3 | 789,1 | **772,6** | 773,0 | 803,6 |
+
+    En caliente (`--warmup`), los tres primeros son deterministas y dan lo mismo. Los demás:
+
+    | Instancia | `alns` | `alns-x4` | `timefold` 2.7.1 |
+    |---|---:|---:|---:|
+    | ASE 1 día | **118,8** | **118,8** | 118,9 |
+    | ASE 1 noche | **54,8** | **54,8** | **54,8** |
+    | ASE 2 día | 587,3 | **587,0** | 635,4 |
+    | ASE 2 noche | 317,0 | **315,6** | 324,6 |
+    | ASE 3 día | **119,5** | **119,5** | 120,6 |
+    | ASE 4 día | 991,4 | **990,3** | 1.119,5 |
+    | ASE 5 noche | **773,2** | **773,2** | 809,1 |
+
+  - **Lo que muestra:** las 252 soluciones son factibles según el `Evaluator`. `alns` y `alns-x4` quedan a menos de 0,5 % entre sí, dentro de la dispersión entre semillas, y usan en todas el mínimo posible de viajes (los kilos entre 8.000, redondeado hacia arriba). Timefold, con su configuración por defecto, empata en las instancias pequeñas, pero queda un 11,5 % por encima de `alns-x4` en el ASE 4 (13,0 % en caliente) y un 7,2 % en el ASE 2 de día. La distancia crece en general con el tamaño, como en Suba. Clarke-Wright usa 2 o 3 viajes de más en las ASE 2 y 4. `local-search` arranca de Clarke-Wright y en el ASE 2 de noche y el ASE 4 termina por encima del vecino más cercano, porque quita algunos de esos viajes pero no todos.
 - [ ] Release de datos de Bogotá con `SHA256SUMS`; `docker compose up` sigue siendo un solo comando.
 
 **Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. Cada plan dice qué parte de las toneladas de su ASE cubre el cargue lateral. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada.
