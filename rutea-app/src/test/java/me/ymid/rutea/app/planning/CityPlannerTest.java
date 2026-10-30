@@ -57,13 +57,13 @@ class CityPlannerTest {
         assertThat(CityPlanner.Fleet.overlap(SideLoading.ASE_2_NIGHT, new SideLoading.Shift("Madrugada", "", "04:00",
                 3600))).isTrue();
 
-        CityPlanner.Fleet lime = CityPlanner.Fleet.of(ServiceAreas.ASE_2,
+        CityPlanner.Fleet tunjuelo = CityPlanner.Fleet.of(ServiceAreas.ASE_2,
                 List.of(SideLoading.ASE_2_DAY, SideLoading.ASE_2_NIGHT), List.of(schedule(8, 7), schedule(4, 4)));
 
-        assertThat(lime.trucks()).isEqualTo(8);
-        assertThat(lime.lowerBound()).isEqualTo(7);
-        assertThat(lime.beyondDeclared()).isEqualTo(3);
-        assertThat(lime.warning()).hasValue("ASE 2: el plan pide 8 camiones de cargue lateral y LIME declara 5");
+        assertThat(tunjuelo.trucks()).isEqualTo(8);
+        assertThat(tunjuelo.lowerBound()).isEqualTo(7);
+        assertThat(tunjuelo.beyondDeclared()).isEqualTo(3);
+        assertThat(tunjuelo.warning()).hasValue("ASE 2: el plan pide 8 camiones de cargue lateral y Tunjuelo declara 5");
     }
 
     @Test

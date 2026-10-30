@@ -14,10 +14,10 @@ El comando escribe un CSV por ASE (`code,lat_e7,lon_e7,liters,locality,route,shi
 
 | ASE | Archivo | Contenedores | Capacidad | Turno | Capa editada | SHA-256 |
 |---|---|---:|---|---|---|---|
-| 1 · Promoambiental | `ase1-contenedores-negros.csv` | 168 | 153 de 1.100 L, 15 de 2.200 L | 155 de día, 13 de noche | 2026-10-27 | `8b50bbffbeb665d942f54043c66b36e99836fedaa7d7802885b3551de716eb52` |
-| 2 · LIME | `ase2-contenedores-negros.csv` | 990 | 2.200 L | 609 de día, 381 de noche | 2026-10-07 | `84883fe6c585ca97b0ade7519d828f8906758327d37e938d750058f02cf6b32b` |
-| 4 · Bogotá Limpia | `ase4-contenedores-negros.csv` | 763 | 2.400 L | – | 2026-10-02 | `d0dd5508e40ed2d54d85ac06cd3e09150c5a28108f807638c946055e1d99527d` |
+| 1 · Arzobispo | `ase1-contenedores-negros.csv` | 168 | 153 de 1.100 L, 15 de 2.200 L | 155 de día, 13 de noche | 2026-10-27 | `8b50bbffbeb665d942f54043c66b36e99836fedaa7d7802885b3551de716eb52` |
+| 2 · Tunjuelo | `ase2-contenedores-negros.csv` | 990 | 2.200 L | 609 de día, 381 de noche | 2026-10-07 | `84883fe6c585ca97b0ade7519d828f8906758327d37e938d750058f02cf6b32b` |
+| 4 · Salitre | `ase4-contenedores-negros.csv` | 763 | 2.400 L | – | 2026-10-02 | `d0dd5508e40ed2d54d85ac06cd3e09150c5a28108f807638c946055e1d99527d` |
 
 Descargado el 2026-10-29. Dos descargas seguidas dieron los mismos bytes, y ningún contenedor cayó fuera de su ASE.
 
-**Las capas cambian.** Los operadores las editan cada mes, y LIME publica un servicio nuevo con la fecha en el nombre (`CONTENEDORES_OCTUBRE_2026`). Si una descarga da otro SHA-256, cambió la capa: se actualiza esta tabla y se anota en el commit, porque las instancias y los planes cambian con ella. Si LIME publica un servicio nuevo, se cambia la URL en `OperatorContainers.LAYERS`.
+**Las capas cambian.** Los operadores las editan cada mes, y Tunjuelo publica un servicio nuevo con la fecha en el nombre (`CONTENEDORES_OCTUBRE_2026`). Si una descarga da otro SHA-256, cambió la capa: se actualiza esta tabla y se anota en el commit, porque las instancias y los planes cambian con ella. Si Tunjuelo publica un servicio nuevo, se cambia la URL en `OperatorContainers.LAYERS`.

@@ -27,7 +27,7 @@ import me.ymid.rutea.solver.alns.AlnsSolver;
 /**
  * El cargue lateral del ASE 2 con sus contenedores reales: cada turno del operador por separado, con cada llenado de
  * {@link SideLoading#FILLS} y las dos descargas del rango publicado. Dice cuántos compactadores hacen falta frente a
- * los que declara LIME. ALNS con límite de iteraciones: el resultado depende solo de la semilla.
+ * los que declara Tunjuelo. ALNS con límite de iteraciones: el resultado depende solo de la semilla.
  *
  * <p>Uso: {@code PlanSecondArea <bogota.rgraph> <dir-extracto> <dir-salida>}
  */
@@ -58,7 +58,7 @@ public final class PlanSecondArea {
         Files.createDirectories(outDir);
         Path csv = outDir.resolve("second-area-" + LocalDateTime.now().format(RUN_ID) + ".csv");
         System.out.printf(Locale.ROOT, "ASE %d (%s): %d contenedores reales, compactadores de %,d kg, semilla %d,"
-                + " %d iteraciones de ALNS, %d hilos; LIME declara %d de cargue lateral%n%n", area.number(),
+                + " %d iteraciones de ALNS, %d hilos; Tunjuelo declara %d de cargue lateral%n%n", area.number(),
                 area.operator(), real.size(), SideLoading.SIDE_LOADER_KG, seed, iterations, threads, declared);
         System.out.println("| Turno | Contenedores | Llenado | t | Viajes | Descarga | Camiones | Cota inferior |"
                 + " km | Horas de camión | Escenario |");

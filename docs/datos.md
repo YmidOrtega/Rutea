@@ -2,22 +2,24 @@
 
 Cifras que usa Rutea para simular la recolección en Suba (ASE 5), con su fuente. En el código, las de toda Bogotá y los supuestos generales viven en `rutea-app/.../scenario/BogotaFigures.java`; la base de cada ASE, en su `ServiceArea`, y las cifras del operador (participación, cargue lateral, frecuencia, turno, compactador y contenedores), en su `Operation`, las dos en `ServiceAreas.java`; y los sitios del grafo, en `rutea-geo/.../AreaSpec.java`. Si cambia una, se actualizan todos los lugares en el mismo cambio.
 
-Las cifras de la Superservicios salen del [informe de inspección a Área Limpia](https://www.superservicios.gov.co/sites/default/files/inline-files/Area-Limpia-Distrito-Capital-SAS-ESP.pdf) (visita del 9 al 13 de marzo de 2026), que compara el PGIRS de Bogotá con el PPSA del operador.
+**Nombres de los operadores.** Rutea no usa la razón social de las empresas prestadoras: cada una lleva el nombre de un río de su zona. Arzobispo es el operador del ASE 1, Tunjuelo el del ASE 2, Fucha el del ASE 3, Salitre el del ASE 4 y Torca el del ASE 5. Las fuentes se siguen citando con su enlace, el documento y la fecha, y algunos enlaces llevan el nombre de la empresa en su dirección. Una cita textual que la nombra lo reemplaza por `[el operador]`.
+
+Las cifras de la Superservicios salen del [informe de inspección a Torca](https://www.superservicios.gov.co/sites/default/files/inline-files/Area-Limpia-Distrito-Capital-SAS-ESP.pdf) (visita del 9 al 13 de marzo de 2026), que compara el PGIRS de Bogotá con el PPSA del operador.
 
 ## Bogotá: localidades y ASE
 
 Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `rutea-app/.../scenario/ServiceAreas.java`.
 
-- **Reparto y operadores:** "Así está dividido el esquema de aseo en las localidades de Bogotá" ([Bogotá.gov.co, 7 feb. 2026](https://bogota.gov.co/mi-ciudad/habitat/como-esta-dividido-el-esquema-de-aseo-en-las-localidades-de-bogota)). Los nombres legales salen de la adjudicación ([Bogotá.gov.co, 4 ene. 2018](https://bogota.gov.co/mi-ciudad/habitat/adjudicado-nuevo-esquema-de-aseo-para-bogota)), que no lista localidades. El ASE 2 se adjudicó a "Limpieza Metropolitana S.A. ESP", que la página de 2026 llama LIME.
+- **Reparto y operadores:** "Así está dividido el esquema de aseo en las localidades de Bogotá" ([Bogotá.gov.co, 7 feb. 2026](https://bogota.gov.co/mi-ciudad/habitat/como-esta-dividido-el-esquema-de-aseo-en-las-localidades-de-bogota)). El ASE 2 se adjudicó a "Limpieza Metropolitana S.A. ESP", que la página de 2026 llama Tunjuelo.
 - **Relaciones de OSM:** son las `boundary=administrative` con `admin_level=8` del extracto `colombia-261019`. Su etiqueta `ref` coincide con el número oficial de cada una de las 20 localidades.
 
 | ASE | Operador | Localidades (número oficial) | Base |
 |---|---|---|---|
-| 1 | Promoambiental Distrito | Usaquén (1), Chapinero (2), Santa Fe (3), San Cristóbal (4), Usme (5), La Candelaria (17), Sumapaz (20) | Carrera 60 # 15-07, Puente Aranda (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 8483428972 |
-| 2 | LIME | Tunjuelito (6), Bosa (7), Teusaquillo (13), Los Mártires (14), Antonio Nariño (15), Puente Aranda (16), Rafael Uribe Uribe (18), Ciudad Bolívar (19) | Carrera 62 # 19-04 Int. 4, Puente Aranda (informe de la Superservicios, marzo de 2026); nodo OSM 3868073372 |
-| 3 | Ciudad Limpia | Kennedy (8), Fontibón (9) | Calle 59C Sur # 51-50, Ciudad Bolívar (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 6580796244 |
-| 4 | Bogotá Limpia | Engativá (10), Barrios Unidos (12) | Calle 63 # 96-05, Engativá (informe de la Superservicios, marzo de 2026); nodo OSM 5769034872 |
-| 5 | Área Limpia | Suba (11) | Av. Calle 17 # 124-81, Fontibón; nodo OSM 865490722 (ver abajo) |
+| 1 | Arzobispo | Usaquén (1), Chapinero (2), Santa Fe (3), San Cristóbal (4), Usme (5), La Candelaria (17), Sumapaz (20) | Carrera 60 # 15-07, Puente Aranda (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 8483428972 |
+| 2 | Tunjuelo | Tunjuelito (6), Bosa (7), Teusaquillo (13), Los Mártires (14), Antonio Nariño (15), Puente Aranda (16), Rafael Uribe Uribe (18), Ciudad Bolívar (19) | Carrera 62 # 19-04 Int. 4, Puente Aranda (informe de la Superservicios, marzo de 2026); nodo OSM 3868073372 |
+| 3 | Fucha | Kennedy (8), Fontibón (9) | Calle 59C Sur # 51-50, Ciudad Bolívar (informes de la Superservicios, marzo de 2026, y de la UAESP, agosto de 2026); nodo OSM 6580796244 |
+| 4 | Salitre | Engativá (10), Barrios Unidos (12) | Calle 63 # 96-05, Engativá (informe de la Superservicios, marzo de 2026); nodo OSM 5769034872 |
+| 5 | Torca | Suba (11) | Av. Calle 17 # 124-81, Fontibón; nodo OSM 865490722 (ver abajo) |
 
 | Localidad | Relación OSM | Localidad | Relación OSM |
 |---|---:|---|---:|
@@ -43,7 +45,7 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
 | 5 | 5.800,7 ha (15 %) | 3.270.000 L | Av. Calle 145 con Cra. 84B | 32,589 km | 806 |
 | Bogotá | 37.969 ha | 12.670.000 L | | | 5.374 |
 
-- **Suelo urbano:** "Cobertura de recolección área urbana", [Línea base del PGIRS de Bogotá, agosto de 2018](https://habitatbogota.gov.co/sites/default/files/archivos-adjuntos/LINEA%20BASE%20PGIRS%20OBS%20HABITAT%203.8.2018.pdf), Tabla 3, parámetro 1: la intersección del suelo urbano con cada ASE. Es el 15 % que la inspección de la Superservicios cita para el ASE 5 ("Área Limpia corresponde al ASE 5 con el 15% del total de la ciudad"). Desde F3, Rutea lo había leído como parte de las toneladas: es parte del área.
+- **Suelo urbano:** "Cobertura de recolección área urbana", [Línea base del PGIRS de Bogotá, agosto de 2018](https://habitatbogota.gov.co/sites/default/files/archivos-adjuntos/LINEA%20BASE%20PGIRS%20OBS%20HABITAT%203.8.2018.pdf), Tabla 3, parámetro 1: la intersección del suelo urbano con cada ASE. Es el 15 % que la inspección de la Superservicios cita para el ASE 5 ("Torca corresponde al ASE 5 con el 15% del total de la ciudad"). Desde F3, Rutea lo había leído como parte de las toneladas: es parte del área.
 - **Contenedores exigidos:** [UAESP, Licitación 02 de 2017, Anexo 11](https://bogota.gov.co/sites/default/files/inline-files/anexo-11.-plan-de-contenerizacion_adenda20171124-1.pdf), Tabla 4: capacidad nominal agregada, en litros, de los contenedores de no aprovechables de cada ASE.
 - **Centroide y distancia a Doña Juana:** misma línea base, Tabla 3, parámetro 7, tomados de los estudios de costos de cada prestador (Resolución CRA 720 de 2015). Sirven para calibrar el grafo en cada ASE, como se hizo con el ASE 5 (abajo).
 - **Contenedores negros en Rutea:** 10.746 × parte del suelo urbano × 1/2, el mismo supuesto que da los 806 de Suba (ver "Supuestos"). El ASE 2 es la más grande, con 1.666, por debajo de los ~1.700 en los que F3 previó el primer ajuste de escala del solver.
@@ -63,9 +65,9 @@ Para elegir localidades y planificar por ASE (ADR 0012). En el código vive en `
 
   | ASE | Predio en OSM | Nodo | Dónde |
   |---|---|---:|---|
-  | 1 | Vía 458791813, "Promoambiental Distrito S.A E.S.P" (`building=industrial`) | 8483428972 | Salida a la Carrera 60, a unos 8 m de la esquina con la Calle 15 |
-  | 2 | Vía 881770228, "LIME S.A E.S.P" (`landuse=industrial`, `addr:street=Carrera 62`, `addr:housenumber=19-04`) | 3868073372 | Salida del patio a la Carrera 62 con Calle 20 |
-  | 3 | Vía 700784521, "Ciudad Limpia" (`landuse=industrial`) | 6580796244 | Salida del patio a la Calle 59C Sur (Av. Madelena). Queda en Ciudad Bolívar, fuera del ASE 3 |
+  | 1 | Vía 458791813, con el nombre del operador (`building=industrial`) | 8483428972 | Salida a la Carrera 60, a unos 8 m de la esquina con la Calle 15 |
+  | 2 | Vía 881770228, con el nombre del operador (`landuse=industrial`, `addr:street=Carrera 62`, `addr:housenumber=19-04`) | 3868073372 | Salida del patio a la Carrera 62 con Calle 20 |
+  | 3 | Vía 700784521, con el nombre del operador (`landuse=industrial`) | 6580796244 | Salida del patio a la Calle 59C Sur (Av. Madelena). Queda en Ciudad Bolívar, fuera del ASE 3 |
   | 4 | Vía 1210674921, "Bogota Limpia ESP SAS" (`building=yes`, `addr:street=Avenida Calle 63`) | 5769034872 | Calzada sur de la Av. Calle 63, a unos 31 m del edificio; no hay vía de acceso mapeada |
 - Sumapaz es toda rural. Su modelo de recolección es `PENDIENTE_VERIFICAR`.
 
@@ -77,17 +79,17 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
 
 | ASE | Contenedores negros en la calle | Plan de Contenerización de 2026 | Recolección publicada | Base |
 |---|---|---|---|---|
-| 1 · Promoambiental | 168 "en campo" (ArcGIS) | 242 de 1.100 L, con observaciones de la interventoría | 41 macrorrutas y 239 microrrutas (Superservicios); 302 polígonos en su ArcGIS, 212 domiciliarios | Carrera 60 # 15-07 |
-| 2 · LIME | 990 de 2.200 L, con ubicación (ArcGIS, 10 de octubre de 2026) | Con observaciones, escalado a la UAESP | 24 macrorrutas y 352 microrrutas (Superservicios); 9 macrorrutas publicadas en su ArcGIS | Carrera 62 # 19-04 Int. 4 |
-| 3 · Ciudad Limpia | 0 de 2.400 L (ArcGIS) | 91 de 1.100 L, aprobado | 15 macrorrutas y 432 microrrutas (Superservicios); puerta a puerta | Calle 59C Sur # 51-50 |
-| 4 · Bogotá Limpia | 763 de 2.400 L, todos en Engativá (ArcGIS) | Sin claridad en el informe de la UAESP | 12 macrorrutas y 99 microrrutas (Superservicios); 10 publicadas en su ArcGIS, con cargue | Calle 63 # 96-05 |
-| 5 · Área Limpia | 374 del contrato y 70 de adiciones, a julio | **320**, aprobado | – | Av. Calle 17 # 124-81 (arriba) |
+| 1 · Arzobispo | 168 "en campo" (ArcGIS) | 242 de 1.100 L, con observaciones de la interventoría | 41 macrorrutas y 239 microrrutas (Superservicios); 302 polígonos en su ArcGIS, 212 domiciliarios | Carrera 60 # 15-07 |
+| 2 · Tunjuelo | 990 de 2.200 L, con ubicación (ArcGIS, 10 de octubre de 2026) | Con observaciones, escalado a la UAESP | 24 macrorrutas y 352 microrrutas (Superservicios); 9 macrorrutas publicadas en su ArcGIS | Carrera 62 # 19-04 Int. 4 |
+| 3 · Fucha | 0 de 2.400 L (ArcGIS) | 91 de 1.100 L, aprobado | 15 macrorrutas y 432 microrrutas (Superservicios); puerta a puerta | Calle 59C Sur # 51-50 |
+| 4 · Salitre | 763 de 2.400 L, todos en Engativá (ArcGIS) | Sin claridad en el informe de la UAESP | 12 macrorrutas y 99 microrrutas (Superservicios); 10 publicadas en su ArcGIS, con cargue | Calle 63 # 96-05 |
+| 5 · Torca | 374 del contrato y 70 de adiciones, a julio | **320**, aprobado | – | Av. Calle 17 # 124-81 (arriba) |
 
 **Fuentes de la UAESP.** Los [informes mensuales de supervisión, monitoreo y control](https://www.uaesp.gov.co/content/informes-supervision-y-control-rbl) de agosto de 2026, uno por ASE, que resumen los de la interventoría (contrato 396 de 2018). Los anexos que citan (inventario de vehículos, inventario de contenedores, planes operativos) no se publican. Los planes de supervisión de 2026 de la misma página son calendarios de verificación, sin cifras operativas.
 
 - **ASE 1** ([informe](https://www.uaesp.gov.co/sites/default/files/documentos/ASE_1_Informe_de_Supervision_Monitoreo_y_Control_AGOSTO_2026.pdf), contrato 283 de 2018):
   - El operador presentó el plan actualizado el 13 de abril de 2026, con 242 contenedores de 1.100 L, y la interventoría lo observó el 16 de abril.
-  - "Se retiraron del espacio público 484 contenedores de material no aprovechable, los cuales se encuentran resguardados en la KR 60 # 15 07 base de operaciones Promoambiental Distrito SAS ESP".
+  - "Se retiraron del espacio público 484 contenedores de material no aprovechable, los cuales se encuentran resguardados en la KR 60 # 15 07 base de operaciones [el operador]".
   - Los 484 aprovechables fueron entregados a terceros.
 - **ASE 2** ([informe](https://www.uaesp.gov.co/sites/default/files/documentos/ASE_2_Informe_de_Supervision_Monitoreo_y_Control_AGOSTO_2026.pdf), contrato 284 de 2018):
   - El Anexo 11 le fija 2.410.000 L, que el operador cubrió con 1.096 contenedores de 2.200 L e igual número de aprovechables de 1.100 L (1.092 entregados a terceros).
@@ -102,14 +104,14 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
   - El plan actualizado (2 de marzo de 2026) "estableció una capacidad nominal de 320 contenedores para residuos no aprovechables", con concepto favorable de la interventoría el 20 de mayo de 2026.
   - En agosto, la interventoría encontró 64 contenedores adicionales "Ubicado en Campo" y 53 registros duplicados.
 
-**Fuentes de la Superservicios.** Los informes de inspección de marzo de 2026 a los cinco operadores, del mismo tipo que el de Área Limpia (arriba). Los de las ASE 1 a 4 se descargaron el 2026-10-29. Las flotas que declaran los operadores en la visita no coinciden con las del SUI, y la Superservicios lo marca en cada caso como presunto incumplimiento.
+**Fuentes de la Superservicios.** Los informes de inspección de marzo de 2026 a los cinco operadores, del mismo tipo que el de Torca (arriba). Los de las ASE 1 a 4 se descargaron el 2026-10-29. Las flotas que declaran los operadores en la visita no coinciden con las del SUI, y la Superservicios lo marca en cada caso como presunto incumplimiento.
 
-- **ASE 1, Promoambiental** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-Promoambiental-Distrito-SAS-ESP.pdf), visita del 2 al 6 de marzo de 2026):
+- **ASE 1, Arzobispo** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-Promoambiental-Distrito-SAS-ESP.pdf), visita del 2 al 6 de marzo de 2026):
   - **Base:** "Base de operaciones. Dirección: Carrera 60 No. 15 – 07 Puente Aranda". Es la misma KR 60 # 15-07 donde el informe de la UAESP dice que se guardan los contenedores retirados.
   - **Rutas:** 41 macrorrutas y 239 microrrutas, con frecuencia de 3 y 7 veces por semana.
   - **Flota:** 79 compactadores de 10 a 28 yd³, de los cuales 23 son de reserva y 3 de carga lateral para contenedores; además, 14 ampliroll de 15 yd³ y volquetas.
   - **Toneladas:** "la cantidad de residuos provenientes del ASE 1, para el mes de enero de 2026 suma 36.230,27 toneladas", unas 1.169 t/día.
-- **ASE 2, LIME** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-inspeccion-Limpieza-Metropolitana-SA-ESP-Lime.pdf), visita del 2 al 6 de marzo de 2026):
+- **ASE 2, Tunjuelo** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-inspeccion-Limpieza-Metropolitana-SA-ESP-Lime.pdf), visita del 2 al 6 de marzo de 2026):
   - **Base:** "La base de operaciones se encuentra ubicada en la Carrera 62 19 - 04 INT. 4". La portada del informe dice "Carrera 69 No. 19 – 04 INT 4"; se toma la del texto, que coincide con los canales de atención publicados por la [Alcaldía](https://bogota.gov.co/mi-ciudad/habitat/canales-de-atencion-de-los-operadores-de-aseo-en-bogota-2026).
   - **Rutas:** 24 macrorrutas y 352 microrrutas. Frecuencia de 3 y 6 veces por semana en zona residencial, y de 6 y 7 en zona comercial.
   - **Horarios:** de 06:00–16:00 a 18:30–04:30, con varios turnos intermedios.
@@ -123,12 +125,12 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
 
     En el SUI figuran 191 compactadores activos y 69 volquetas (actualización del 22 de abril de 2026). La Superservicios lo marca como presunto incumplimiento por no actualizar el SUI.
   - **Toneladas:** "en promedio 54.892 toneladas de residuos mensuales provenientes del ASE2, lo cual significa un promedio diario de 1804.7 toneladas". Es la primera cifra de toneladas por ASE con fuente. Frente a las 5.680 t/día de la ciudad da el 31,8 %, cerca del 31 % de suelo urbano del ASE 2.
-- **ASE 3, Ciudad Limpia** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-concreto-Ciudad-Limpia-SA-ESP.pdf), visita del 2 al 6 de marzo de 2026):
+- **ASE 3, Fucha** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-concreto-Ciudad-Limpia-SA-ESP.pdf), visita del 2 al 6 de marzo de 2026):
   - **Base:** "La base de operaciones del prestador se encuentra localizada en la calle 59c sur # 51 - 50". Allí está también su sede administrativa, y la UAESP la visitó el 26 de agosto de 2026 ("CL 59C SUR 51 50, Base de operaciones").
   - **Rutas:** 15 macrorrutas y 432 microrrutas. La frecuencia es de 3 veces por semana, 7 para algunos grandes productores y 6 para la atención de contenedores.
   - **Flota en operación:** 3 compactadores de 16 yd³, 30 de 25 yd³ y 7 de 28 yd³, más 3 de reserva. Compró 9 compactadores nuevos (modelo 2026), de los que uno ya opera. El SUI registra 41.
   - **Toneladas, enero de 2026:** 33.316,12 t en total, de las cuales 30.795,80 son domiciliarias (unas 1.075 t/día en total).
-- **ASE 4, Bogotá Limpia** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-inspeccion-Bogota-Limpia-SAS-ESP.pdf), visita del 9 al 13 de marzo de 2026):
+- **ASE 4, Salitre** ([informe](https://www.superservicios.gov.co/sites/default/files/inline-files/Informe-inspeccion-Bogota-Limpia-SAS-ESP.pdf), visita del 9 al 13 de marzo de 2026):
   - **Base:** "ubicada en la Calle 63 Nº 96-05 de la localidad de Engativá", en un predio de 19.652 m². La portada del informe dice "Av. Calle 63 No. 96 - 05, Fontibón"; se toma la del texto, porque la Calle 63 con Carrera 96 queda en Engativá.
   - **Rutas:** 12 macrorrutas y 99 microrrutas. La frecuencia es de 3 veces por semana en zona residencial y diaria en zona comercial.
   - **Horarios:** 06:00–15:00, 18:00–03:00 y 14:00–22:00.
@@ -137,7 +139,7 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
 
 **Fuentes de los operadores.** Visores públicos de ArcGIS Online, leídos con la API REST pública (`/query`). Ninguna capa declara licencia: `PENDIENTE_VERIFICAR` antes de versionar un extracto. Los contenedores negros "en campo" de las ASE 1, 2 y 4 se descargan con `mvn -pl rutea-app exec:java@operator-containers` (ver `data/ase/README.md`).
 
-- **ASE 1, Promoambiental** ([visor](https://experience.arcgis.com/experience/ce3b02ef43e440479c946a0da02f331e/page/Recolecci%C3%B3n?org=promodistrito1)):
+- **ASE 1, Arzobispo** ([visor](https://experience.arcgis.com/experience/ce3b02ef43e440479c946a0da02f331e/page/Recolecci%C3%B3n?org=promodistrito1)):
   - **Contenedores** (`C0nt3n3d0r3s`): 1.168 registros. 168 "En campo", todos no aprovechables, con frecuencia de 3 veces por semana:
 
     | Localidad | De 1.100 L | De 2.200 L |
@@ -152,11 +154,11 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
     - **Domiciliarias:** 212. De ellas, 167 son de 3 veces por semana, en turno de 06:00–16:00 o de 18:00–04:00.
     - **Vehículos:** compactadores de 25 yd (14 t) y de 16–17 yd (8,5 t).
     - **Recorridos:** la capa `l_r3c0rr1d0_m1cr0rrut4_r3c0l3cc10n` trae el trazado de cada microrruta; no se ha revisado.
-- **ASE 3, Ciudad Limpia** ([visor de recolección](https://climpia.maps.arcgis.com/apps/webappviewer/index.html?id=aa38dd9a651a448e9ff6008ba6cda087), [visor de contenedores](https://climpia.maps.arcgis.com/apps/webappviewer/index.html?id=dde1f3748589406fb0d0da03b2ab0e75)):
+- **ASE 3, Fucha** ([visor de recolección](https://climpia.maps.arcgis.com/apps/webappviewer/index.html?id=aa38dd9a651a448e9ff6008ba6cda087), [visor de contenedores](https://climpia.maps.arcgis.com/apps/webappviewer/index.html?id=dde1f3748589406fb0d0da03b2ab0e75)):
   - **Contenedores** (`Pagina_Web_Contenedores_2021`, editada el 4 de septiembre de 2026): ninguno de los 996 no aprovechables sigue en la calle. 747 figuran retirados "por descontenerización" y 248 "por prueba piloto"; las cifras no coinciden del todo con las del informe de la UAESP. Los 996 aprovechables están "entregados a terceros".
   - **Macrorrutas:** las de 2026 (`PuntosxCuartelillo`, capa 1) son 14 polígonos por cuartelillo (B1 a B12, I6), con turno de día, tarde o noche. El visor de recolección todavía usa las de 2019.
   - **Puerta a puerta:** la nota "Avanza retiro de contenedores en Fontibón y Kennedy" ([SIGAB, 23 sep. 2026](https://sigab.gov.co/avanza-retiro-de-contenedores-en-fontibon-y-kennedy/)) informa más de 550 contenedores retirados desde finales de abril, el paso a recolección puerta a puerta y su base: la Resolución CRA 1027 de 2026, que modifica el Contrato 285 de 2018. El texto de la resolución es `PENDIENTE_VERIFICAR`.
-- **ASE 4, Bogotá Limpia** ([visor](https://bogotalimpia.maps.arcgis.com/apps/webappviewer/index.html?id=13724c8b7e444e119179d0412f43a92e)):
+- **ASE 4, Salitre** ([visor](https://bogotalimpia.maps.arcgis.com/apps/webappviewer/index.html?id=13724c8b7e444e119179d0412f43a92e)):
   - **Contenedores negros** (`Contenerizacion_ASE4_2400_Actualizacion`, editada el 14 de septiembre de 2026): 1.935 registros de 2.400 L, con dirección y microrruta.
 
     | Estado | Contenedores |
@@ -171,7 +173,7 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
     - **Turnos:** de mañana (06:00–15:00) y de noche (18:00–03:00).
     - **Frecuencias:** lunes-miércoles-viernes, martes-jueves-sábado, o de lunes a sábado.
     - **Cargue:** lateral solo en Engativá; en Barrios Unidos todo es manual.
-- **ASE 2, LIME** ([visor](https://experience.arcgis.com/experience/7a9ef52ad80746f2b996dda11b954e3f/)):
+- **ASE 2, Tunjuelo** ([visor](https://experience.arcgis.com/experience/7a9ef52ad80746f2b996dda11b954e3f/)):
   - **Contenedores** (`CONTENEDORES_OCTUBRE_2026`, corte del 10 de octubre de 2026): 2.086 registros, con dirección, UPZ, microrruta y turno. 990 no aprovechables de 2.200 L "en campo", que cuadran con los 1.096 del contrato menos los 95 retirados que reporta la UAESP. Los aprovechables son 1.092 "entregados a terceros" y 4 en campo.
 
     | Localidad | Contenedores negros en campo |
@@ -196,7 +198,7 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
 | Reparto de los contenedores | "la mitad para residuos no aprovechables y la mitad para promover el reciclaje" | UAESP, [Bogotá.gov.co, 26 feb. 2025](https://bogota.gov.co/mi-ciudad/habitat/contenedores-de-basuras-en-bogota-apoyan-prestacion-servicio-aseo-2025) | F3 solo simula los negros |
 | Servicio ordinario que entra a Doña Juana | ≈ 5.680 t/día (1.er trimestre de 2026, sin puntos críticos) | UAESP, [Bogotá.gov.co, 17 abr. 2026](https://bogota.gov.co/mi-ciudad/habitat/aumenta-la-produccion-de-residuos-solidos-en-bogota-segun-uaesp) | Demanda |
 | Parte del suelo urbano de Bogotá que cubre el ASE 5 | 15 % (5.800,7 de 37.969 ha) | PGIRS, en el informe de la Superservicios y en su línea base de 2018 | Supuesto: se usa como parte de las toneladas y de los contenedores (ver "Supuestos") |
-| Toneladas domiciliarias por cargue lateral (contenedores) | mínimo 13 % | PPSA de Área Limpia, en el informe de la Superservicios | Demanda (se usa el mínimo) |
+| Toneladas domiciliarias por cargue lateral (contenedores) | mínimo 13 % | PPSA de Torca, en el informe de la Superservicios | Demanda (se usa el mínimo) |
 | Frecuencia de recolección | de 3 a 6 veces por semana | Operador, en el informe de la Superservicios | 6 veces: carga de 7/6 días |
 | Turnos | 06:00–14:00 y 18:00–02:00 (88 microrrutas cada uno), y otros menores | Operador, en el informe de la Superservicios | Turno de 8 h desde las 18:00 |
 | Camiones y toneladas que entran a Doña Juana | 684 camiones y 6.368 t por día en promedio (≈ 9,3 t por camión) | [La República, 2025](https://www.larepublica.co/responsabilidad-social/control-de-emisiones-de-metano-tarea-pendiente-de-dona-juana-y-de-los-bogotanos-4070876) | Corrobora cargas de 8 t por viaje |
@@ -241,15 +243,15 @@ La dirección del PPSA para el relleno no sirve para ubicarlo: en OSM, la Calle 
 - Las vías privadas solo entran al grafo cerca de un sitio: las del relleno son privadas para el público, no para los compactadores.
 - `PENDIENTE_VERIFICAR`: **150 kg/m³ de residuos sueltos en el contenedor**. No hay cifra publicada para Bogotá: el estudio de caracterización de la UAESP (Consorcio NCU, 2017) reporta producción per cápita, no densidad. 150 kg/m³ es el valor de manual para "basura suelta en recipientes" (Tchobanoglous, 1993), citado en el [estudio de caracterización de CONAMA RM y la PUCV (2006)](https://santiagorecicla.mma.gob.cl/wp-content/uploads/2016/04/infor_residuos_conama2011.pdf). `SensorBenchmark` mide qué pasa con 100 y 200 kg/m³.
 - Supuesto: **cada contenedor tiene uno de los tres tamaños que declara el operador, al azar**. No se conoce la mezcla.
-- `PENDIENTE_VERIFICAR`: **llenado medio al recoger del 100 %** (ADR 0013; `SideLoading`). La carga de cada contenedor real es litros × 150 kg/m³ × el llenado. No hay dato de llenado. Los planes usan la cota alta para no quedarse cortos de camiones, y el plan se reporta también con 50 y 75 %. El 13 % de toneladas por cargue lateral que declara Área Limpia no acota el llenado: con los 320 contenedores aprobados haría falta un llenado del 84 % si todos fueran de 3.200 L, del 112 % si fueran de 2.400 L y del 245 % si fueran de 1.100 L, y no se publica la mezcla.
-- **Suba de 2026** (`SubaNoche-n321-s1-f100`): los 320 contenedores aprobados en el Plan de Contenerización del ASE 5 no tienen ubicación publicada. Se ubican con el método de F3 y la misma semilla que los 806, cada uno con un tamaño al azar entre los tres que declara Área Limpia (supuesto: no se publica la mezcla), en el turno de 18:00 a 02:00 de su `Operation`. Con llenado del 100 % recogen 110,5 t por recolección, 94,7 t/día con 6 recolecciones por semana: el 11,1 % de las 852 t/día supuestas para el ASE, frente al mínimo de 13 % que declara su PPSA.
-- `PENDIENTE_VERIFICAR`: **un compactador de cargue lateral de 32 yd³ carga 8.000 kg** (`SideLoading.SIDE_LOADER_KG`). LIME declara 5 de 32 yd³ y ningún operador publica sus kilos. Se toman los 8 t que Área Limpia declara para sus compactadores de 32 yd.
-- **Turnos de cargue lateral del ASE 2:** la capa de LIME asigna cada contenedor al turno de día (609) o al de noche (381), y cada turno es una instancia. Su informe de la Superservicios da los horarios, de 06:00–16:00 y de 18:30–04:30: turnos de 10 h.
+- `PENDIENTE_VERIFICAR`: **llenado medio al recoger del 100 %** (ADR 0013; `SideLoading`). La carga de cada contenedor real es litros × 150 kg/m³ × el llenado. No hay dato de llenado. Los planes usan la cota alta para no quedarse cortos de camiones, y el plan se reporta también con 50 y 75 %. El 13 % de toneladas por cargue lateral que declara Torca no acota el llenado: con los 320 contenedores aprobados haría falta un llenado del 84 % si todos fueran de 3.200 L, del 112 % si fueran de 2.400 L y del 245 % si fueran de 1.100 L, y no se publica la mezcla.
+- **Suba de 2026** (`SubaNoche-n321-s1-f100`): los 320 contenedores aprobados en el Plan de Contenerización del ASE 5 no tienen ubicación publicada. Se ubican con el método de F3 y la misma semilla que los 806, cada uno con un tamaño al azar entre los tres que declara Torca (supuesto: no se publica la mezcla), en el turno de 18:00 a 02:00 de su `Operation`. Con llenado del 100 % recogen 110,5 t por recolección, 94,7 t/día con 6 recolecciones por semana: el 11,1 % de las 852 t/día supuestas para el ASE, frente al mínimo de 13 % que declara su PPSA.
+- `PENDIENTE_VERIFICAR`: **un compactador de cargue lateral de 32 yd³ carga 8.000 kg** (`SideLoading.SIDE_LOADER_KG`). Tunjuelo declara 5 de 32 yd³ y ningún operador publica sus kilos. Se toman los 8 t que Torca declara para sus compactadores de 32 yd.
+- **Turnos de cargue lateral del ASE 2:** la capa de Tunjuelo asigna cada contenedor al turno de día (609) o al de noche (381), y cada turno es una instancia. Su informe de la Superservicios da los horarios, de 06:00–16:00 y de 18:30–04:30: turnos de 10 h.
 - **Turnos de cargue lateral de las demás ASE** (`SideLoading`):
   - **ASE 1:** su capa asigna 155 contenedores al turno de día y 13 al de noche. Las horas son las de sus microrrutas domiciliarias de 3 veces por semana, 06:00–16:00 y 18:00–04:00 (capa de microrrutas del operador). No se cruzó la microrruta de cada contenedor.
   - **ASE 4:** `PENDIENTE_VERIFICAR`. Su capa no trae turno, así que los 763 van al de mañana, 06:00–15:00 (9 h). La Superservicios vio su compactador de carga lateral en la microrruta 411067 a las 10:45, un martes, con frecuencia martes-jueves-sábado.
   - **ASE 3:** `PENDIENTE_VERIFICAR`. Los 91 simulados van al turno de 06:00–14:00 (8 h), el que su informe de la Superservicios pone al lado de la frecuencia de "atención de contenedores"; la tabla del informe no los empareja de forma explícita.
-- Supuesto: **los contenedores de las ASE 2 y 4 se recogen 3 veces por semana**, la frecuencia residencial que declaran los dos operadores. Sus capas no traen la frecuencia (en la de LIME, el campo `FRECUENCIA` está vacío), así que también se mide con 6. El ASE 1 publica 3 para sus 168 contenedores (campo `Frecuencia` de su capa), y el ASE 3 declara 6 para la atención de contenedores.
+- Supuesto: **los contenedores de las ASE 2 y 4 se recogen 3 veces por semana**, la frecuencia residencial que declaran los dos operadores. Sus capas no traen la frecuencia (en la de Tunjuelo, el campo `FRECUENCIA` está vacío), así que también se mide con 6. El ASE 1 publica 3 para sus 168 contenedores (campo `Frecuencia` de su capa), y el ASE 3 declara 6 para la atención de contenedores.
 - **Cuánto cubre el cargue lateral** (`mvn -pl rutea-app exec:java@side-loading`, CSV en `docs/benchmarks/f7-side-loading/`), en toneladas por día y parte de las toneladas de la ASE:
 
   | ASE | Contenedores | Veces por semana | 50 % | 75 % | 100 % |

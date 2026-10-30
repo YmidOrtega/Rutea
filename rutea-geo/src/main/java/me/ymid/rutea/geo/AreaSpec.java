@@ -37,7 +37,7 @@ public record AreaSpec(long localityRelation, long cityRelation, List<Site> site
      * Suba (relación 2214884) y Bogotá D. C. (relación 1387968), en el extracto de {@code data/osm}.
      *
      * <ul>
-     *   <li>Base de Área Limpia: Avenida Calle 17 # 124-81, Fontibón, según la inspección de la
+     *   <li>Base de Torca: Avenida Calle 17 # 124-81, Fontibón, según la inspección de la
      *       Superservicios de marzo de 2026. Se toma la esquina de la Av. Calle 17 con la Carrera 124
      *       (nodo 865490722); la base queda a unos 81 m de ella.
      *   <li>Relleno Sanitario Doña Juana: portería noreste, nodo 1013564592 ({@code barrier=swing_gate}),
@@ -54,10 +54,10 @@ public record AreaSpec(long localityRelation, long cityRelation, List<Site> site
      * del predio sale a la calle pública o, si no hay vía mapeada, el punto de la calle más cercano al edificio:
      *
      * <ul>
-     *   <li>ASE 1, Promoambiental (vía 458791813): salida a la Carrera 60, frente al número 15-07.
-     *   <li>ASE 2, LIME (vía 881770228, Carrera 62 # 19-04): salida del patio a la Carrera 62 con Calle 20.
-     *   <li>ASE 3, Ciudad Limpia (vía 700784521): salida del patio a la Calle 59C Sur.
-     *   <li>ASE 4, Bogotá Limpia (vía 1210674921): calzada sur de la Av. Calle 63, a unos 31 m del edificio.
+     *   <li>ASE 1, Arzobispo (vía 458791813): salida a la Carrera 60, frente al número 15-07.
+     *   <li>ASE 2, Tunjuelo (vía 881770228, Carrera 62 # 19-04): salida del patio a la Carrera 62 con Calle 20.
+     *   <li>ASE 3, Fucha (vía 700784521): salida del patio a la Calle 59C Sur.
+     *   <li>ASE 4, Salitre (vía 1210674921): calzada sur de la Av. Calle 63, a unos 31 m del edificio.
      * </ul>
      *
      * Los cuatro nodos están sobre calles públicas, que ya entran al grafo, así que van con margen 0: de lo privado

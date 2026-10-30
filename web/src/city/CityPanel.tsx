@@ -26,7 +26,7 @@ const sameSelection = (result: SelectionPlan | null, selected: Set<number>) =>
 
 /**
  * Elegir localidades y ver cada ASE con su flota. La lista va agrupada por ASE porque es la ASE la que planifica
- * (ADR 0012): elegir Kennedy es pedirle el plan a Ciudad Limpia.
+ * (ADR 0012): elegir Kennedy es pedirle el plan a Fucha.
  */
 export function CityPanel(props: Props) {
   const { localities, selected, result, planningSince } = props

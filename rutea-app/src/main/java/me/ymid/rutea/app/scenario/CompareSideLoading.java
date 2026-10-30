@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /**
  * Cuánto recoge el cargue lateral de cada ASE con cada llenado medio de {@link SideLoading#FILLS}, frente a sus
- * toneladas, y qué llenado haría falta para el 13 % que declara Área Limpia. Lee el extracto de {@code data/ase}.
+ * toneladas, y qué llenado haría falta para el 13 % que declara Torca. Lee el extracto de {@code data/ase}.
  *
  * <p>Uso: {@code CompareSideLoading <dir-extracto> <dir-salida>}
  */

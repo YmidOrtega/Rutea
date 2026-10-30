@@ -108,7 +108,7 @@ class OperationsControllerTest {
                 .andExpect(jsonPath("$.length()").value(20))
                 .andExpect(jsonPath("$[10].name").value("Suba"))
                 .andExpect(jsonPath("$[10].area").value(5))
-                .andExpect(jsonPath("$[10].operator").value("Área Limpia"))
+                .andExpect(jsonPath("$[10].operator").value("Torca"))
                 .andExpect(jsonPath("$[19].rural").value(true))
                 .andExpect(jsonPath("$[10].outline[0][0].length()").value(2));
     }

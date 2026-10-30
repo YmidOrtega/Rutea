@@ -42,11 +42,11 @@ class SideLoadingTest {
 
     @Test
     void sideLoadingShiftsChainFourTripsAndSubaKeepsThree() {
-        SideLoading.Area lime = SideLoading.of(ServiceAreas.ASE_2);
+        SideLoading.Area tunjuelo = SideLoading.of(ServiceAreas.ASE_2);
 
-        assertThat(lime.shifts()).containsExactly(SideLoading.ASE_2_DAY, SideLoading.ASE_2_NIGHT);
-        assertThat(lime.operation(SideLoading.ASE_2_NIGHT).maxTripsPerTruck()).isEqualTo(4);
-        assertThat(lime.operation(SideLoading.ASE_2_NIGHT).compactorKg()).isEqualTo(SideLoading.SIDE_LOADER_KG);
+        assertThat(tunjuelo.shifts()).containsExactly(SideLoading.ASE_2_DAY, SideLoading.ASE_2_NIGHT);
+        assertThat(tunjuelo.operation(SideLoading.ASE_2_NIGHT).maxTripsPerTruck()).isEqualTo(4);
+        assertThat(tunjuelo.operation(SideLoading.ASE_2_NIGHT).compactorKg()).isEqualTo(SideLoading.SIDE_LOADER_KG);
         assertThat(ServiceAreas.ASE_5.verified().maxTripsPerTruck()).isEqualTo(3);
         assertThatThrownBy(() -> SideLoading.of(ServiceAreas.ASE_1).operation(SideLoading.ASE_4_DAY))
                 .hasMessageContaining("no es un turno");

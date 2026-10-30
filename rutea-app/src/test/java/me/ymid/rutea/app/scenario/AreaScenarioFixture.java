@@ -20,7 +20,7 @@ public final class AreaScenarioFixture {
             Map.of(ServiceAreas.locality(11).orElseThrow(), rectangle(-1, -1, 11, 11)));
 
     /**
-     * Una ASE de prueba con la operación de Área Limpia: el pueblo partido en dos por la longitud del paso 6, y una
+     * Una ASE de prueba con la operación de Torca: el pueblo partido en dos por la longitud del paso 6, y una
      * localidad rural fuera de él.
      */
     static final Locality WEST = new Locality(1, "Oeste", 91, false);

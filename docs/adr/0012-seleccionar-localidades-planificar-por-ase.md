@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Hasta F6, Rutea planifica una sola zona: Suba, que es a la vez una localidad y un Área de Servicio Exclusivo (ASE 5, operada por Área Limpia). Todo lo que la define está fijo en el código: `AreaSpec.SUBA`, `SubaFigures`, `SubaScenario`, `suba-upz.geojson` y los sitios sensibles de Suba.
+Hasta F6, Rutea planifica una sola zona: Suba, que es a la vez una localidad y un Área de Servicio Exclusivo (ASE 5, operada por Torca). Todo lo que la define está fijo en el código: `AreaSpec.SUBA`, `SubaFigures`, `SubaScenario`, `suba-upz.geojson` y los sitios sensibles de Suba.
 
 El siguiente paso es poder escoger cualquier conjunto de localidades de Bogotá (una, cinco, las veinte o las que sean) y que el plan funcione. Hay cuatro fuerzas en juego:
 

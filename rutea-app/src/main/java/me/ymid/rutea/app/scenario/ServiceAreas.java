@@ -12,9 +12,9 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
- * Las 20 localidades de Bogotá y las 5 Áreas de Servicio Exclusivo (ASE) que las atienden (ADR 0012). La
- * localidad es lo que se elige; la ASE, quién recoge. Cada dato está en {@code docs/datos.md}; si cambia uno,
- * se actualizan los dos en el mismo cambio.
+ * Las 20 localidades de Bogotá y las 5 Áreas de Servicio Exclusivo (ASE) que las atienden (ADR 0012). Cada operador
+ * lleva el nombre de un río de su zona y no su razón social. La localidad es lo que se elige; la ASE, quién recoge.
+ * Cada dato está en {@code docs/datos.md}; si cambia uno, se actualizan los dos en el mismo cambio.
  *
  * <p>Reparto y operadores: "Así está dividido el esquema de aseo en las localidades de Bogotá" (Bogotá.gov.co,
  * 7 de febrero de 2026). Relaciones de OSM: {@code admin_level=8}, en el extracto de {@code data/osm}; su
@@ -157,8 +157,8 @@ public final class ServiceAreas {
      */
     public static final long DISPOSAL_OSM_NODE = 1013564592;
 
-    /** Promoambiental Distrito S.A.S. E.S.P. Base: Carrera 60 # 15-07, Puente Aranda. */
-    public static final ServiceArea ASE_1 = new ServiceArea(1, "Promoambiental Distrito", List.of(
+    /** Operador Arzobispo. Base: Carrera 60 # 15-07, Puente Aranda. */
+    public static final ServiceArea ASE_1 = new ServiceArea(1, "Arzobispo", List.of(
             new Locality(1, "Usaquén", 2214885, false),
             new Locality(2, "Chapinero", 1379547, false),
             new Locality(3, "Santa Fe", 4740232, false),
@@ -168,8 +168,8 @@ public final class ServiceAreas {
             new Locality(20, "Sumapaz", 5579632, true)),
             0.24, new Base("Carrera 60 # 15-07", "Puente Aranda", 8483428972L), Optional.empty());
 
-    /** Limpieza Metropolitana S.A. E.S.P. (LIME). Base: Carrera 62 # 19-04 Int. 4, Puente Aranda. */
-    public static final ServiceArea ASE_2 = new ServiceArea(2, "LIME", List.of(
+    /** Operador Tunjuelo. Base: Carrera 62 # 19-04 Int. 4, Puente Aranda. */
+    public static final ServiceArea ASE_2 = new ServiceArea(2, "Tunjuelo", List.of(
             new Locality(6, "Tunjuelito", 2216689, false),
             new Locality(7, "Bosa", 4740227, false),
             new Locality(13, "Teusaquillo", 2216632, false),
@@ -180,20 +180,20 @@ public final class ServiceAreas {
             new Locality(19, "Ciudad Bolívar", 4740228, false)),
             0.31, new Base("Carrera 62 # 19-04 Int. 4", "Puente Aranda", 3868073372L), Optional.empty());
 
-    /** Ciudad Limpia Bogotá S.A. E.S.P. Base: Calle 59C Sur # 51-50, Ciudad Bolívar, fuera de su ASE. */
-    public static final ServiceArea ASE_3 = new ServiceArea(3, "Ciudad Limpia", List.of(
+    /** Operador Fucha. Base: Calle 59C Sur # 51-50, Ciudad Bolívar, fuera de su ASE. */
+    public static final ServiceArea ASE_3 = new ServiceArea(3, "Fucha", List.of(
             new Locality(8, "Kennedy", 4740229, false),
             new Locality(9, "Fontibón", 2216630, false)),
             0.18, new Base("Calle 59C Sur # 51-50", "Ciudad Bolívar", 6580796244L), Optional.empty());
 
-    /** Bogotá Limpia S.A.S. E.S.P. Base: Calle 63 # 96-05, Engativá. */
-    public static final ServiceArea ASE_4 = new ServiceArea(4, "Bogotá Limpia", List.of(
+    /** Operador Salitre. Base: Calle 63 # 96-05, Engativá. */
+    public static final ServiceArea ASE_4 = new ServiceArea(4, "Salitre", List.of(
             new Locality(10, "Engativá", 2214883, false),
             new Locality(12, "Barrios Unidos", 2214882, false)),
             0.12, new Base("Calle 63 # 96-05", "Engativá", 5769034872L), Optional.empty());
 
     /**
-     * Área Limpia Distrito Capital S.A.S. E.S.P., según la inspección de la Superservicios del 9 al 13 de marzo de
+     * Operador Torca, según la inspección de la Superservicios del 9 al 13 de marzo de
      * 2026, que compara el PGIRS con el PPSA del operador:
      *
      * <ul>
@@ -209,7 +209,7 @@ public final class ServiceAreas {
      *       antes.
      * </ul>
      */
-    public static final ServiceArea ASE_5 = new ServiceArea(5, "Área Limpia", List.of(
+    public static final ServiceArea ASE_5 = new ServiceArea(5, "Torca", List.of(
             new Locality(11, "Suba", 2214884, false)),
             0.15, new Base("Avenida Calle 17 # 124-81", "Fontibón", 865490722),
             Optional.of(new Operation(OptionalDouble.of(0.13), 6, "18:00", 8 * 3600, 8_000, List.of(3_200, 2_400, 1_100), 3)));

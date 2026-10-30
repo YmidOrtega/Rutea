@@ -15,7 +15,7 @@ public final class SideLoading {
 
     /**
      * {@code PENDIENTE_VERIFICAR}: parte del contenedor llena cuando el camión llega. No hay dato publicado; el 13 %
-     * del PPSA de Área Limpia no lo acota, porque no se publica cuántos contenedores tenía ni de qué tamaño. Los planes
+     * del PPSA de Torca no lo acota, porque no se publica cuántos contenedores tenía ni de qué tamaño. Los planes
      * usan la cota alta, para que nunca se queden cortos de camiones.
      */
     public static final double MEAN_FILL = 1.0;
@@ -25,7 +25,7 @@ public final class SideLoading {
 
     /**
      * {@code PENDIENTE_VERIFICAR}: kilos que carga un compactador de cargue lateral de 32 yd³. Ningún operador publica
-     * los kilos de los suyos; se toman los 8.000 kg que Área Limpia declara para sus compactadores de 32 yd.
+     * los kilos de los suyos; se toman los 8.000 kg que Torca declara para sus compactadores de 32 yd.
      */
     public static final int SIDE_LOADER_KG = 8_000;
 

@@ -5,7 +5,7 @@
 
 ## Contexto
 
-La licitación de aseo de Bogotá permite a los operadores poner "chips de llenado RFID" en los contenedores (UAESP, Licitación 02 de 2017, Anexo 11), y Área Limpia ya tiene contenedores soterrados en Suba. Un sensor convierte los desbordes de ADR 0006, que hoy reporta una persona, en avisos automáticos. La pregunta es si eso acorta el tiempo que un contenedor pasa desbordado.
+La licitación de aseo de Bogotá permite a los operadores poner "chips de llenado RFID" en los contenedores (UAESP, Licitación 02 de 2017, Anexo 11), y Torca ya tiene contenedores soterrados en Suba. Un sensor convierte los desbordes de ADR 0006, que hoy reporta una persona, en avisos automáticos. La pregunta es si eso acorta el tiempo que un contenedor pasa desbordado.
 
 No hay inventario de contenedores con su tamaño, ni densidad de residuos sueltos medida en Bogotá, ni curva horaria de presentación. El estudio de caracterización de la UAESP (2017) midió la producción por estrato, pero la tabla no se encontró publicada. `docs/datos.md` registra cada supuesto.
 
