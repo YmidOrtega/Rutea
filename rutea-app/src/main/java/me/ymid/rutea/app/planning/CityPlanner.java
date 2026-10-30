@@ -192,7 +192,34 @@ public final class CityPlanner {
         List<Compliance.Check> checks = new ArrayList<>(drawn.compliance());
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
-        return new DemoPlan(drawn.meta(), drawn.sites(), drawn.containers(), drawn.routes(), checks, sectors);
+        return new DemoPlan(meta(drawn.meta(), SideLoading.of(scenario.area())), drawn.sites(), drawn.containers(),
+                drawn.routes(), checks, sectors);
+    }
+
+    /** Lo que es real y lo que se supone en un plan de cargue lateral, que no lleva aprovechables. */
+    private static DemoPlan.Meta meta(DemoPlan.Meta drawn, SideLoading.Area area) {
+        boolean simulated = area.planned().isPresent();
+        List<String> assumptions = new ArrayList<>();
+        if (simulated) {
+            assumptions.add("Contenedores simulados con la cantidad oficial: el operador no publica su ubicación");
+        }
+        assumptions.add(String.format(Locale.ROOT, "Carga por capacidad: litros × %.0f kg/m³ × %.0f %% de llenado al"
+                + " recoger, sin dato publicado", BogotaFigures.LOOSE_WASTE_KG_PER_M3, SideLoading.MEAN_FILL * 100));
+        assumptions.add("Compactadores de " + SideLoading.SIDE_LOADER_KG / 1000 + " t con hasta "
+                + SideLoading.MAX_TRIPS_PER_TRUCK + " viajes por turno");
+        if (!area.frequencyPublished()) {
+            assumptions.add("Recolección " + area.collectionsPerWeek() + " veces por semana: el operador no publica"
+                    + " la de sus contenedores");
+        }
+        assumptions.add("Velocidades por tipo de vía y parada de " + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER
+                + " s por contenedor");
+        assumptions.add("Consumo de " + BogotaFigures.LITERS_PER_KM + " L/km para el CO₂");
+        return new DemoPlan.Meta(drawn.zone(), simulated, simulated
+                ? "Calles reales de OpenStreetMap; contenedores simulados con la cantidad oficial"
+                : "Calles reales de OpenStreetMap; contenedores del operador, de su capa pública de ArcGIS",
+                drawn.solver(), drawn.seed(), drawn.iterations(), drawn.shiftStart(), drawn.shiftSeconds(),
+                drawn.serviceSeconds(), drawn.unloadSeconds(), drawn.litersPerKm(), drawn.kgCo2PerLiter(),
+                drawn.attribution(), assumptions);
     }
 
     private static List<AreaPlan> inSeries(List<Callable<AreaPlan>> tasks) {

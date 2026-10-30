@@ -15,7 +15,7 @@ import me.ymid.rutea.app.planning.DemoPlan;
  * @param visits hora nueva de llegada a cada contenedor del plan de los camiones que cambiaron
  * @param citation R05: un cambio de ruta por caso fortuito no espera el aviso de tres días
  */
-public record ClosureEvent(int seq, long atSeconds, String roadClass, List<double[]> path, double latencyMs,
+public record ClosureEvent(int seq, int area, long atSeconds, String roadClass, List<double[]> path, double latencyMs,
         int recomputed, int matrixSize, int changedPairs, List<String> isolated, List<String> dropped,
         List<Change> changes, List<DemoPlan.Route> routes, Map<String, Long> visits, String citation)
         implements OperationEvent {

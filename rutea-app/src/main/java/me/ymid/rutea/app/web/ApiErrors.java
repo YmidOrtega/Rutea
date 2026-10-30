@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -56,6 +57,8 @@ class ApiErrors extends ResponseEntityExceptionHandler {
                         : path + " no admite " + method.getMethod() + "; admite "
                                 + String.join(", ", method.getSupportedMethods());
                 case NoResourceFoundException ignored -> "no hay nada en " + path;
+                case MissingServletRequestParameterException parameter -> "falta el parámetro "
+                        + parameter.getParameterName();
                 case TypeMismatchException mismatch -> mismatch.getPropertyName() + " no admite el valor "
                         + mismatch.getValue();
                 default -> problem.getDetail();

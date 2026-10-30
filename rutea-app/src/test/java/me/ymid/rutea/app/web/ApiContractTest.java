@@ -34,7 +34,9 @@ class ApiContractTest {
                 ClosureEvent.class, ClosureEvent.Change.class, TelemetryMessage.class, TelemetryMessage.Clock.class,
                 TelemetryMessage.Report.class, TelemetryMessage.VehicleState.class, SensorsMessage.class,
                 DemoPlan.class, DemoPlan.Meta.class, DemoPlan.Site.class, DemoPlan.Container.class,
-                DemoPlan.Route.class, DemoPlan.Sector.class, DemoPlan.Pass.class, WasteStream.class, Compliance.Check.class, Compliance.Status.class);
+                DemoPlan.Route.class, DemoPlan.Sector.class, DemoPlan.Pass.class, WasteStream.class,
+                Compliance.Check.class, Compliance.Status.class, SelectionPlan.class, SelectionPlan.Area.class,
+                SelectionPlan.Fleet.class, SelectionPlan.Shift.class);
     }
 
     @ParameterizedTest(name = "{0}")

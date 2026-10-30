@@ -71,6 +71,9 @@ public class OperationsService {
      */
     static final double MAX_SPEED = 3_600;
 
+    /** La operación en vivo: los eventos llevan su número aunque el plan todavía no esté armado. */
+    static final ServiceAreas.ServiceArea AREA = ServiceAreas.ASE_5;
+
     private final Path graph;
     private final Path sites;
     private final boolean warmUp;
@@ -158,7 +161,7 @@ public class OperationsService {
         }
         List<String> orphans = Arrays.stream(replan.orphans())
                 .mapToObj(node -> waste.scenario().containers().get(node - 1).id()).toList();
-        BreakdownEvent event = new BreakdownEvent(events.size() + 1, truckId, atSeconds, dispatch, replan.latencyNanos() / 1e6, orphans,
+        BreakdownEvent event = new BreakdownEvent(events.size() + 1, AREA.number(), truckId, atSeconds, dispatch, replan.latencyNanos() / 1e6, orphans,
                 reserve, replan.firstPickupSeconds(), replan.lastPickupSeconds(), replan.meetsRecoveryRule(),
                 CollectionRules.BREAKDOWN_RECOVERY.citation());
         add(event);
@@ -244,7 +247,7 @@ public class OperationsService {
                     visits.put(scenario.containers().get(node - 1).id(), seconds));
         }
         TravelMatrix.Repair repair = closure.repair();
-        ClosureEvent event = new ClosureEvent(events.size() + 1, atSeconds,
+        ClosureEvent event = new ClosureEvent(events.size() + 1, AREA.number(), atSeconds,
                 graph.roadClass(graph.edgesOn(shape)[0]).name(), path, closure.latencyNanos() / 1e6,
                 repair.rows() + repair.columns(), repair.matrix().size(), repair.changedPairs(),
                 ids(closure.isolated()), ids(closure.dropped()), changes, routes, visits,
@@ -420,7 +423,7 @@ public class OperationsService {
 
     /** El turno en curso y su último {@code seq}, leídos juntos. */
     public synchronized ShiftMessage shiftMessage() {
-        return new ShiftMessage(shift, events.size());
+        return new ShiftMessage(shift, AREA.number(), events.size());
     }
 
     private OverflowEvent record(LiveOperation.Dispatch dispatch, String cause) {
@@ -451,7 +454,7 @@ public class OperationsService {
                 routes.add(shifted(drawn, truck, dispatch.atSeconds() + BogotaFigures.RESERVE_DISPATCH_SECONDS));
             }
         }
-        OverflowEvent event = new OverflowEvent(events.size() + 1, container, dispatch.atSeconds(), cause,
+        OverflowEvent event = new OverflowEvent(events.size() + 1, AREA.number(), container, dispatch.atSeconds(), cause,
                 dispatch.pickup(), truck, dispatch.pickupSeconds(), dispatch.extraMeters(),
                 dispatch.latencyNanos() / 1e6, routes, visits);
         add(event);
@@ -592,7 +595,7 @@ public class OperationsService {
         }
         try {
             long seed = AreaPlanner.DEFAULT_SEED;
-            AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(graph).graph(), ServiceAreas.ASE_5, seed)
+            AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(graph).graph(), AREA, seed)
                     .withSites(SensitiveSites.read(sites));
             waste = AreaPlanner.fleet(scenario, BogotaFigures.UNLOAD_SECONDS_LOW, seed);
             operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),

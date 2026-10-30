@@ -86,7 +86,7 @@ mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
 mvn -pl rutea-app exec:java@sensors          # desbordes según densidad, tamaño y día, con y sin sensores → docs/benchmarks/f5-sensors/*.csv
-mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan, reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm)
+mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan de cualquier selección de localidades (GET /api/areas), reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm y data/ase)
 
 # Frontend
 cd web && pnpm install

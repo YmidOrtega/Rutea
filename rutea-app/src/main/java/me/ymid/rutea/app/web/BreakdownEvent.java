@@ -13,7 +13,7 @@ import me.ymid.rutea.app.planning.DemoPlan;
  * @param latencyMs tiempo real de replanificar
  * @param meetsRecoveryRule si el primer huérfano se recoge en máximo tres horas (R05)
  */
-public record BreakdownEvent(int seq, String truck, long atSeconds, long dispatchSeconds, double latencyMs,
+public record BreakdownEvent(int seq, int area, String truck, long atSeconds, long dispatchSeconds, double latencyMs,
         List<String> orphans, List<DemoPlan.Route> reserve, long firstPickupSeconds, long lastPickupSeconds,
         boolean meetsRecoveryRule, String citation) implements OperationEvent {
 

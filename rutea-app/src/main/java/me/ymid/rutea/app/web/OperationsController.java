@@ -32,11 +32,14 @@ public class OperationsController {
     }
 
     private final OperationsService operations;
+    private final CityPlans cityPlans;
     private final EventsHub hub;
     private final Telemetry telemetry;
 
-    public OperationsController(OperationsService operations, EventsHub hub, Telemetry telemetry) {
+    public OperationsController(OperationsService operations, CityPlans cityPlans, EventsHub hub,
+            Telemetry telemetry) {
         this.operations = operations;
+        this.cityPlans = cityPlans;
         this.hub = hub;
         this.telemetry = telemetry;
     }
@@ -44,6 +47,12 @@ public class OperationsController {
     @GetMapping("/plan")
     public DemoPlan plan() {
         return operations.plan();
+    }
+
+    /** {@code ?localities=11,10}: un plan por ASE de la selección. La primera vez tarda lo que tarda planificarla. */
+    @GetMapping("/areas")
+    public SelectionPlan areas(@RequestParam(name = "localities") List<Integer> localities) {
+        return cityPlans.plan(localities);
     }
 
     @GetMapping("/events")
