@@ -6,6 +6,7 @@ import { DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { sodiumBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
+  cityRoutesLayer,
   containersLayer,
   fillLayer,
   localityLayers,
@@ -388,7 +389,8 @@ export default function App() {
     const lit = new Map(cityDrawn.containers.map((container) => [container.id, 0]))
     return [
       ...selector,
-      ...staticLayers(cityDrawn, new Set(cityDrawn.routes.map((route) => route.id)), palette, CITY_ROUTES),
+      cityRoutesLayer(cityDrawn.routes, palette),
+      ...staticLayers({ routes: [], sites: cityDrawn.sites }, new Set(), palette),
       containersLayer(cityDrawn.containers, lit, 0, palette),
     ]
   }, [localities, chosen, hovered, cityDrawn, palette])
@@ -607,9 +609,6 @@ function PlayIcon({ state }: { state: 'play' | 'pause' | 'restart' }) {
 }
 
 const sectorLabel = (sector: Sector) => (sector.ref === 'rural' ? sector.name : `UPZ ${sector.name}`)
-
-/** Sin estelas que brillen encima, en la ciudad el plan mismo es lo que se mira: va más claro que en vivo. */
-const CITY_ROUTES = 0.5
 
 const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']

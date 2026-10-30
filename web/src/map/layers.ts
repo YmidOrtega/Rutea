@@ -1,10 +1,10 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
 import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
-import type { Locality } from '../city/city'
+import type { CityRoute, Locality } from '../city/city'
 import { isReserveId, type ClosureEvent, type OverflowEvent } from '../operations/live'
 import { fillState, type VehicleTrack } from '../operations/telemetry'
-import { strokeColor, type Palette, type RGB } from './colors'
+import { operatorColor, strokeColor, type Palette, type RGB } from './colors'
 import suba from './suba.json'
 
 /**
@@ -89,6 +89,27 @@ export function localityLayers(
   ]
 }
 
+/**
+ * En la ciudad todas las rutas son de no aprovechables: el color de la corriente no distinguiría nada, así que cada
+ * una va en el de su operador, mezclado con el fondo como las del plan en vivo.
+ */
+export function cityRoutesLayer(routes: CityRoute[], palette: Palette) {
+  return new PathLayer<CityRoute>({
+    id: 'routes',
+    data: routes,
+    getPath: (route) => route.path,
+    getColor: (route) => mix(palette.bg, operatorColor(palette, route.area), CITY_ROUTES),
+    getWidth: 1.5,
+    widthUnits: 'pixels',
+    jointRounded: true,
+    capRounded: true,
+    parameters: FLAT,
+  })
+}
+
+/** Sin estelas que brillen encima, en la ciudad el plan mismo es lo que se mira: va más claro que en vivo. */
+const CITY_ROUTES = 0.7
+
 /** El borde de la UPZ elegida en los horarios de paso: es una selección, va en el acento. */
 export function sectorLayer(outline: LonLat[], palette: Palette) {
   return new PathLayer<LonLat[]>({
@@ -112,12 +133,7 @@ const PLANNED = 0.22
 const mix = (from: RGB, to: RGB, t: number): RGB =>
   [0, 1, 2].map((i) => Math.round(from[i] + (to[i] - from[i]) * t)) as RGB
 
-export function staticLayers(
-  plan: Pick<DemoPlan, 'routes' | 'sites'>,
-  visible: Set<string>,
-  palette: Palette,
-  planned = PLANNED,
-) {
+export function staticLayers(plan: Pick<DemoPlan, 'routes' | 'sites'>, visible: Set<string>, palette: Palette) {
   const routes = plan.routes.filter((route) => visible.has(route.id))
 
   return [
@@ -125,7 +141,7 @@ export function staticLayers(
       id: 'routes',
       data: routes,
       getPath: (route) => route.path,
-      getColor: (route) => mix(palette.bg, strokeColor(palette, route.stream), planned),
+      getColor: (route) => mix(palette.bg, strokeColor(palette, route.stream), PLANNED),
       getWidth: 1.5,
       widthUnits: 'pixels',
       jointRounded: true,

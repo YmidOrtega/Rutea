@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { clock, secondsOfDay } from '../demo/plan'
 import { decimal, tonnes } from '../format'
 import type { Area, Locality, SelectionPlan, Shift } from './city'
@@ -110,8 +110,10 @@ function AreaSection({
   onHover,
 }: Props & { number: number; localities: Locality[]; planned: Area | undefined }) {
   return (
-    <section className="stream city-area">
+    // Su color sale de tokens.css: el mismo de sus rutas en el mapa.
+    <section className="stream city-area" style={{ '--operator': `var(--operator-${number})` } as CSSProperties}>
       <h2 className="city-area-name">
+        <span className="swatch city-swatch" aria-hidden="true" />
         <span className="label">ASE {number}</span>
         <span className="city-operator">{localities[0].operator}</span>
       </h2>

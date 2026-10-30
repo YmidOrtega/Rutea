@@ -20,6 +20,16 @@
   --stream-non-recyclable: #0a0a0a;
   --stream-non-recyclable-edge: #cdc3b3;
 
+  /*
+   * Operadores en el modo Ciudad, por ASE: tonos fríos y rosa, a unos 35° uno de otro. Ninguno es rojo (alerta),
+   * ámbar (selección), amarillo (advertencia), verde (orgánicos) ni blanco (aprovechables).
+   */
+  --operator-1: #a78bfa;
+  --operator-2: #4fd1e0;
+  --operator-3: #f472b6;
+  --operator-4: #6b9cff;
+  --operator-5: #e879f9;
+
   --font-ui: 'Schibsted Grotesk Variable', system-ui, sans-serif;
   --font-mono: 'Martian Mono Variable', ui-monospace, monospace;
 

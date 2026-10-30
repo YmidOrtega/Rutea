@@ -24,6 +24,11 @@
   font-weight: 500;
 }
 
+.city-swatch {
+  align-self: center;
+  background: var(--operator);
+}
+
 .city-localities {
   list-style: none;
   margin: 0;
@@ -96,7 +101,7 @@
 .city-trucks > span {
   width: 5px;
   height: 12px;
-  background: var(--fg);
+  background: var(--operator);
 }
 
 /* Lo que pasa de lo declarado no cabe en la flota del operador: advertencia, no falla */

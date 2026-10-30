@@ -45,6 +45,10 @@ export interface SelectionPlan {
   planMs: number
 }
 
+export interface CityRoute extends Route {
+  area: number
+}
+
 /** Un contenedor de la ciudad, con lo que el tooltip necesita saber de su plan. */
 export interface CityContainer extends Container {
   code: string
@@ -72,14 +76,18 @@ export async function fetchSelection(localities: number[], signal: AbortSignal):
  * Todos los turnos en un solo plan para dibujarlos. Cada ASE numera sus camiones y sus contenedores simulados desde
  * 1, así que los ids llevan delante la ASE y el turno; el código original queda en `code`.
  */
-export function mergePlans(selection: SelectionPlan): { routes: Route[]; containers: CityContainer[]; sites: Site[] } {
-  const routes: Route[] = []
+export function mergePlans(selection: SelectionPlan): {
+  routes: CityRoute[]
+  containers: CityContainer[]
+  sites: Site[]
+} {
+  const routes: CityRoute[] = []
   const containers: CityContainer[] = []
   const sites = new Map<string, Site>()
   for (const area of selection.areas) {
     for (const shift of area.shifts) {
       const key = (id: string) => `${area.number}·${shift.name}·${id}`
-      for (const route of shift.plan.routes) routes.push({ ...route, id: key(route.id) })
+      for (const route of shift.plan.routes) routes.push({ ...route, id: key(route.id), area: area.number })
       for (const container of shift.plan.containers) {
         containers.push({
           ...container,

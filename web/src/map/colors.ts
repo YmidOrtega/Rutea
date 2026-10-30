@@ -31,10 +31,18 @@ export function readPalette() {
       NON_RECYCLABLE: token('--stream-non-recyclable'),
     } satisfies Record<WasteStream, RGB>,
     nonRecyclableEdge: token('--stream-non-recyclable-edge'),
+    /** Por número de ASE: `operator[1]` es el del ASE 1. */
+    operator: [null, ...[1, 2, 3, 4, 5].map((area) => token(`--operator-${area}`))] as (RGB | null)[],
   }
 }
 
 export type Palette = ReturnType<typeof readPalette>
+
+export function operatorColor(palette: Palette, area: number): RGB {
+  const color = palette.operator[area]
+  if (!color) throw new Error(`No hay color para el ASE ${area} en tokens.css`)
+  return color
+}
 
 /** El negro oficial no se ve sobre el mapa oscuro: su trazo usa el borde claro. */
 export function strokeColor(palette: Palette, stream: WasteStream): RGB {
