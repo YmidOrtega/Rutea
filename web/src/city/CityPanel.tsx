@@ -123,10 +123,14 @@ function AreaSection({
             <button
               className={`city-locality${hovered === locality.number ? ' is-hovered' : ''}`}
               aria-pressed={selected.has(locality.number)}
-              onClick={() => onToggle(locality.number)}
+              onClick={() => {
+                onToggle(locality.number)
+                // Un borde que sigue marcado después del clic se lee como "sigue elegida"
+                onHover(null)
+              }}
               onMouseEnter={() => onHover(locality.number)}
               onMouseLeave={() => onHover(null)}
-              onFocus={() => onHover(locality.number)}
+              onFocus={(event) => event.currentTarget.matches(':focus-visible') && onHover(locality.number)}
               onBlur={() => onHover(null)}
             >
               <span className="city-check" aria-hidden="true" />

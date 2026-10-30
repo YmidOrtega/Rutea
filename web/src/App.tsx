@@ -428,6 +428,8 @@ export default function App() {
           ref={map}
           initialViewState={initialView}
           mapStyle={basemap}
+          // deck.gl no siempre recibe la salida del puntero hacia la consola: sin esto el borde queda marcado
+          onMouseOut={() => setHovered(null)}
           attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
         >
           <DeckOverlay
@@ -436,11 +438,15 @@ export default function App() {
             getCursor={({ isHovering }) => (closing && mode === 'live' ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
             onHover={(info) =>
               mode === 'city' &&
-              setHovered(info.layer?.id === 'localities' ? (info.object as { locality: Locality }).locality.number : null)
+              // Al salir de un polígono, deck.gl avisa con la capa pero sin objeto
+              setHovered(
+                info.layer?.id === 'localities' && info.object ? (info.object as { locality: Locality }).locality.number : null,
+              )
             }
             onClick={(info) => {
               if (mode === 'city') {
-                if (info.layer?.id === 'localities') toggleLocality((info.object as { locality: Locality }).locality.number)
+                if (info.layer?.id === 'localities' && info.object)
+                  toggleLocality((info.object as { locality: Locality }).locality.number)
                 return
               }
               if (closing) {
