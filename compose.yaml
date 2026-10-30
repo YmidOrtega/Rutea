@@ -4,13 +4,18 @@ name: rutea
 services:
   data:
     image: alpine:3.22
-    environment:
-      RELEASE_URL: https://github.com/YmidOrtega/Rutea/releases/download/data-osm-suba-20261019
     volumes:
       - osm:/data
-      - ./data/osm/SHA256SUMS:/expected/SHA256SUMS:ro
+      - ./data/osm/SHA256SUMS:/expected/suba.sha256:ro
+      - ./data/bogota/SHA256SUMS:/expected/bogota.sha256:ro
       - ./docker/fetch-data.sh:/fetch-data.sh:ro
-    entrypoint: ["/bin/sh", "/fetch-data.sh"]
+    entrypoint:
+      - /bin/sh
+      - /fetch-data.sh
+      - /expected/suba.sha256
+      - https://github.com/YmidOrtega/Rutea/releases/download/data-osm-suba-20261019
+      - /expected/bogota.sha256
+      - https://github.com/YmidOrtega/Rutea/releases/download/data-bogota-20261029
 
   # Las órdenes de cada turno y las posiciones transmitidas (R08). Solo la app la ve: no publica su puerto.
   db:
@@ -36,6 +41,9 @@ services:
     environment:
       RUTEA_GRAPH: /data/suba.rgraph
       RUTEA_SITES: /data/suba-sitios-sensibles.csv
+      RUTEA_BOGOTAGRAPH: /data/bogota.rgraph
+      RUTEA_BOGOTASITES: /data/bogota-sitios-sensibles.csv
+      RUTEA_OPERATORCONTAINERS: /data
       SPRING_PROFILES_ACTIVE: postgres
       RUTEA_DB_URL: jdbc:postgresql://db:5432/rutea
     volumes:

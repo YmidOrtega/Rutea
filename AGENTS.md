@@ -59,7 +59,7 @@ La traducción "problema de residuos → instancia CVRP" vive en `rutea-app` (pa
 Comandos previstos; se activan cuando exista cada módulo. Actualiza esta sección si cambian.
 
 ```bash
-docker compose up                            # todo: datos de OSM, PostGIS y la app con el mapa en http://localhost:8080
+docker compose up                            # todo: datos de Suba y de Bogotá (releases verificados por SHA-256), PostGIS y la app con el mapa en http://localhost:8080
 
 # Backend
 mvn verify                                   # compila y corre todos los tests

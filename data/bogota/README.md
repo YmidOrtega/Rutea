@@ -32,6 +32,10 @@ mvn -pl rutea-app -am install -DskipTests
 mvn -pl rutea-app exec:java@bogota-instances           # data/bogota/*.vrp
 ```
 
+## Datos de entrada
+
+El grafo, los sitios sensibles y los contenedores de los operadores de los que salen estas instancias están en el release [`data-bogota-20261029`](https://github.com/YmidOrtega/Rutea/releases/tag/data-bogota-20261029). [`SHA256SUMS`](SHA256SUMS), en este directorio, es la referencia: `docker compose up` los descarga del release y los verifica contra ella, no contra las sumas que vienen con la descarga. Si un archivo cambia (otro extracto de OSM, otra versión de una capa), se publica un release nuevo y se actualizan `SHA256SUMS` y `compose.yaml` en el mismo cambio.
+
 ## Licencia
 
 Las distancias derivan de OpenStreetMap: © colaboradores de OpenStreetMap, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Toda instancia o resultado derivado que se publique lleva esa atribución.

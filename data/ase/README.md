@@ -2,7 +2,7 @@
 
 Los contenedores negros que cada operador publica "en campo" en su capa pública de ArcGIS ([ADR 0013](../../docs/adr/0013-contenedores-reales-de-2026.md)). Solo las ASE 1, 2 y 4 publican la ubicación. Las ASE 3 y 5 publican solo la cantidad del Plan de Contenerización de 2026 (91 y 320), así que sus contenedores se simulan. Las fuentes de cada cifra están en [`docs/datos.md`](../../docs/datos.md), en "Inventario de fuentes por ASE".
 
-Los archivos no se suben al repo, porque las capas no declaran licencia (`PENDIENTE_VERIFICAR`). Se descargan con:
+Los archivos no se versionan en git. Las capas no declaran licencia (`PENDIENTE_VERIFICAR`). El extracto en uso va como copia fechada en el release [`data-bogota-20261029`](https://github.com/YmidOrtega/Rutea/releases/tag/data-bogota-20261029), de donde los toma `docker compose up`, verificados contra [`data/bogota/SHA256SUMS`](../bogota/SHA256SUMS). La versión vigente de cada capa se descarga con:
 
 ```bash
 mvn -pl rutea-app exec:java@operator-containers

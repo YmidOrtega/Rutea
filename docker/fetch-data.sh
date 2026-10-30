@@ -1,13 +1,20 @@
 #!/bin/sh
-# Descarga los datos de OSM del release y los verifica contra las sumas del repo, no contra las que vienen con ellos.
+# Descarga los datos de cada release y los verifica contra las sumas del repo, no contra las que vienen con ellos.
+# Uso: fetch-data.sh <SHA256SUMS> <url-del-release> [<SHA256SUMS> <url-del-release> ...]
 set -eu
 cd /data
-if sha256sum -c /expected/SHA256SUMS >/dev/null 2>&1; then
-    echo "Datos de OSM ya presentes y verificados."
-    exit 0
-fi
-for file in suba.rgraph suba-sitios-sensibles.csv; do
-    wget -q -O "$file.part" "$RELEASE_URL/$file"
-    mv "$file.part" "$file"
+while [ $# -ge 2 ]; do
+    sums=$1
+    url=$2
+    shift 2
+    # Archivo por archivo: si solo falta uno, solo ese se descarga.
+    while read -r sum file; do
+        if echo "$sum  $file" | sha256sum -c - >/dev/null 2>&1; then
+            continue
+        fi
+        echo "Descargando $file"
+        wget -q -O "$file.part" "$url/$file"
+        mv "$file.part" "$file"
+    done < "$sums"
+    sha256sum -c "$sums"
 done
-sha256sum -c /expected/SHA256SUMS
