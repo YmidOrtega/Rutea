@@ -3,6 +3,7 @@ package me.ymid.rutea.app.planning;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,13 +20,12 @@ import java.util.stream.IntStream;
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.OperatorContainers;
+import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SideLoading;
 import me.ymid.rutea.geo.RoadGraph;
-import me.ymid.rutea.solver.Evaluation;
-import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
 import me.ymid.rutea.solver.alns.AlnsSolver;
@@ -39,11 +39,14 @@ import me.ymid.rutea.solver.alns.AlnsSolver;
 public final class CityPlanner {
 
     /**
+     * @param plan el turno de cada camión sobre las calles, con R02, R03, R04 y R07 revisadas y los horarios de paso
+     *     por UPZ
      * @param scenarioNanos armar el escenario: ubicar los contenedores y calcular la matriz
      * @param solveNanos resolver con ALNS y repartir los viajes entre camiones
+     * @param drawNanos dibujar el plan sobre las calles y revisar la normativa
      */
     public record AreaPlan(AreaScenario scenario, SideLoading.Shift shift, Solution solution,
-            ShiftScheduler.Schedule schedule, long scenarioNanos, long solveNanos) {
+            ShiftScheduler.Schedule schedule, DemoPlan plan, long scenarioNanos, long solveNanos, long drawNanos) {
     }
 
     /** Un turno de una ASE elegida sin contenedores en las localidades elegidas: no hay nada que planificar. */
@@ -129,10 +132,11 @@ public final class CityPlanner {
 
     /**
      * @param real contenedores de cada ASE que publica su ubicación, por número de ASE
+     * @param sites sitios sensibles para R02 y R07: los de toda Bogotá sirven para cualquier selección
      * @param parallel un hilo por instancia; si no, una tras otra en este hilo
      */
     public static Plan plan(RoadGraph graph, Map<Integer, List<OperatorContainers.Container>> real,
-            Collection<Locality> selection, double fill, long seed, long iterations, boolean parallel) {
+            List<SensitiveSites.Site> sites, Collection<Locality> selection, double fill, long seed, long iterations, boolean parallel) {
         long start = System.nanoTime();
         List<Callable<AreaPlan>> tasks = new ArrayList<>();
         List<Skipped> skipped = new ArrayList<>();
@@ -143,7 +147,7 @@ public final class CityPlanner {
             for (SideLoading.Shift shift : sideLoading.shifts()) {
                 if (sideLoading.planned().isPresent()) {
                     SideLoading.Planned planned = sideLoading.planned().get();
-                    tasks.add(() -> solve(shift, seed, iterations, () -> AreaScenario.buildPlanned(graph, area, shift,
+                    tasks.add(() -> solve(shift, sites, seed, iterations, () -> AreaScenario.buildPlanned(graph, area, shift,
                             chosen, planned.count(), planned.liters(), fill, seed)));
                     continue;
                 }
@@ -156,7 +160,7 @@ public final class CityPlanner {
                     skipped.add(new Skipped(area, shift));
                     continue;
                 }
-                tasks.add(() -> solve(shift, seed, iterations,
+                tasks.add(() -> solve(shift, sites, seed, iterations,
                         () -> AreaScenario.buildReal(graph, area, shift, chosen, containers, fill)));
             }
         }
@@ -164,21 +168,31 @@ public final class CityPlanner {
         return new Plan(plans, skipped, System.nanoTime() - start);
     }
 
-    private static AreaPlan solve(SideLoading.Shift shift, long seed, long iterations,
-            Callable<AreaScenario> build) throws Exception {
+    private static AreaPlan solve(SideLoading.Shift shift, List<SensitiveSites.Site> sites, long seed,
+            long iterations, Callable<AreaScenario> build) throws Exception {
         long start = System.nanoTime();
-        AreaScenario scenario = build.call();
+        AreaScenario scenario = build.call().withSites(sites);
         long built = System.nanoTime();
         // El límite de tiempo es solo un seguro: con límite de iteraciones el plan termina mucho antes.
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), iterations));
-        Evaluation evaluation = Evaluator.evaluate(scenario.instance(), solution);
-        if (!evaluation.feasible()) {
-            throw new IllegalStateException(scenario.instance().name() + " infactible: " + evaluation.violations());
-        }
         ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution,
                 BogotaFigures.UNLOAD_SECONDS_LOW);
-        return new AreaPlan(scenario, shift, solution, schedule, built - start, System.nanoTime() - built);
+        long solved = System.nanoTime();
+        DemoPlan plan = checked(scenario, solution, schedule, seed, iterations);
+        return new AreaPlan(scenario, shift, solution, schedule, plan, built - start, solved - built,
+                System.nanoTime() - solved);
+    }
+
+    /** El plan dibujado, con R02, R03 y R07 revisadas parada por parada y los horarios de paso por UPZ (R04). */
+    static DemoPlan checked(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, long seed,
+            long iterations) {
+        DemoPlan drawn = AreaPlanner.plan(scenario, solution, schedule, "alns", seed, iterations);
+        List<DemoPlan.Sector> sectors = Sectors.of(scenario.area()).schedule(drawn.containers());
+        List<Compliance.Check> checks = new ArrayList<>(drawn.compliance());
+        checks.add(Compliance.scheduleCheck(sectors));
+        checks.sort(Comparator.comparing(Compliance.Check::id));
+        return new DemoPlan(drawn.meta(), drawn.sites(), drawn.containers(), drawn.routes(), checks, sectors);
     }
 
     private static List<AreaPlan> inSeries(List<Callable<AreaPlan>> tasks) {

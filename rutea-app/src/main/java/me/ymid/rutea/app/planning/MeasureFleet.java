@@ -63,7 +63,8 @@ public final class MeasureFleet {
             out.write("fill,unload_s,area,shift,instance,trips,trucks,trucks_lower_bound,fewest_proven,schedule_ms,"
                     + "shared_across_shifts,declared,beyond_declared,seed,iterations\n");
             for (double fill : SideLoading.FILLS) {
-                CityPlanner.Plan plan = CityPlanner.plan(bogota, real, all, fill, seed, iterations, true);
+                // Sin sitios sensibles: la flota no depende de la normativa de cada parada.
+                CityPlanner.Plan plan = CityPlanner.plan(bogota, real, List.of(), all, fill, seed, iterations, true);
                 for (int unload : UNLOADS) {
                     Map<ServiceAreas.ServiceArea, List<CityPlanner.AreaPlan>> byArea = new LinkedHashMap<>();
                     Map<CityPlanner.AreaPlan, ShiftScheduler.Schedule> schedules = new LinkedHashMap<>();

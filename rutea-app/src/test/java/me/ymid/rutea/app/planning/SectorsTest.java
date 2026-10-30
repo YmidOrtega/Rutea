@@ -63,6 +63,33 @@ class SectorsTest {
         assertThat(Sectors.of(ServiceAreas.ASE_5).locate(47_416_000, -740_833_000)).as("plaza fundacional de Suba").isEqualTo("27");
     }
 
+    @Test
+    void aUpzInSeveralPartsLocatesInAnyAndDrawsTheLargest() {
+        Sectors parts = Sectors.read(JsonMapper.builder().build().readTree("""
+                {"type": "FeatureCollection", "features": [
+                 {"type": "Feature", "properties": {"ref": "60", "name": "Partida"}, "geometry": {
+                  "type": "MultiPolygon", "coordinates": [
+                   [[[-74.10, 4.70], [-74.099, 4.70], [-74.099, 4.701], [-74.10, 4.701], [-74.10, 4.70]]],
+                   [[[-74.09, 4.70], [-74.08, 4.70], [-74.08, 4.71], [-74.09, 4.71], [-74.09, 4.70]]]]}}
+                ]}"""));
+
+        assertThat(parts.locate(47_005_000, -740_995_000)).isEqualTo("60");
+        assertThat(parts.locate(47_050_000, -740_850_000)).isEqualTo("60");
+        assertThat(parts.locate(47_050_000, -740_950_000)).isEqualTo(Sectors.RURAL);
+        assertThat(parts.schedule(List.of(container("N1", "C-01", 0, "60"))).getFirst().outline())
+                .hasSize(5).first().satisfies(point -> assertThat(point).containsExactly(-74.09, 4.70));
+    }
+
+    @Test
+    void everyAreaReadsTheUpzOfItsUrbanLocalities() {
+        assertThat(Sectors.of(ServiceAreas.ASE_1).locate(45_981_000, -740_760_000)).as("plaza de Bolívar")
+                .isEqualTo("94");
+        assertThat(Sectors.of(ServiceAreas.ASE_2).locate(45_981_000, -740_760_000)).isEqualTo(Sectors.RURAL);
+        for (ServiceAreas.ServiceArea area : ServiceAreas.BOGOTA) {
+            assertThat(Sectors.of(area)).as(area.name()).isNotNull();
+        }
+    }
+
     private static DemoPlan.Container container(String id, String route, int visitSeconds, String sector) {
         WasteStream stream = id.startsWith("A") ? WasteStream.RECYCLABLE : WasteStream.NON_RECYCLABLE;
         return new DemoPlan.Container(id, stream, new double[] {0, 0}, 100, route, visitSeconds, false, false,

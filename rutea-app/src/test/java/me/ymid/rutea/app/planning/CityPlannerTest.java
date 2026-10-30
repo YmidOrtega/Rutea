@@ -5,18 +5,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.OperatorContainers;
+import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.SideLoading;
+import me.ymid.rutea.app.scenario.SimulatedContainers;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.SampleTown;
+import me.ymid.rutea.solver.Solution;
+import me.ymid.rutea.solver.SolverSettings;
+import me.ymid.rutea.solver.alns.AlnsSolver;
 
 class CityPlannerTest {
 
@@ -31,7 +41,7 @@ class CityPlannerTest {
     void aShiftWithoutContainersInTheSelectionIsSkippedNotSolved() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        CityPlanner.Plan plan = CityPlanner.plan(town, Map.of(1, List.of(USME)),
+        CityPlanner.Plan plan = CityPlanner.plan(town, Map.of(1, List.of(USME)), List.of(),
                 List.of(ServiceAreas.locality(20).orElseThrow()), 1.0, 7, 10, true);
 
         assertThat(plan.areas()).isEmpty();
@@ -77,10 +87,33 @@ class CityPlannerTest {
     }
 
     @Test
+    @DisplayName("R02, R03, R04 y R07 · D. 1077/2015: cada plan de la selección sale con las cuatro revisadas")
+    void everyPlanComesOutWithItsRulesChecked() throws IOException {
+        AreaScenario town = AreaScenarioFixture.town(dir, 12, 400);
+        SimulatedContainers.Container first = town.containers().getFirst();
+        AreaScenario withSchool = town.withSites(List.of(new SensitiveSites.Site(SensitiveSites.Kind.EDUCATION,
+                "node/1", "Colegio", new int[] {first.latE7()}, new int[] {first.lonE7()})));
+        Solution solution = new AlnsSolver().solve(withSchool.instance(),
+                new SolverSettings(7, Duration.ofSeconds(30), 50));
+
+        DemoPlan plan = CityPlanner.checked(withSchool, solution,
+                AreaPlanner.fewestTrucks(withSchool, solution, BogotaFigures.UNLOAD_SECONDS_LOW), 7, 50);
+
+        assertThat(plan.compliance()).extracting(Compliance.Check::id).containsExactly("R02", "R03", "R04", "R07");
+        assertThat(plan.compliance().get(3).count()).isGreaterThanOrEqualTo(1);
+        assertThat(plan.containers().getFirst().noCompaction()).isTrue();
+        // El pueblo de prueba queda fuera de las UPZ de Suba: todo es un solo sector, sin borde.
+        assertThat(plan.sectors()).singleElement().satisfies(sector -> {
+            assertThat(sector.ref()).isEqualTo(Sectors.RURAL);
+            assertThat(sector.passes()).isNotEmpty();
+        });
+    }
+
+    @Test
     void anAreaWithRealContainersNeedsItsExtract() throws IOException {
         RoadGraph town = SampleTown.graph(dir);
 
-        assertThatThrownBy(() -> CityPlanner.plan(town, Map.of(), List.of(ServiceAreas.locality(5).orElseThrow()),
+        assertThatThrownBy(() -> CityPlanner.plan(town, Map.of(), List.of(), List.of(ServiceAreas.locality(5).orElseThrow()),
                 1.0, 7, 10, false)).hasMessageContaining("falta el extracto de contenedores de ASE 1");
     }
 }

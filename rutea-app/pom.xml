@@ -119,14 +119,23 @@
             </configuration>
           </execution>
           <execution>
+            <id>bogota-sensitive-sites</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractSensitiveSites</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota-sitios-sensibles.csv</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>sectors</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExtractSectors</mainClass>
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
-                <!-- "UPZs Localidad Suba": sus subáreas son las 12 UPZ -->
-                <argument>11486101</argument>
-                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/sectors/suba-upz.geojson</argument>
+                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/sectors</argument>
               </arguments>
             </configuration>
           </execution>
@@ -167,6 +176,7 @@
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota-sitios-sensibles.csv</argument>
                 <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f7-city-plan</argument>
               </arguments>
             </configuration>

@@ -20,8 +20,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Las UPZ de las localidades de una ASE, los sectores en que se publican los horarios de paso (R04). Cada localidad
- * tiene las suyas en {@code sectors/<localidad>-upz.geojson}, que salen de OSM con
- * {@code mvn -pl rutea-app exec:java@sectors}.
+ * urbana tiene las suyas en {@code sectors/<localidad>-upz.geojson}, que salen de OSM con
+ * {@code mvn -pl rutea-app exec:java@sectors}; el suelo rural es un solo sector, {@link #RURAL}.
  */
 public final class Sectors {
 
@@ -58,6 +58,9 @@ public final class Sectors {
         if (sectors == null) {
             List<Upz> upz = new ArrayList<>();
             for (Locality locality : area.localities()) {
+                if (locality.rural()) {
+                    continue;
+                }
                 String resource = "/sectors/" + locality.slug() + "-upz.geojson";
                 try (InputStream in = Sectors.class.getResourceAsStream(resource)) {
                     if (in == null) {
@@ -82,23 +85,47 @@ public final class Sectors {
     private static List<Upz> upz(JsonNode geoJson) {
         List<Upz> upz = new ArrayList<>();
         for (JsonNode feature : geoJson.get("features")) {
-            JsonNode ring = feature.get("geometry").get("coordinates").get(0);
-            int n = ring.size() - 1;
-            int[] lat = new int[n];
-            int[] lon = new int[n];
-            List<double[]> outline = new ArrayList<>(n + 1);
-            for (int i = 0; i <= n; i++) {
-                double lonDegrees = ring.get(i).get(0).asDouble();
-                double latDegrees = ring.get(i).get(1).asDouble();
-                outline.add(new double[] {lonDegrees, latDegrees});
-                if (i < n) {
-                    lat[i] = (int) Math.round(latDegrees * 1e7);
-                    lon[i] = (int) Math.round(lonDegrees * 1e7);
+            JsonNode geometry = feature.get("geometry");
+            List<JsonNode> rings = new ArrayList<>();
+            if (geometry.get("type").asString().equals("MultiPolygon")) {
+                geometry.get("coordinates").forEach(part -> rings.add(part.get(0)));
+            } else {
+                rings.add(geometry.get("coordinates").get(0));
+            }
+            List<int[]> lats = new ArrayList<>();
+            List<int[]> lons = new ArrayList<>();
+            List<double[]> outline = List.of();
+            double largest = -1;
+            for (JsonNode ring : rings) {
+                int n = ring.size() - 1;
+                int[] lat = new int[n];
+                int[] lon = new int[n];
+                List<double[]> points = new ArrayList<>(n + 1);
+                double area = 0;
+                for (int i = 0; i <= n; i++) {
+                    double lonDegrees = ring.get(i).get(0).asDouble();
+                    double latDegrees = ring.get(i).get(1).asDouble();
+                    points.add(new double[] {lonDegrees, latDegrees});
+                    if (i < n) {
+                        lat[i] = (int) Math.round(latDegrees * 1e7);
+                        lon[i] = (int) Math.round(lonDegrees * 1e7);
+                    }
+                    if (i > 0) {
+                        double[] previous = points.get(i - 1);
+                        area += previous[0] * latDegrees - lonDegrees * previous[1];
+                    }
+                }
+                lats.add(lat);
+                lons.add(lon);
+                // El plan dibuja un solo borde por sector: el de la parte más grande. Ubicar usa todas.
+                if (Math.abs(area) > largest) {
+                    largest = Math.abs(area);
+                    outline = points;
                 }
             }
             JsonNode properties = feature.get("properties");
             upz.add(new Upz(properties.get("ref").asString(), properties.get("name").asString(),
-                    new Polygon(List.of(lat), List.of(lon)), outline));
+                    new Polygon(lats, lons), outline));
         }
         return upz;
     }

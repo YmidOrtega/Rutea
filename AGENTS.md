@@ -73,12 +73,13 @@ mvn -pl rutea-app exec:java@suba-instance    # instancias de Suba → data/suba/
 mvn -pl rutea-app exec:java@baseline         # Rutea frente al barrido por cuadrantes → docs/benchmarks/f4-baseline/*.csv
 mvn -pl rutea-app exec:java@graphs           # Suba sobre el grafo de Suba y el de Bogotá, y la matriz del ASE 2 → docs/benchmarks/f7-bogota-graph/*.csv
 mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de OSM (R02, R07) → data/osm/suba-sitios-sensibles.csv
-mvn -pl rutea-app exec:java@sectors          # las 12 UPZ de Suba de OSM (R04) → rutea-app/src/main/resources/sectors/suba-upz.geojson (se versiona)
+mvn -pl rutea-app exec:java@bogota-sensitive-sites  # los mismos sitios en todo el Distrito → data/osm/bogota-sitios-sensibles.csv (F7)
+mvn -pl rutea-app exec:java@sectors          # las UPZ de las 19 localidades urbanas de OSM (R04) → rutea-app/src/main/resources/sectors/<localidad>-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@localities       # límites de las 20 localidades de OSM → rutea-app/src/main/resources/localities/bogota-localidades.geojson (se versiona)
 mvn -pl rutea-app exec:java@operator-containers  # contenedores negros "en campo" de las ASE 1, 2 y 4 (ArcGIS de los operadores) → data/ase/*.csv (ADR 0013; se descarga)
 mvn -pl rutea-app exec:java@suba-2026        # Suba con los 806 contenedores simulados frente a los 320 de 2026 → docs/benchmarks/f7-suba-2026/*.csv
 mvn -pl rutea-app exec:java@second-area      # cargue lateral del ASE 2 con sus contenedores reales: camiones por turno, llenado y descarga → docs/benchmarks/f7-second-area/*.csv
-mvn -pl rutea-app exec:java@city-plan         # cargue lateral de 1, 5 y 20 localidades, una instancia por ASE y turno: latencia en paralelo y en serie → docs/benchmarks/f7-city-plan/*.csv
+mvn -pl rutea-app exec:java@city-plan         # cargue lateral de 1, 5 y 20 localidades, una instancia por ASE y turno, con R02, R03, R04 y R07 revisadas: latencia en paralelo y en serie → docs/benchmarks/f7-city-plan/*.csv
 mvn -pl rutea-app exec:java@fleet             # camiones de cargue lateral de cada ASE frente a los declarados, con 50/75/100 % de llenado y 40/90 min de descarga → docs/benchmarks/f7-fleet/*.csv
 mvn -pl rutea-app exec:java@side-loading     # toneladas que cubre el cargue lateral de cada ASE con llenado de 50, 75 y 100 % → docs/benchmarks/f7-side-loading/*.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
