@@ -13,7 +13,7 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F4 | Restricciones del dominio | Completa |
 | F5 | Operación en tiempo real | Completa |
 | F6 | Producto y publicación | Completa |
-| F7 | Bogotá por ASE | **Siguiente** |
+| F7 | Bogotá por ASE | Completa |
 
 ## F0 — Fundamentos (1–2 semanas)
 
@@ -397,7 +397,12 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
   - **Probado** con volúmenes vacíos (proyecto de Compose aparte): se descargan los seis archivos y pasan el SHA-256. Una segunda corrida no descarga nada, y un CSV alterado se vuelve a descargar solo. Las 19 localidades urbanas responden en 16,7 s (4,30 MB), con las cinco ASE.
   - **Licencia:** los contenedores van como copia fechada de las capas públicas de los operadores, que no declaran licencia (`PENDIENTE_VERIFICAR`). Se citan por su URL en `fuentes.csv`.
 
-**Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. Cada plan dice qué parte de las toneladas de su ASE cubre el cargue lateral. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada.
+**Criterio de cierre:** con un comando se planifica cualquier selección de localidades (una, cinco o las veinte), y cada ASE involucrada sale con un plan factible según el `Evaluator`, cifras con fuente o marcadas `PENDIENTE_VERIFICAR` y su fila en la tabla del arnés. Cada plan dice qué parte de las toneladas de su ASE cubre el cargue lateral. El refactor deja Suba con los mismos bytes, y su diferencia sobre el grafo de Bogotá queda medida y publicada. **Cumplido** el 2026-10-29:
+- **Un comando:** con `docker compose up` y volúmenes vacíos, `GET /api/areas` planifica cualquier selección. En la app se midieron Suba (6,2 s), cinco localidades (15,8 s) y las veinte (16,3 s); en Docker, las 19 urbanas (16,7 s). Cada selección sale por ASE.
+- **Factibles:** las siete instancias de las cinco ASE son las mismas que resuelve `CityPlanner`, y las 259 soluciones medidas sobre ellas (252 del arnés y 7 de la comprobación con semilla 7) son factibles según el `Evaluator`.
+- **Tabla del arnés:** cada ASE tiene su fila, en frío y en caliente.
+- **Toneladas:** cada plan dice qué parte de las toneladas de su ASE cubre. Las ASE 1 a 4 dan la cifra con su fuente. El ASE 5 dice «sin dato», porque su operador no publica sus toneladas, y no se inventa la cifra.
+- **Suba:** el grafo, los sitios, las UPZ y las instancias `.vrp` de Suba conservan sus SHA-256. `plan-suba.json` cambió solo en la etiqueta de la base, al quitar los nombres de los operadores. La diferencia sobre el grafo de Bogotá está en `docs/benchmarks/f7-bogota-graph/`.
 
 ## Más adelante (sin fase asignada)
 

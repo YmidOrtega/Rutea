@@ -156,4 +156,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F7 — Bogotá por ASE.** Seleccionar localidades, planificar por ASE (ADR 0012). Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+Ninguna en curso. F7 (Bogotá por ASE, ADR 0012) cerró el 2026-10-29. La siguiente fase se define en `docs/roadmap.md`, a partir de "Más adelante", antes de empezar a trabajar en ella.
