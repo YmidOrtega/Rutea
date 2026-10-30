@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,20 +57,42 @@ public final class OsmBoundaries {
      * @throws IOException si falta la relación, una subárea, una vía o un nodo, o un anillo no cierra
      */
     public static List<Boundary> subareas(Path pbf, long parent) throws IOException {
+        return subareas(pbf, List.of(parent)).get(parent);
+    }
+
+    /**
+     * Las subáreas de cada relación de {@code parents}, con una sola lectura del extracto: las UPZ de todas las
+     * localidades de Bogotá, por ejemplo.
+     *
+     * @throws IOException si falta una relación, una subárea, una vía o un nodo, o un anillo no cierra
+     */
+    public static Map<Long, List<Boundary>> subareas(Path pbf, List<Long> parents) throws IOException {
         Map<Long, Relation> relations = relations(pbf);
-        Relation group = relations.get(parent);
-        if (group == null) {
-            throw new IOException(pbf.getFileName() + ": no está la relación " + parent);
-        }
-        if (group.subareas().isEmpty()) {
-            throw new IOException(pbf.getFileName() + ": la relación " + parent + " no tiene subáreas");
-        }
-        for (long id : group.subareas()) {
-            if (!relations.containsKey(id)) {
-                throw new IOException(pbf.getFileName() + ": falta la subárea " + id + " de la relación " + parent);
+        List<Long> ids = new ArrayList<>();
+        for (long parent : parents) {
+            Relation group = relations.get(parent);
+            if (group == null) {
+                throw new IOException(pbf.getFileName() + ": no está la relación " + parent);
             }
+            if (group.subareas().isEmpty()) {
+                throw new IOException(pbf.getFileName() + ": la relación " + parent + " no tiene subáreas");
+            }
+            for (long id : group.subareas()) {
+                if (!relations.containsKey(id)) {
+                    throw new IOException(pbf.getFileName() + ": falta la subárea " + id + " de la relación " + parent);
+                }
+            }
+            ids.addAll(group.subareas());
         }
-        return boundaries(pbf, relations, group.subareas());
+        List<Boundary> all = boundaries(pbf, relations, ids);
+        Map<Long, List<Boundary>> byParent = new LinkedHashMap<>();
+        int next = 0;
+        for (long parent : parents) {
+            int count = relations.get(parent).subareas().size();
+            byParent.put(parent, List.copyOf(all.subList(next, next + count)));
+            next += count;
+        }
+        return byParent;
     }
 
     /**
@@ -85,10 +108,9 @@ public final class OsmBoundaries {
     private static Map<Long, Relation> relations(Path pbf) throws IOException {
         Map<Long, Relation> relations = new HashMap<>();
         PbfReader.read(pbf, EnumSet.of(Element.RELATIONS), block -> {
+            // Sin filtrar por type: los límites se piden por id, y en el extracto de 2026-10-19 la UPZ Tintal Sur
+            // (relación 11291510) está etiquetada type=public_transport aunque sus vías son las de su borde.
             for (OsmRelation relation : block.relations()) {
-                if (!"boundary".equals(relation.tags().get("type"))) {
-                    continue;
-                }
                 List<Long> ways = new ArrayList<>();
                 List<Long> subareas = new ArrayList<>();
                 for (Member member : relation.members()) {
