@@ -18,6 +18,10 @@ F6 cierra cuando alguien clona el repo, ejecuta un comando y ve la zona piloto f
 4. **Posiciones en PostGIS (R08).** Cada punto que transmite un vehículo se guarda como `geometry(Point, 4326)` con su hora del turno. Kilómetros, tiempos detenidos y pasos cerca de un sitio salen con SQL espacial (consultas de ejemplo en `docs/arquitectura.md`).
 5. **Sin base, en memoria.** Sin el perfil `postgres` la app funciona como antes; así corren los tests y `pnpm dev`.
 
+## Actualización (2026-10-29)
+
+`data` descarga también el release [`data-bogota-20261029`](https://github.com/YmidOrtega/Rutea/releases/tag/data-bogota-20261029) (F7): el grafo de Bogotá, sus sitios sensibles y los contenedores de las ASE 1, 2 y 4. Lo verifica contra `data/bogota/SHA256SUMS`. `fetch-data.sh` recibe pares de sumas y release y revisa archivo por archivo. Los contenedores no salen de OSM y no se pueden reconstruir: son una copia fechada de capas que cambian cada mes y no declaran licencia (`PENDIENTE_VERIFICAR`).
+
 ## Consecuencias
 
 - Medido: después de reiniciar la app con 52 órdenes guardadas, los 53 eventos son idénticos a los de antes (sin contar las latencias medidas) y la repetición tarda 433 ms. Un turno a 240× hasta las 18:57 guardó 10.720 puntos.

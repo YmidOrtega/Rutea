@@ -3,13 +3,13 @@ package me.ymid.rutea.app.planning;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
 
-import me.ymid.rutea.app.scenario.SubaFigures;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.domain.DieselEmissions;
 
 /**
  * Cifras de un plan, por turno y en total: km (con el regreso a la base), horas (manejo y paradas, sin la
  * descarga), toneladas, litros de diésel y kg de CO₂. Los litros usan el consumo supuesto de
- * {@link SubaFigures#LITERS_PER_KM}; el CO₂, los valores del IPCC de {@link DieselEmissions}.
+ * {@link BogotaFigures#LITERS_PER_KM}; el CO₂, los valores del IPCC de {@link DieselEmissions}.
  */
 public record PlanReport(String method, List<Line> lines, Line total) {
 
@@ -17,7 +17,7 @@ public record PlanReport(String method, List<Line> lines, Line total) {
 
         static Line of(String id, long meters, long seconds, long kg) {
             double km = meters / 1000.0;
-            double liters = km * SubaFigures.LITERS_PER_KM;
+            double liters = km * BogotaFigures.LITERS_PER_KM;
             return new Line(id, km, seconds / 3600.0, kg / 1000.0, liters, DieselEmissions.kgCo2(liters));
         }
     }

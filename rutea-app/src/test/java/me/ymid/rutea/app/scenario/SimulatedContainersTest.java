@@ -91,9 +91,11 @@ class SimulatedContainersTest {
 
     @Test
     void figuresFollowTheirSources() {
-        assertThat(SubaFigures.nonRecyclableContainers()).isEqualTo(806);
-        assertThat(SubaFigures.containerKgPerDay()).isEqualTo(110_760);
-        assertThat(SubaFigures.meanKgPerCollection(806)).isCloseTo(160.3, offset(0.1));
+        ServiceAreas.ServiceArea suba = ServiceAreas.ASE_5;
+
+        assertThat(suba.nonRecyclableContainers()).isEqualTo(806);
+        assertThat(suba.containerKgPerDay()).isEqualTo(110_760);
+        assertThat(suba.meanKgPerCollection(806)).isCloseTo(160.3, offset(0.1));
     }
 
     @Test

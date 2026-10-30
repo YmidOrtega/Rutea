@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
@@ -28,29 +28,29 @@ class BreakdownReplannerTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
     private static Solution solution;
     private static ShiftScheduler.Schedule schedule;
 
     @BeforeAll
     static void plan() throws IOException {
-        scenario = SubaScenarioFixture.town(dir, 20, 1_600);
+        scenario = AreaScenarioFixture.town(dir, 20, 1_600);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(2, Duration.ofMinutes(1), 200));
-        schedule = ShiftScheduler.schedule(scenario, solution, SubaFigures.SERVICE_SECONDS_PER_CONTAINER,
-                SubaFigures.UNLOAD_SECONDS_LOW, SubaFigures.SHIFT_SECONDS, 3);
+        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER,
+                BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 3);
     }
 
     @Test
     void timelineAddsUpToTheTruckShift() {
         ShiftScheduler.Truck truck = schedule.trucks().getFirst();
         List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, solution, truck,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0);
 
         assertThat(visits).extracting(ShiftScheduler.Visit::arriveSeconds).isSorted();
         int stops = Arrays.stream(truck.trips()).map(solution::routeLength).sum();
         assertThat(visits).hasSize(stops);
         ShiftScheduler.Visit last = visits.getLast();
-        long end = last.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER
+        long end = last.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER
                 + scenario.travel().seconds(last.node(), scenario.gate()) + schedule.unloadSeconds()
                 + scenario.travel().seconds(scenario.gate(), 0);
         assertThat(end).isEqualTo(truck.seconds());
@@ -98,7 +98,7 @@ class BreakdownReplannerTest {
     void reserveArrivesWithinThreeHoursAfterDispatch() {
         BreakdownReplanner.Replan replan = BreakdownReplanner.afterBreakdown(scenario, solution, schedule, 0, 600, 100, 1);
 
-        assertThat(replan.firstPickupSeconds()).isGreaterThanOrEqualTo(600 + SubaFigures.RESERVE_DISPATCH_SECONDS);
+        assertThat(replan.firstPickupSeconds()).isGreaterThanOrEqualTo(600 + BogotaFigures.RESERVE_DISPATCH_SECONDS);
         assertThat(replan.meetsRecoveryRule()).isTrue();
     }
 

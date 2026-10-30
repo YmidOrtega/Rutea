@@ -17,7 +17,7 @@ import me.ymid.rutea.app.planning.DemoPlan;
  * @param visits hora a la que el compactador llega ahora a cada contenedor de su plan, corrida por la recogida
  *     extra; vacío si no cambia nada
  */
-public record OverflowEvent(int seq, String container, long atSeconds, String cause, LiveOperation.Pickup pickup,
+public record OverflowEvent(int seq, int area, String container, long atSeconds, String cause, LiveOperation.Pickup pickup,
         String truck, long pickupSeconds, long extraMeters, double latencyMs, List<DemoPlan.Route> routes,
         Map<String, Long> visits) implements OperationEvent {
 

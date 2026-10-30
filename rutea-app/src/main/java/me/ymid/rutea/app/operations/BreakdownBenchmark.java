@@ -12,10 +12,11 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.SplittableRandom;
 
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
@@ -57,10 +58,10 @@ public final class BreakdownBenchmark {
             }
         }
 
-        SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), seed);
+        AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), ServiceAreas.ASE_5, seed);
         Solution solution = new AlnsSolver().solve(scenario.instance(),
-                new SolverSettings(seed, Duration.ofMinutes(10), SubaPlanner.ITERATIONS));
-        ShiftScheduler.Schedule schedule = SubaPlanner.fewestTrucks(scenario, solution, SubaFigures.UNLOAD_SECONDS_LOW);
+                new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
+        ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
 
         SplittableRandom random = new SplittableRandom(seed);
         int total = WARMUP + events;
@@ -174,7 +175,7 @@ public final class BreakdownBenchmark {
      * {latencia en ns, metros de la reserva} resolviendo los mismos huérfanos con ALNS desde cero. Los viajes pasan
      * por el mismo reparto en camiones, así los metros se comparan igual que en el arranque en caliente.
      */
-    private static long[] fromScratch(SubaScenario scenario, BreakdownReplanner.Replan replan,
+    private static long[] fromScratch(AreaScenario scenario, BreakdownReplanner.Replan replan,
             ShiftScheduler.Schedule schedule, long seed) {
         if (replan.orphans().length == 0) {
             return new long[] {0, 0};
@@ -184,7 +185,8 @@ public final class BreakdownBenchmark {
         Solution solved = new AlnsSolver().solve(part, new SolverSettings(seed, Duration.ofMinutes(10), REPLAN_ITERATIONS));
         Solution trips = BreakdownReplanner.toOriginalNodes(solved, replan.orphans());
         ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), SubaFigures.SHIFT_SECONDS, 3);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
+                scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new long[] {System.nanoTime() - start, reserve.meters()};
     }
 

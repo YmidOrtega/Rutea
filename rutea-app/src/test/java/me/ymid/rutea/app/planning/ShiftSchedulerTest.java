@@ -14,8 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.planning.ShiftScheduler.Schedule;
 import me.ymid.rutea.app.planning.ShiftScheduler.Truck;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
@@ -30,12 +30,12 @@ class ShiftSchedulerTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
     private static Solution solution;
 
     @BeforeAll
     static void plan() throws IOException {
-        scenario = SubaScenarioFixture.town(dir, 20, 1_600);
+        scenario = AreaScenarioFixture.town(dir, 20, 1_600);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(3, Duration.ofMinutes(1), 200));
     }
 
@@ -57,6 +57,56 @@ class ShiftSchedulerTest {
         assertThat(covered).isEqualTo(IntStream.range(0, solution.routeCount()).toArray());
         assertThat(chained.trucks()).filteredOn(truck -> truck.trips().length > 1)
                 .allSatisfy(truck -> assertThat(truck.seconds()).isLessThanOrEqualTo(SHIFT));
+    }
+
+    @Test
+    void chainsUpToFourTripsWhenAllowed() {
+        Schedule four = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 4);
+
+        assertThat(four.trucks().size()).isEqualTo((solution.routeCount() + 3) / 4);
+        assertThat(four.trucks()).allSatisfy(truck -> assertThat(truck.trips().length).isLessThanOrEqualTo(4));
+    }
+
+    @Test
+    void anExactScheduleIsItsOwnLowerBound() {
+        Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
+
+        assertThat(chained.lowerBound()).isEqualTo(chained.trucks().size());
+        assertThat(chained.fewestTrucks()).isTrue();
+    }
+
+    @Test
+    void moreTripsThanTheExactLimitAreSplitInGroupsWithALowerBound() {
+        // Un viaje por contenedor: 20 viajes del pueblo dos veces, 40 en total, más de los que se asignan exactos.
+        int[][] routes = new int[2 * scenario.containers().size()][];
+        for (int i = 0; i < routes.length; i++) {
+            routes[i] = new int[] {i % scenario.containers().size() + 1};
+        }
+        Solution many = new Solution(routes);
+
+        Schedule chained = ShiftScheduler.schedule(scenario, many, SERVICE, UNLOAD, SHIFT, 3);
+
+        int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
+        assertThat(covered).isEqualTo(IntStream.range(0, routes.length).toArray());
+        assertThat(chained.trucks()).allSatisfy(truck -> assertThat(truck.seconds()).isLessThanOrEqualTo(SHIFT));
+        assertThat(chained.lowerBound()).isEqualTo(routes.length / 3 + 1).isLessThanOrEqualTo(chained.trucks().size());
+    }
+
+    @Test
+    void searchesBeyondTheGroupsUntilItProvesTheFewestTrucks() {
+        // 41 viajes de un contenedor en grupos de 14, 14 y 13 dan 5 camiones por grupo; caben en 14.
+        int[][] routes = new int[41][];
+        for (int i = 0; i < routes.length; i++) {
+            routes[i] = new int[] {i % scenario.containers().size() + 1};
+        }
+
+        Schedule chained = ShiftScheduler.schedule(scenario, new Solution(routes), SERVICE, UNLOAD, SHIFT, 3);
+
+        assertThat(chained.trucks()).hasSize(14);
+        assertThat(chained.fewestTrucks()).isTrue();
+        int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
+        assertThat(covered).isEqualTo(IntStream.range(0, routes.length).toArray());
+        assertThat(chained.trucks()).allSatisfy(truck -> assertThat(truck.seconds()).isLessThanOrEqualTo(SHIFT));
     }
 
     @Test

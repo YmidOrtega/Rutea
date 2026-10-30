@@ -1,0 +1,4 @@
+graph,vertices,edges,points,threads,matrix_cold_ms,matrix_warm_ms,seed,iterations,cost_m,trips
+suba,18729,35364,808,16,86.9,94.1,1,2000,1017481,17
+bogota,70728,168035,808,16,389.8,410.1,1,2000,1005964,17
+bogota-1700,70728,168035,1702,16,928.9,923.4,1,,,

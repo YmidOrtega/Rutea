@@ -5,10 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.domain.CollectionRules;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadClass;
@@ -55,7 +54,7 @@ public final class Compliance {
     /**
      * @param visitSeconds segundos desde el inicio del turno hasta que el camión llega a cada contenedor
      */
-    public static Result evaluate(SubaScenario scenario, int[] visitSeconds, String shiftStart) {
+    public static Result evaluate(AreaScenario scenario, int[] visitSeconds, String shiftStart) {
         RoadGraph graph = scenario.graph();
         RoadClass[] shapeClass = new RoadClass[graph.shapeCount()];
         for (int e = 0; e < graph.edgeCount(); e++) {
@@ -99,7 +98,7 @@ public final class Compliance {
             // La norma no fija frecuencia mínima para aprovechables (R03) y sin compactación no aplica R07.
             return new Result(stops, List.of(r02));
         }
-        int frequency = SubaFigures.COLLECTIONS_PER_WEEK;
+        int frequency = scenario.operation().collectionsPerWeek();
         int minimum = CollectionRules.minimumWeeklyFrequency(WasteStream.NON_RECYCLABLE).orElseThrow();
         List<Check> checks = List.of(
                 r02,

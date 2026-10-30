@@ -20,6 +20,7 @@
 /* Un sello, no una píldora: dice que los datos son simulados con la misma seriedad que una norma */
 .stamp {
   margin-left: auto;
+  white-space: nowrap;
   padding: 1px 6px;
   border: 1px solid currentColor;
   font-size: var(--text-11);

@@ -9,11 +9,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.DemoPlan;
-import me.ymid.rutea.app.planning.SubaPlanner;
+import me.ymid.rutea.app.planning.ShiftScheduler;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.geo.TravelMatrix;
 import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
@@ -86,12 +86,12 @@ public final class LiveOperation {
     private final Set<Integer> outOfService = new HashSet<>();
     private int nextTag = 1;
 
-    public LiveOperation(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+    public LiveOperation(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             int serviceSeconds) {
         this(scenario, solution, schedule, serviceSeconds, Policy.EARLIEST);
     }
 
-    public LiveOperation(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+    public LiveOperation(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             int serviceSeconds, Policy policy) {
         live = LivePlan.of(scenario, solution, schedule, serviceSeconds);
         this.policy = policy;
@@ -117,8 +117,8 @@ public final class LiveOperation {
                     extra.meters(), System.nanoTime() - start);
         }
         int gate = live.scenario().gate();
-        TravelMatrix travel = live.travelAt(atSeconds + SubaFigures.RESERVE_DISPATCH_SECONDS);
-        long pickup = atSeconds + SubaFigures.RESERVE_DISPATCH_SECONDS + travel.seconds(0, node);
+        TravelMatrix travel = live.travelAt(atSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS);
+        long pickup = atSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS + travel.seconds(0, node);
         long meters = travel.meters(0, node) + travel.meters(node, gate) + travel.meters(gate, 0);
         return new Dispatch(node, atSeconds, Pickup.RESERVE, -1, pickup, meters, System.nanoTime() - start);
     }
@@ -230,7 +230,7 @@ public final class LiveOperation {
                 .mapToInt(LivePlan.Stop::node).toArray();
     }
 
-    public SubaScenario scenarioAt(long atSeconds) {
+    public AreaScenario scenarioAt(long atSeconds) {
         TravelMatrix travel = live.travelAt(atSeconds);
         return travel == live.scenario().travel() ? live.scenario() : live.scenario().withTravel(travel);
     }
@@ -240,14 +240,14 @@ public final class LiveOperation {
     }
 
     public DemoPlan.Route route(int truck, String id) {
-        List<List<SubaPlanner.Arc>> legs = new ArrayList<>();
+        List<List<AreaPlanner.Arc>> legs = new ArrayList<>();
         for (LivePlan.Leg leg : live.legs(truck)) {
             legs.add(live.arcs(leg));
         }
-        return SubaPlanner.redraw(live.scenario(), trips(truck), legs, live.unloadSeconds(), id);
+        return AreaPlanner.redraw(live.scenario(), trips(truck), legs, live.unloadSeconds(), id);
     }
 
-    public SubaScenario scenario() {
+    public AreaScenario scenario() {
         return live.scenario();
     }
 

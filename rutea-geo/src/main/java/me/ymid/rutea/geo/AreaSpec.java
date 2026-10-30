@@ -37,7 +37,7 @@ public record AreaSpec(long localityRelation, long cityRelation, List<Site> site
      * Suba (relación 2214884) y Bogotá D. C. (relación 1387968), en el extracto de {@code data/osm}.
      *
      * <ul>
-     *   <li>Base de Área Limpia: Avenida Calle 17 # 124-81, Fontibón, según la inspección de la
+     *   <li>Base de Torca: Avenida Calle 17 # 124-81, Fontibón, según la inspección de la
      *       Superservicios de marzo de 2026. Se toma la esquina de la Av. Calle 17 con la Carrera 124
      *       (nodo 865490722); la base queda a unos 81 m de ella.
      *   <li>Relleno Sanitario Doña Juana: portería noreste, nodo 1013564592 ({@code barrier=swing_gate}),
@@ -47,6 +47,34 @@ public record AreaSpec(long localityRelation, long cityRelation, List<Site> site
     public static final AreaSpec SUBA = new AreaSpec(2214884, 1387968, List.of(
             new Site(DEPOT, 865490722, 500),
             new Site(DISPOSAL, 1013564592, 2000)));
+
+    /**
+     * Las calles públicas de todo Bogotá D. C. (relación 1387968), con los sitios de {@link #SUBA} y las bases de las
+     * ASE 1 a 4 (dirección y fuente en {@code docs/datos.md}). Cada base está mapeada en OSM; su nodo es donde la vía
+     * del predio sale a la calle pública o, si no hay vía mapeada, el punto de la calle más cercano al edificio:
+     *
+     * <ul>
+     *   <li>ASE 1, Arzobispo (vía 458791813): salida a la Carrera 60, frente al número 15-07.
+     *   <li>ASE 2, Tunjuelo (vía 881770228, Carrera 62 # 19-04): salida del patio a la Carrera 62 con Calle 20.
+     *   <li>ASE 3, Fucha (vía 700784521): salida del patio a la Calle 59C Sur.
+     *   <li>ASE 4, Salitre (vía 1210674921): calzada sur de la Av. Calle 63, a unos 31 m del edificio.
+     * </ul>
+     *
+     * Los cuatro nodos están sobre calles públicas, que ya entran al grafo, así que van con margen 0: de lo privado
+     * entra solo la vía que pasa por el nodo, la de acceso al predio. La localidad de cada calle no queda en el grafo:
+     * se asigna por polígono donde se necesita.
+     */
+    public static final AreaSpec BOGOTA = new AreaSpec(1387968, 1387968, List.of(
+            SUBA.sites().get(0), SUBA.sites().get(1),
+            new Site(depot(1), 8483428972L, 0),
+            new Site(depot(2), 3868073372L, 0),
+            new Site(depot(3), 6580796244L, 0),
+            new Site(depot(4), 5769034872L, 0)));
+
+    /** El sitio de la base de una ASE en {@link #BOGOTA}; la del ASE 5 es {@link #DEPOT}, como en {@link #SUBA}. */
+    public static String depot(int area) {
+        return area == 5 ? DEPOT : DEPOT + "-ase" + area;
+    }
 
     public AreaSpec {
         sites = List.copyOf(sites);

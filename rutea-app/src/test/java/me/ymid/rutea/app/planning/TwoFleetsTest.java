@@ -13,11 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.planning.Compliance.Status;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.SolverSettings;
@@ -28,27 +28,27 @@ class TwoFleetsTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario waste;
-    private static SubaScenario recyclables;
+    private static AreaScenario waste;
+    private static AreaScenario recyclables;
     private static DemoPlan merged;
 
     @BeforeAll
     static void plan() throws IOException {
-        waste = SubaScenarioFixture.town(dir, 12, 1_600);
-        SubaScenario plainRecyclables = SubaScenarioFixture.recyclableTown(dir, 12, 300);
+        waste = AreaScenarioFixture.town(dir, 12, 1_600);
+        AreaScenario plainRecyclables = AreaScenarioFixture.recyclableTown(dir, 12, 300);
         Container first = plainRecyclables.containers().getFirst();
         // Un colegio encima del primer contenedor blanco: sin compactación, R07 no tiene nada que marcar.
         recyclables = plainRecyclables.withSites(List.of(new SensitiveSites.Site(SensitiveSites.Kind.EDUCATION,
                 "node/1", "Colegio", new int[] {first.latE7()}, new int[] {first.lonE7()})));
-        DemoPlan a = plan(waste, SubaFigures.UNLOAD_SECONDS_LOW);
-        DemoPlan b = plan(recyclables, SubaFigures.ECA_UNLOAD_SECONDS);
-        merged = SubaPlanner.merge(a, b);
+        DemoPlan a = plan(waste, BogotaFigures.UNLOAD_SECONDS_LOW);
+        DemoPlan b = plan(recyclables, BogotaFigures.ECA_UNLOAD_SECONDS);
+        merged = AreaPlanner.merge(waste.area(), a, b);
     }
 
-    private static DemoPlan plan(SubaScenario scenario, int unload) {
+    private static DemoPlan plan(AreaScenario scenario, int unload) {
         Solution solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(1, Duration.ofMinutes(1), 200));
         ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, 60, unload, 8 * 3600, 3);
-        return SubaPlanner.plan(scenario, solution, schedule, "alns", 1, 200);
+        return AreaPlanner.plan(scenario, solution, schedule, "alns", 1, 200);
     }
 
     @Test
@@ -57,7 +57,7 @@ class TwoFleetsTest {
         assertThat(recyclables.depotVertex()).isEqualTo(recyclables.gateVertex());
         assertThat(recyclables.returnMeters()).isZero();
         assertThat(recyclables.stream()).isEqualTo(WasteStream.RECYCLABLE);
-        assertThat(recyclables.instance().capacity()).isEqualTo(SubaFigures.RECYCLABLE_VEHICLE_KG);
+        assertThat(recyclables.instance().capacity()).isEqualTo(BogotaFigures.RECYCLABLE_VEHICLE_KG);
         assertThat(merged.routes()).filteredOn(r -> r.stream() == WasteStream.RECYCLABLE)
                 .allSatisfy(r -> assertThat(r.id()).startsWith("A-"));
         assertThat(merged.routes()).filteredOn(r -> r.stream() == WasteStream.NON_RECYCLABLE)

@@ -1,0 +1,238 @@
+.city-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.city-count {
+  margin-right: auto;
+}
+
+.city-head .control {
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--text-11);
+}
+
+.city-area-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.city-swatch {
+  align-self: center;
+  background: var(--operator);
+}
+
+.city-localities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.city-locality {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.city-locality:hover,
+.city-locality.is-hovered {
+  background: var(--line);
+}
+
+.city-locality[aria-pressed='true'] {
+  color: var(--fg);
+}
+
+/* Una casilla grabada; elegida se llena de sodio, como la localidad en el mapa */
+.city-check {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--line-strong);
+}
+
+.city-locality[aria-pressed='true'] .city-check {
+  background: var(--sodium);
+  border-color: var(--sodium);
+}
+
+.city-number {
+  min-width: 2ch;
+  color: var(--fg-muted);
+  text-align: right;
+}
+
+.city-result {
+  margin-top: 8px;
+}
+
+.city-fleet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: var(--text-15);
+}
+
+.city-trucks {
+  flex: none;
+  display: flex;
+  gap: 2px;
+}
+
+.city-trucks > span {
+  width: 5px;
+  height: 12px;
+  background: var(--operator);
+}
+
+/* Lo que pasa de lo declarado no cabe en la flota del operador: advertencia, no falla */
+.city-trucks > .is-beyond {
+  background: var(--warn);
+}
+
+.city-trucks > .is-idle {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.city-declared {
+  font-size: var(--text-12);
+  color: var(--fg-muted);
+}
+
+.city-declared.is-beyond {
+  color: var(--warn);
+}
+
+.city-note {
+  margin: 0 0 6px;
+  font-size: var(--text-11);
+  color: var(--fg-muted);
+}
+
+.city-result .spec {
+  margin-bottom: 6px;
+  font-size: var(--text-12);
+}
+
+.city-shifts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: var(--text-12);
+}
+
+.city-shift {
+  display: grid;
+  grid-template-columns: 40px auto 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.city-shift-count {
+  text-align: right;
+}
+
+.city-shift-name {
+  color: var(--fg-muted);
+}
+
+.city-shift.is-skipped {
+  grid-template-columns: 40px 1fr;
+  white-space: normal;
+  color: var(--fg-muted);
+}
+
+.city-rules {
+  color: var(--fg-muted);
+}
+
+.city-foot {
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* La acción que se va a hacer ahora: el único botón con el acento */
+.city-plan:not(:disabled) {
+  border-color: var(--sodium);
+  color: var(--sodium);
+}
+
+.city-status {
+  font-size: var(--text-12);
+  color: var(--fg-muted);
+}
+
+.city-error {
+  font-size: var(--text-12);
+  line-height: 1.45;
+  color: var(--crit);
+}
+
+/* Los camiones no son la hora: la cifra grande va en el texto principal */
+.instrument-clock.city-reading {
+  color: var(--fg);
+}
+
+/* El modo: dos posiciones grabadas, como el selector de un tablero */
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.modes button {
+  height: 30px;
+  background: none;
+  border: 0;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--text-11);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.modes button + button {
+  border-left: 1px solid var(--line);
+}
+
+.modes button[aria-pressed='true'] {
+  color: var(--fg);
+  box-shadow: inset 0 -1px 0 var(--sodium);
+}
+
+.modes button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .city-localities {
+    grid-template-columns: 1fr;
+  }
+}

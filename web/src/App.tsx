@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import MapGL from 'react-map-gl/maplibre'
+import MapGL, { type MapRef } from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
 import { DATA_ATTRIBUTION, initialViewState } from './map/view'
 import { sodiumBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
+  cityRoutesLayer,
   containersLayer,
   fillLayer,
+  localityLayers,
   operationLayers,
   sectorLayer,
   staticLayers,
@@ -67,6 +69,18 @@ import { Timeline } from './panels/Timeline'
 import { Instrument } from './panels/Instrument'
 import { collectedBy, firstVisit, progressOf } from './operations/progress'
 import { windowAt } from './demo/schedule'
+import { CityInstrument, CityPanel } from './city/CityPanel'
+import {
+  boundsOf,
+  fetchLocalities,
+  fetchSelection,
+  hashOf,
+  mergePlans,
+  selectionFromHash,
+  type CityContainer,
+  type Locality,
+  type SelectionPlan,
+} from './city/city'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
@@ -94,6 +108,99 @@ export default function App() {
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
   const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof sodiumBasemap>> | null>(null)
+  const map = useRef<MapRef>(null)
+
+  // La ciudad: elegir localidades y ver cada ASE con su flota. Necesita la API; el plan estático es solo Suba.
+  const [mode, setMode] = useState<'live' | 'city'>(() => (selectionFromHash() === null ? 'live' : 'city'))
+  const [localities, setLocalities] = useState<Locality[] | null>(null)
+  const [chosen, setChosen] = useState<Set<number>>(() => new Set(selectionFromHash() ?? []))
+  const [hovered, setHovered] = useState<number | null>(null)
+  const [cityResult, setCityResult] = useState<SelectionPlan | null>(null)
+  const [planningSince, setPlanningSince] = useState<number | null>(null)
+  const [cityError, setCityError] = useState<string | null>(null)
+  const planning = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    void fetchLocalities().then(setLocalities)
+    // Un enlace pegado en la misma pestaña cambia solo el hash: sin recargar, la selección también cambia.
+    const follow = () => {
+      const selection = selectionFromHash()
+      setMode(selection === null ? 'live' : 'city')
+      if (selection !== null) setChosen(new Set(selection))
+    }
+    window.addEventListener('hashchange', follow)
+    return () => window.removeEventListener('hashchange', follow)
+  }, [])
+
+  useEffect(() => {
+    const hash = mode === 'city' ? hashOf([...chosen].sort((a, b) => a - b)) : ''
+    if (hash !== window.location.hash) {
+      window.history.replaceState(null, '', hash || window.location.pathname + window.location.search)
+    }
+  }, [mode, chosen])
+
+  const toggleLocality = (number: number) =>
+    setChosen((current) => {
+      const next = new Set(current)
+      if (!next.delete(number)) next.add(number)
+      return next
+    })
+
+  const planCity = () => {
+    planning.current?.abort()
+    const abort = new AbortController()
+    planning.current = abort
+    setCityError(null)
+    setPlanningSince(performance.now())
+    fetchSelection([...chosen].sort((a, b) => a - b), abort.signal)
+      .then(setCityResult)
+      .catch((cause: unknown) => {
+        if (!abort.signal.aborted) setCityError(cause instanceof Error ? cause.message : String(cause))
+      })
+      .finally(() => {
+        if (planning.current === abort) setPlanningSince(null)
+      })
+  }
+
+  const cityPlan = useMemo(() => {
+    const current =
+      cityResult !== null &&
+      cityResult.localities.length === chosen.size &&
+      cityResult.localities.every((n) => chosen.has(n))
+    return current ? cityResult : null
+  }, [cityResult, chosen])
+  const cityDrawn = useMemo(() => (cityPlan ? mergePlans(cityPlan) : null), [cityPlan])
+
+  // Al entrar a la ciudad se ve el Distrito urbano; con un plan, lo elegido. Sumapaz, rural, alejaría todo al sur.
+  useEffect(() => {
+    if (mode !== 'city' || !localities || !map.current) return
+    const framed = localities.filter((locality) =>
+      cityPlan ? cityPlan.localities.includes(locality.number) : !locality.rural,
+    )
+    if (framed.length === 0) return
+    const narrow = window.matchMedia('(max-width: 640px)').matches
+    map.current.fitBounds(boundsOf(framed.flatMap((locality) => locality.outline)), {
+      // En el móvil la consola baja hasta el 55 % del alto (App.css): el mapa se encuadra debajo.
+      padding: narrow
+        ? { top: Math.round(window.innerHeight * 0.55) + 24, bottom: 40, left: 16, right: 16 }
+        : { top: 24, bottom: 40, left: 368, right: 40 },
+      pitch: 30,
+      bearing: -15,
+      duration: reducedMotion ? 0 : 1200,
+    })
+  }, [mode, localities, cityPlan, basemap, reducedMotion])
+
+  const enterLive = () => {
+    setMode('live')
+    const view = initialViewState()
+    map.current?.flyTo({
+      center: [view.longitude, view.latitude],
+      zoom: view.zoom,
+      pitch: view.pitch,
+      bearing: view.bearing,
+      duration: reducedMotion ? 0 : 1200,
+    })
+  }
 
   useEffect(() => {
     void sodiumBasemap(palette).then(setBasemap)
@@ -274,7 +381,22 @@ export default function App() {
     () => (current ? fillLayer(shown, sensors.readings, palette) : null),
     [current, shown, sensors, palette],
   )
-  const layers = feed
+  const cityLayers = useMemo(() => {
+    if (!localities) return []
+    const selector = localityLayers(localities, chosen, hovered, palette)
+    if (!cityDrawn) return selector
+    // Sin línea de tiempo: el plan de la ciudad se mira entero, con cada contenedor ya encendido.
+    const lit = new Map(cityDrawn.containers.map((container) => [container.id, 0]))
+    return [
+      ...selector,
+      cityRoutesLayer(cityDrawn.routes, palette),
+      ...staticLayers({ routes: [], sites: cityDrawn.sites }, new Set(), palette),
+      containersLayer(cityDrawn.containers, lit, 0, palette),
+    ]
+  }, [localities, chosen, hovered, cityDrawn, palette])
+  const layers = mode === 'city'
+    ? cityLayers
+    : feed
     ? [
         ...baseLayers,
         ...(filled ? [filled] : []),
@@ -303,15 +425,24 @@ export default function App() {
     <main className="app">
       {basemap && (
         <MapGL
+          ref={map}
           initialViewState={initialView}
           mapStyle={basemap}
           attributionControl={{ compact: true, customAttribution: DATA_ATTRIBUTION }}
         >
           <DeckOverlay
             layers={layers}
-            getTooltip={tooltipFor(current, live, sensors)}
-            getCursor={({ isHovering }) => (closing ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
+            getTooltip={mode === 'city' ? cityTooltip : tooltipFor(current, live, sensors)}
+            getCursor={({ isHovering }) => (closing && mode === 'live' ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
+            onHover={(info) =>
+              mode === 'city' &&
+              setHovered(info.layer?.id === 'localities' ? (info.object as { locality: Locality }).locality.number : null)
+            }
             onClick={(info) => {
+              if (mode === 'city') {
+                if (info.layer?.id === 'localities') toggleLocality((info.object as { locality: Locality }).locality.number)
+                return
+              }
               if (closing) {
                 if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
                 return
@@ -323,7 +454,39 @@ export default function App() {
       )}
 
       <div className="console">
-        <Instrument
+        <nav className="modes panel" aria-label="Modo">
+          <button aria-pressed={mode === 'live'} onClick={enterLive}>
+            En vivo · Suba
+          </button>
+          <button
+            aria-pressed={mode === 'city'}
+            disabled={!localities}
+            title={localities ? 'Elegir localidades y planificar por ASE' : 'Necesita la API: mvn -pl rutea-app spring-boot:run'}
+            onClick={() => setMode('city')}
+          >
+            Ciudad
+          </button>
+        </nav>
+
+        {mode === 'city' && localities && (
+          <>
+            <CityInstrument result={cityPlan} selected={chosen.size} />
+            <CityPanel
+              localities={localities}
+              selected={chosen}
+              onToggle={toggleLocality}
+              onSelect={(numbers) => setChosen(new Set(numbers))}
+              hovered={hovered}
+              onHover={setHovered}
+              result={cityResult}
+              planningSince={planningSince}
+              error={cityError}
+              onPlan={planCity}
+            />
+          </>
+        )}
+
+        {mode === 'live' && <Instrument
           zone={plan?.meta.zone ?? 'Suba'}
           time={plan ? at(time) : null}
           shift={plan ? `${at(0)}–${at(plan.meta.shiftSeconds)}` : null}
@@ -331,9 +494,9 @@ export default function App() {
           totalContainers={current?.plan.containers.length ?? 0}
           totalKg={progress?.kgBefore[progress.kgBefore.length - 1] ?? 0}
           onStreet={onStreet}
-        />
+        />}
 
-        {current && progress && (
+        {mode === 'live' && current && progress && (
           <PlanPanel
             sector={sector}
             onSector={setSector}
@@ -352,7 +515,7 @@ export default function App() {
         )}
       </div>
 
-      <div className="dock">
+      {mode === 'live' && <div className="dock">
         {current && selectedContainer && (
           <ContainerCard
             container={selectedContainer}
@@ -415,9 +578,9 @@ export default function App() {
             )}
           </Timeline>
         )}
-      </div>
+      </div>}
 
-      {error && (
+      {error && mode === 'live' && (
         <div className="status panel" role="alert">
           <strong>No se pudo cargar el plan de demo.</strong>
           <span className="num">{error}</span>
@@ -451,6 +614,44 @@ const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
 const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
 const CLOSURE_LAYERS = ['closures', 'closure-marks']
+
+const TOOLTIP_STYLE = {
+  background: 'var(--panel)',
+  color: 'var(--fg)',
+  border: '1px solid var(--line)',
+  borderRadius: '0',
+  padding: '8px 10px',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 'var(--text-13)',
+}
+
+function cityTooltip({ object, layer }: PickingInfo) {
+  if (!object) return null
+  if (layer?.id === 'localities') {
+    const { locality } = object as { locality: Locality }
+    return {
+      className: 'tooltip',
+      style: TOOLTIP_STYLE,
+      html: `<strong>${locality.name}</strong>
+        <span>ASE ${locality.area} · ${locality.operator}${locality.rural ? ' · rural' : ''}</span>`,
+    }
+  }
+  if (layer?.id === 'containers') {
+    const container = object as CityContainer
+    const at = clock(secondsOfDay(container.shiftStart) + container.visitSeconds)
+    const rules = container.rules.map((rule) => `<span class="rule">${rule}</span>`).join('')
+    return {
+      className: 'tooltip',
+      style: TOOLTIP_STYLE,
+      html: `<strong class="num">${container.code}</strong>
+        <span>ASE ${container.area} · ${container.simulated ? 'simulado' : 'del operador'}</span>
+        <span class="num">${container.kg} kg por recolección, por capacidad</span>
+        <span class="num">Turno de ${container.shift === 'Dia' ? 'día' : 'noche'} · llega a las ${at}</span>${rules}`,
+    }
+  }
+  if (layer?.id === 'sites') return { className: 'tooltip', style: TOOLTIP_STYLE, html: `<strong>${(object as Site).label}</strong>` }
+  return null
+}
 
 function tooltipFor(current: CurrentPlan | null, live: boolean, sensors: Sensors) {
   return (info: PickingInfo) => (current ? tooltip(info, current, live, sensors) : null)

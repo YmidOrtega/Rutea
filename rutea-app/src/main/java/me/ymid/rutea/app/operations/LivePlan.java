@@ -7,9 +7,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.geo.TravelMatrix;
@@ -17,7 +17,7 @@ import me.ymid.rutea.solver.Solution;
 
 /**
  * El plan en curso, que se puede modificar: por camión, sus viajes con las paradas en el orden en que las hace.
- * Los nodos son índices de {@link SubaScenario#travel}: 0 es la base y {@code gate()} la portería. Las horas se
+ * Los nodos son índices de {@link AreaScenario#travel}: 0 es la base y {@code gate()} la portería. Las horas se
  * calculan igual que {@link ShiftScheduler}: manejo por la matriz, paradas, descargas y regreso a la base.
  *
  * <p>Cada parada lleva una marca: 0 si es del plan, otra si se agregó después (un desborde). Un mismo contenedor
@@ -48,13 +48,13 @@ final class LivePlan {
     record Network(long fromSeconds, TravelMatrix travel, boolean[] closed) {
     }
 
-    private record Detour(long seconds, long meters, List<SubaPlanner.Arc> arcs, boolean rerouted) {
+    private record Detour(long seconds, long meters, List<AreaPlanner.Arc> arcs, boolean rerouted) {
     }
 
     private record LegKey(int from, int to, long departSeconds) {
     }
 
-    private final SubaScenario scenario;
+    private final AreaScenario scenario;
     private final int serviceSeconds;
     private final int unloadSeconds;
     private final int shiftSeconds;
@@ -66,7 +66,7 @@ final class LivePlan {
     private final Map<Integer, List<Leg>> legs = new HashMap<>();
     private final Map<RoadGraph, ShortestPaths> searches = new IdentityHashMap<>();
 
-    private LivePlan(SubaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
+    private LivePlan(AreaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
         this.scenario = scenario;
         this.serviceSeconds = serviceSeconds;
         this.unloadSeconds = unloadSeconds;
@@ -74,7 +74,7 @@ final class LivePlan {
         networks.add(new Network(0, scenario.travel(), new boolean[scenario.graph().shapeCount()]));
     }
 
-    static LivePlan of(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, int serviceSeconds) {
+    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, int serviceSeconds) {
         LivePlan live = new LivePlan(scenario, serviceSeconds, schedule.unloadSeconds(), schedule.shiftSeconds());
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             List<int[]> trips = new ArrayList<>();
@@ -122,7 +122,7 @@ final class LivePlan {
         return serviceSeconds;
     }
 
-    SubaScenario scenario() {
+    AreaScenario scenario() {
         return scenario;
     }
 
@@ -234,7 +234,7 @@ final class LivePlan {
         return total;
     }
 
-    List<SubaPlanner.Arc> arcs(Leg leg) {
+    List<AreaPlanner.Arc> arcs(Leg leg) {
         Detour detour = detour(leg.from(), leg.to(), leg.departSeconds(), leg.network());
         if (detour != null) {
             return detour.arcs();
@@ -302,7 +302,7 @@ final class LivePlan {
         if (cached != null) {
             return cached;
         }
-        List<SubaPlanner.Arc> arcs = new ArrayList<>(path(travel.graph(), from, to));
+        List<AreaPlanner.Arc> arcs = new ArrayList<>(path(travel.graph(), from, to));
         boolean rerouted = false;
         for (int j = next; j < networks.size(); j++) {
             Network closing = networks.get(j);
@@ -331,16 +331,16 @@ final class LivePlan {
                 // El destino quedó aislado con el camión ya en camino: llega.
                 continue;
             }
-            List<SubaPlanner.Arc> rest = new ArrayList<>(arcs.subList(0, at));
+            List<AreaPlanner.Arc> rest = new ArrayList<>(arcs.subList(0, at));
             for (int edge : search.pathEdges(vertex(to))) {
-                rest.add(new SubaPlanner.Arc(graph, edge));
+                rest.add(new AreaPlanner.Arc(graph, edge));
             }
             arcs = rest;
             rerouted = true;
         }
         long seconds = 0;
         long meters = 0;
-        for (SubaPlanner.Arc arc : arcs) {
+        for (AreaPlanner.Arc arc : arcs) {
             seconds += arc.seconds();
             meters += arc.meters();
         }
@@ -353,12 +353,12 @@ final class LivePlan {
         return searches.computeIfAbsent(graph, g -> new ShortestPaths(g, ShortestPaths.Weight.METERS));
     }
 
-    private List<SubaPlanner.Arc> path(RoadGraph graph, int from, int to) {
+    private List<AreaPlanner.Arc> path(RoadGraph graph, int from, int to) {
         ShortestPaths search = search(graph);
         search.distances(vertex(from), new int[] {vertex(to)});
-        List<SubaPlanner.Arc> arcs = new ArrayList<>();
+        List<AreaPlanner.Arc> arcs = new ArrayList<>();
         for (int edge : search.pathEdges(vertex(to))) {
-            arcs.add(new SubaPlanner.Arc(graph, edge));
+            arcs.add(new AreaPlanner.Arc(graph, edge));
         }
         return arcs;
     }

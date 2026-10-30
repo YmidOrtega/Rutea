@@ -12,9 +12,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
-import me.ymid.rutea.app.scenario.SubaScenario;
-import me.ymid.rutea.app.scenario.SubaScenarioFixture;
 import me.ymid.rutea.geo.geometry.Haversine;
 import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Solution;
@@ -24,11 +24,11 @@ class QuadrantSweepTest {
     @TempDir
     static Path dir;
 
-    private static SubaScenario scenario;
+    private static AreaScenario scenario;
 
     @BeforeAll
     static void town() throws IOException {
-        scenario = SubaScenarioFixture.town(dir, 25, 1_600);
+        scenario = AreaScenarioFixture.town(dir, 25, 1_600);
     }
 
     @Test

@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.domain.CollectionRules;
 import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
@@ -73,22 +73,22 @@ public final class BreakdownReplanner {
         REASSIGN_IF_NO_RESERVE
     }
 
-    public static Replan afterBreakdown(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+    public static Replan afterBreakdown(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             int truck, long breakdownSeconds, long iterations, long seed) {
         return afterBreakdown(scenario, solution, schedule, truck, breakdownSeconds, iterations, seed,
                 Strategy.RESERVE_ONLY);
     }
 
-    public static Replan afterBreakdown(SubaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
+    public static Replan afterBreakdown(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             int truck, long breakdownSeconds, long iterations, long seed, Strategy strategy) {
         long start = System.nanoTime();
         ShiftScheduler.Truck broken = schedule.trucks().get(truck);
         List<Integer> pending = new ArrayList<>();
         for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, broken,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
             // Huérfano si el camión no alcanzó a terminar de recogerlo: averiado a mitad del servicio, lo recoge la
             // reserva.
-            if (visit.arriveSeconds() + SubaFigures.SERVICE_SECONDS_PER_CONTAINER > breakdownSeconds) {
+            if (visit.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER > breakdownSeconds) {
                 pending.add(visit.node());
             }
         }
@@ -96,7 +96,7 @@ public final class BreakdownReplanner {
         List<Reassignment> reassigned = new ArrayList<>();
         if (strategy != Strategy.RESERVE_ONLY && orphans.length > 0) {
             List<Integer> left = new ArrayList<>(pending);
-            LivePlan live = LivePlan.of(scenario, solution, schedule, SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            LivePlan live = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
             List<Insertion.Placement> placed = Insertion.cheapest(live, left, breakdownSeconds, truck);
             if (strategy == Strategy.REASSIGN_FIRST || left.isEmpty()) {
                 for (Insertion.Placement placement : placed) {
@@ -116,20 +116,20 @@ public final class BreakdownReplanner {
      * Solo reserva, con los huérfanos ya calculados sobre el plan en vivo y la red vigente: después de un desborde o
      * un cierre de vía, el plan original ya no dice qué le faltaba al camión.
      */
-    public static Replan afterBreakdown(SubaScenario scenario, int truck, long breakdownSeconds, int[] orphans,
+    public static Replan afterBreakdown(AreaScenario scenario, int truck, long breakdownSeconds, int[] orphans,
             int unloadSeconds, long iterations, long seed) {
         return withReserve(scenario, truck, breakdownSeconds, orphans, orphans, List.of(), unloadSeconds, iterations,
                 seed, System.nanoTime());
     }
 
-    private static Replan withReserve(SubaScenario scenario, int truck, long breakdownSeconds, int[] orphans,
+    private static Replan withReserve(AreaScenario scenario, int truck, long breakdownSeconds, int[] orphans,
             int[] forReserve, List<Reassignment> reassigned, int unloadSeconds, long iterations, long seed,
             long start) {
         long firstAbsorbed = reassigned.stream().mapToLong(Reassignment::pickupSeconds).min().orElse(Long.MAX_VALUE);
         long lastAbsorbed = reassigned.stream().mapToLong(Reassignment::pickupSeconds).max().orElse(breakdownSeconds);
         if (forReserve.length == 0) {
             ShiftScheduler.Schedule none = new ShiftScheduler.Schedule(List.of(), unloadSeconds,
-                    SubaFigures.SHIFT_SECONDS);
+                    scenario.operation().shiftSeconds());
             long first = orphans.length == 0 ? breakdownSeconds : firstAbsorbed;
             return new Replan(truck, breakdownSeconds, orphans, Solution.of(), none, System.nanoTime() - start, first,
                     lastAbsorbed, reassigned);
@@ -141,15 +141,15 @@ public final class BreakdownReplanner {
                 new SolverSettings(seed, Duration.ofMinutes(10), iterations), inPlanOrder(part));
         Solution trips = toOriginalNodes(warm, forReserve);
         ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, SubaFigures.SHIFT_SECONDS, 3);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         long latency = System.nanoTime() - start;
 
-        long dispatch = breakdownSeconds + SubaFigures.RESERVE_DISPATCH_SECONDS;
+        long dispatch = breakdownSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS;
         long first = Long.MAX_VALUE;
         long last = 0;
         for (ShiftScheduler.Truck reserveTruck : reserve.trucks()) {
             List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, trips, reserveTruck,
-                    SubaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, dispatch);
+                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, dispatch);
             first = Math.min(first, visits.getFirst().arriveSeconds());
             last = Math.max(last, visits.getLast().arriveSeconds());
         }

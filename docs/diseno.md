@@ -27,6 +27,18 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 | `--sodium` | `#f5a524` | Acento: hora actual, selección, foco |
 | `--ok` / `--warn` / `--crit` | `#93cf9f` / `#e8d47a` / `#ff5b48` | Estados. `--warn` es más claro y amarillo que el sodio para no confundir una advertencia con lo que pasa ahora |
 
+### Operadores (modo Ciudad)
+
+Cada ASE tiene el color de su operador, que se usa en sus rutas, su muestra y sus camiones del panel. Son tonos fríos y rosa, separados unos 35° de matiz. Ninguno es rojo (alerta), ámbar (selección y hora), amarillo (advertencia), verde (orgánicos) ni blanco (aprovechables), así que una ruta nunca se lee como un estado. En el modo en vivo las rutas siguen con el color de su corriente.
+
+| Token | Valor | ASE |
+|---|---|---|
+| `--operator-1` | `#a78bfa` violeta | 1 · Arzobispo |
+| `--operator-2` | `#4fd1e0` cian | 2 · Tunjuelo |
+| `--operator-3` | `#f472b6` rosa | 3 · Fucha |
+| `--operator-4` | `#6b9cff` azul | 4 · Salitre |
+| `--operator-5` | `#e879f9` orquídea | 5 · Torca |
+
 ### Corrientes de residuo (Resolución 2184 de 2019)
 
 | Corriente | Color oficial | Cómo se dibuja sobre el mapa oscuro |
@@ -64,6 +76,14 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 - **Reloj y posiciones (F5)**: con la API, el reloj es el del servidor y vale para todos: en la línea de tiempo, ▶/❚❚ lo reproduce o pausa, el botón de velocidad alterna 15×, 60× y 240×, y al terminar el turno ↺ empieza uno nuevo y borra los eventos. Cada vehículo es un punto del color de su estela en la posición que transmite; el averiado lleva borde `--crit` y el que terminó su turno desaparece. Su tooltip dice qué está haciendo.
 - **Sensores de llenado (F5)**: un punto en el centro del contenedor, `--warn` desde el 70 % y `--crit` desbordado; los que están bien no llevan punto, porque 806 puntos verdes no dicen nada que la ausencia no diga. El borde sigue siendo el de R07 y el color, el de la corriente. El tooltip y la tarjeta dicen el porcentaje, los litros y que el sensor es simulado. Un desborde que detecta un sensor aparece en el panel como "lleno según su sensor".
 - **Horarios de paso (R04)**: una sección plegable del panel, al final, con cada UPZ y la ventana de cada corriente (su muestra de color y las horas). Elegir una UPZ marca su borde en `--sodium` sobre el mapa, porque es una selección; la zona rural no tiene borde y no se elige. "Descargar por vehículo (CSV)" baja una fila por pasada de vehículo. La tarjeta del contenedor dice su UPZ y su horario publicado, y si hoy llega antes o después, cuántos minutos, en `--crit`: el horario publicado sale del plan y no cambia con los eventos.
+- **Modo y ciudad (F7)**: arriba de todo, un selector grabado de dos posiciones: "En vivo · Suba" (todo lo anterior) y "Ciudad". La posición elegida lleva un filo `--sodium` abajo. Sin la API, "Ciudad" queda deshabilitado y su título dice cómo arrancarla, porque el plan estático es solo Suba. En la ciudad, el mapa mismo es el selector:
+  - Cada localidad es un polígono con su borde fino. Las elegidas quedan bajo la luz de sodio (relleno `--sodium` al 10 %, borde al 60 %) y la que está bajo el puntero, o con el foco en la lista, marca su borde en `--fg`. Un clic la elige o la suelta. El tooltip dice su ASE y su operador.
+  - El panel lista las localidades agrupadas por ASE, porque es la ASE la que planifica (ADR 0012). Cada una tiene una casilla grabada que se llena de sodio al elegirla, como en el mapa. Arriba, "Urbanas" elige las 19 urbanas y "Ninguna" limpia.
+  - "Planificar" es el único botón con el acento. Mientras el servidor planifica, el pie cuenta los segundos en lugar de un porcentaje inventado, porque el servidor no informa avance. Al terminar, el pie dice cuánto tardó.
+  - Cada ASE lleva la muestra del color de su operador. Debajo va su flota: una celda por camión del plan, en ese color, en `--warn` las que pasan de la flota declarada y vacías las declaradas que no se usan. Así se lee de un vistazo si al operador le alcanza. Siguen los kg/día de sus contenedores, si son del operador o simulados, qué parte de sus toneladas cubren ("sin dato" si el operador no las publica) y una fila por turno con su horario, sus contenedores y las paradas R02 y R07.
+  - El instrumento cambia de lectura: la cifra grande son los camiones de cargue lateral, en `--fg` y no en el acento, porque no es algo que pase ahora. Su sello dice "Real y simulado".
+  - El plan se dibuja entero y sin línea de tiempo: cada ruta en el color de su operador, al 70 % sobre el fondo, porque no hay estela que brille encima y todas son de no aprovechables, y cada contenedor encendido. Con R07 llevan el borde de advertencia de siempre.
+  - Cambiar la selección esconde el plan anterior hasta volver a planificar. La selección queda en la dirección (`#ciudad=11,10`), así que se puede compartir y volver a ella. El mapa se encuadra en el Distrito urbano (Sumapaz, rural, lo alejaría todo al sur) y, con un plan, en lo elegido.
 - **Tooltip**: al pasar sobre un contenedor muestra ID, corriente, carga simulada en kg y viaje asignado; sobre un sitio, su nombre.
 
 ## Accesibilidad

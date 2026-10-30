@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** Sin los datos de OSM (como en la CI), la app arranca igual y dice qué falta y cómo generarlo. */
 // Con ".." a propósito: así vienen las rutas por defecto y Spring no debe rechazarlas al arrancar.
 @SpringBootTest(properties = {"rutea.graph=../no-existe/suba.rgraph", "rutea.sites=../no-existe/sitios.csv",
-        "rutea.warm-up=false"})
+        "rutea.bogota-graph=../no-existe/bogota.rgraph", "rutea.warm-up=false"})
 @AutoConfigureMockMvc
 class OperationsControllerTest {
 
@@ -102,6 +102,35 @@ class OperationsControllerTest {
     }
 
     @Test
+    void theLocalitiesToChooseFromNeedNoOsmData() throws Exception {
+        mvc.perform(get("/api/localities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(20))
+                .andExpect(jsonPath("$[10].name").value("Suba"))
+                .andExpect(jsonPath("$[10].area").value(5))
+                .andExpect(jsonPath("$[10].operator").value("Torca"))
+                .andExpect(jsonPath("$[19].rural").value(true))
+                .andExpect(jsonPath("$[10].outline[0][0].length()").value(2));
+    }
+
+    @Test
+    void theSelectionTravelsInTheRequestAndIsCheckedBeforeTheData() throws Exception {
+        mvc.perform(get("/api/areas"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("falta el parámetro localities"));
+        mvc.perform(get("/api/areas").param("localities", "11,21"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("no hay localidad 21; van de 1 (Usaquén) a 20 (Sumapaz)"));
+        mvc.perform(get("/api/areas").param("localities", "suba"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("localities no admite el valor suba"));
+        mvc.perform(get("/api/areas").param("localities", "11,10"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail", Matchers.containsString("bogota.rgraph")))
+                .andExpect(jsonPath("$.detail", Matchers.containsString("exec:java@bogota")));
+    }
+
+    @Test
     void theClockRefusesASpeedThatWouldSkipTheShiftInOneReport() throws Exception {
         mvc.perform(put("/api/clock").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"running\":true,\"speed\":1e9}"))
@@ -118,11 +147,12 @@ class OperationsControllerTest {
     }
 
     @Test
-    void everyEventSaysWhatItIsWhenSentAloneOrInTheHistory() {
-        OperationEvent overflow = new OverflowEvent(2, "N0001", 600, "reporte", LiveOperation.Pickup.PLANNED, "C-01",
+    void everyEventSaysWhatItIsAndWhichAreaWhenSentAloneOrInTheHistory() {
+        OperationEvent overflow = new OverflowEvent(2, 5, "N0001", 600, "reporte", LiveOperation.Pickup.PLANNED, "C-01",
                 900, 0, 0.1, List.of(), Map.of());
 
-        assertThat(json.writeValueAsString(overflow)).contains("\"type\":\"overflow\"");
+        assertThat(json.writeValueAsString(overflow)).contains("\"type\":\"overflow\"", "\"area\":5");
+        assertThat(json.writeValueAsString(new ShiftMessage(1, 5, 0))).contains("\"area\":5");
         assertThat(json.writerFor(json.getTypeFactory().constructCollectionType(List.class, OperationEvent.class))
                 .writeValueAsString(List.of(overflow))).contains("\"type\":\"overflow\"");
     }

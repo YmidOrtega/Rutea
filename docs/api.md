@@ -6,11 +6,12 @@ El contrato entre `rutea-app` y quien la use: el mapa de `web/` o cualquier otro
 
 Convenciones:
 
-- **Horas:** segundos desde el inicio del turno; el turno empieza a la hora de `meta.shiftStart` del plan (18:00).
+- **Horas:** segundos desde el inicio del turno; el turno empieza a la hora de `meta.shiftStart` de su plan (18:00 en la operación en vivo).
 - **Posiciones:** `[lon, lat]`, en el orden que esperan MapLibre y deck.gl.
 - **Distancias:** metros enteros.
 - **Eventos:** cada uno lleva un `seq` que empieza en 1 en cada turno y sube de uno en uno. Un cliente nunca cuenta dos veces el mismo.
-- **Datos simulados:** las calles son reales (OSM); los contenedores, sus cargas y los sensores son simulados (`meta.simulated`).
+- **Datos simulados:** las calles son reales (OSM). En la operación en vivo, los contenedores, sus cargas y los sensores son simulados. En `GET /api/areas`, los contenedores de las ASE 1, 2 y 4 son los del operador y los de las ASE 3 y 5, simulados; las cargas salen de la capacidad. `meta.simulated` y `meta.assumptions` lo dicen en cada plan.
+- **ASE:** cada ASE se identifica por su número oficial, de 1 a 5, y cada localidad por el suyo, de 1 a 20.
 
 ## Errores
 
@@ -23,17 +24,19 @@ Todo error sale en [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`applicat
 
 | Estado | Cuándo |
 |---|---|
-| 400 | JSON mal formado, un campo que falta o con otro tipo, o una orden que la operación no admite (camión o contenedor que no existe, hora fuera del turno, punto lejos de una calle, velocidad fuera de 0–3.600×) |
+| 400 | JSON mal formado, un campo o parámetro que falta o con otro tipo, una localidad que no existe, o una orden que la operación no admite (camión o contenedor que no existe, hora fuera del turno, punto lejos de una calle, velocidad fuera de 0–3.600×) |
 | 404 | Ruta que no existe |
 | 405 | Método que la ruta no admite; `detail` dice cuáles admite |
 | 415 | Cuerpo que no viene como `application/json` |
-| 503 | Faltan los datos de OSM; `detail` dice cuál falta y con qué comando se genera |
+| 503 | Faltan los datos de OSM o de los operadores; `detail` dice cuál falta y con qué comando se genera |
 
 ## REST
 
 | Método y ruta | Cuerpo | Responde |
 |---|---|---|
-| `GET /api/plan` | | `DemoPlan` |
+| `GET /api/plan` | | `DemoPlan` de la operación en vivo |
+| `GET /api/localities` | | Lista de `LocalityOutline`: las 20 localidades, por número, para elegirlas en el mapa |
+| `GET /api/areas?localities=11,10` | | `SelectionPlan`: el cargue lateral de las localidades elegidas, un plan por ASE |
 | `GET /api/events?after=N` | | `EventsPage`: los eventos con `seq` mayor a `N` (por defecto 0, todos) |
 | `POST /api/breakdowns` | `BreakdownRequest` | Lista de eventos: la avería y los desbordes que hubo que volver a despachar |
 | `POST /api/overflows` | `OverflowRequest` | `OverflowEvent` |
@@ -45,6 +48,26 @@ Todo error sale en [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`applicat
 Lo que cambia la operación (averías, desbordes, cierres, el reloj) también llega a todos los clientes por el WebSocket. Quien hizo la petición lo recibe dos veces, en la respuesta y por el WebSocket, y lo cuenta una sola vez por su `seq`.
 
 Sin `atSeconds`, una orden ocurre a la hora del reloj compartido.
+
+### La selección
+
+`GET /api/localities` no necesita los datos de OSM: sus bordes van dentro de la app, y son los mismos con que se ubica cada contenedor en su localidad.
+
+`GET /api/areas` recibe las localidades por su número oficial, separadas por coma, en cualquier orden y aunque se repitan. Cada ASE con al menos una elegida responde con un plan por turno de cargue lateral, con R02, R03, R04 y R07 revisadas. Semilla e iteraciones son fijas (7 y 2.000), así que una selección da siempre el mismo plan.
+
+La primera vez, una selección tarda lo que tarda planificarla. El servidor guarda las últimas 8 selecciones, y dos clientes que piden la misma a la vez esperan un solo cálculo. Las respuestas en JSON van comprimidas con gzip si el cliente lo acepta.
+
+Medido en la app (2026-10-29; i5-14400F, 16 hilos, Java 21.0.12, primera petición después de arrancar):
+
+| Localidades | Instancias | Primera vez | Guardada | Guardada, con gzip | JSON | Con gzip |
+|---|---:|---:|---:|---:|---:|---:|
+| Suba | 1 | 6,2 s | 18 ms | 59 ms | 0,92 MB | 0,26 MB |
+| 1, 5, 8, 10 y 11 | 5 | 15,8 s | 18 ms | 117 ms | 2,77 MB | 0,65 MB |
+| Las 20 | 7 | 16,3 s | 26 ms | 180 ms | 4,30 MB | 0,98 MB |
+
+Las 20 tardan más que los 13,3 s en frío de `exec:java@city-plan`; no se midió por qué. Comprimir las 20 cuesta 154 ms por respuesta y ahorra 3,3 MB, así que sale a cuenta en redes de menos de unos 170 Mbit/s.
+
+La operación en vivo (averías, desbordes, cierres, telemetría, sensores y reloj) es por ahora la de Suba, el ASE 5. Sus eventos y su `shift` llevan `area` para que un cliente no lo suponga.
 
 ## WebSocket `/ws/events`
 
@@ -105,19 +128,19 @@ Campos: `shift`, `events`
 
 ### `ShiftMessage`
 
-Campos: `type`, `shift`, `seq`
+Campos: `type`, `shift`, `area`, `seq`
 
-`seq` es el último evento del turno; 0 si todavía no hay ninguno.
+`area` es la ASE de la operación en vivo. `seq` es el último evento del turno; 0 si todavía no hay ninguno.
 
 ### `BreakdownEvent`
 
-Campos: `type`, `seq`, `truck`, `atSeconds`, `dispatchSeconds`, `latencyMs`, `orphans`, `reserve`, `firstPickupSeconds`, `lastPickupSeconds`, `meetsRecoveryRule`, `citation`
+Campos: `type`, `seq`, `area`, `truck`, `atSeconds`, `dispatchSeconds`, `latencyMs`, `orphans`, `reserve`, `firstPickupSeconds`, `lastPickupSeconds`, `meetsRecoveryRule`, `citation`
 
 `orphans` son los contenedores que el camión averiado no alcanzó a recoger. `reserve` son las rutas de reserva (`R-03-1`, `R-03-2`… para `C-03`), con las horas ya corridas a la de despacho. `meetsRecoveryRule` dice si el primer huérfano se recoge en máximo tres horas (R05). `latencyMs` es el tiempo real de replanificar.
 
 ### `OverflowEvent`
 
-Campos: `type`, `seq`, `container`, `atSeconds`, `cause`, `pickup`, `truck`, `pickupSeconds`, `extraMeters`, `latencyMs`, `routes`, `visits`
+Campos: `type`, `seq`, `area`, `container`, `atSeconds`, `cause`, `pickup`, `truck`, `pickupSeconds`, `extraMeters`, `latencyMs`, `routes`, `visits`
 
 `cause` es `reporte`, `sensor` o `avería de C-03`. `routes` trae el turno nuevo del compactador que se desvía o la ruta de la reserva; `visits`, la hora nueva de llegada a cada contenedor de ese compactador. Los dos van vacíos si nada cambia.
 
@@ -129,7 +152,7 @@ Valores: `PLANNED`, `IN_SERVICE`, `RESERVE`
 
 ### `ClosureEvent`
 
-Campos: `type`, `seq`, `atSeconds`, `roadClass`, `path`, `latencyMs`, `recomputed`, `matrixSize`, `changedPairs`, `isolated`, `dropped`, `changes`, `routes`, `visits`, `citation`
+Campos: `type`, `seq`, `area`, `atSeconds`, `roadClass`, `path`, `latencyMs`, `recomputed`, `matrixSize`, `changedPairs`, `isolated`, `dropped`, `changes`, `routes`, `visits`, `citation`
 
 `path` es la geometría de la calle cerrada. `recomputed` son las filas más columnas de la matriz que se recalcularon, de `matrixSize`. `isolated` son los contenedores que quedaron sin acceso; `dropped`, los que de esos tenían visita pendiente.
 
@@ -218,3 +241,35 @@ Campos: `id`, `citation`, `count`, `summary`, `status`
 ### `Compliance.Status`
 
 Valores: `OK`, `ACTION`, `FAIL`
+
+## La selección
+
+### `LocalityOutline`
+
+Campos: `number`, `name`, `area`, `operator`, `rural`, `outline`
+
+`area` es la ASE que la atiende y `operator`, su operador. `outline` trae el anillo exterior de cada parte, simplificado a 5 m y cerrado. Sumapaz es `rural`: su modelo de recolección es `PENDIENTE_VERIFICAR`.
+
+### `SelectionPlan`
+
+Campos: `localities`, `areas`, `planMs`
+
+`localities` son las elegidas, ordenadas y sin repetir. `planMs` es lo que tardó planificarlas, en reloj de pared; una selección guardada responde con el tiempo de cuando se calculó.
+
+### `SelectionPlan.Area`
+
+Campos: `number`, `name`, `operator`, `localities`, `fleet`, `kgPerDay`, `sideLoadingShare`, `shifts`, `skipped`
+
+`name` es la localidad si la ASE tiene una sola, o `ASE n`. `localities` son las elegidas de esta ASE. `kgPerDay` es lo que recogen sus contenedores elegidos, repartido en la semana con la frecuencia del operador. `sideLoadingShare` es la parte de las toneladas de la ASE que eso cubre; `null` si el operador no publica sus toneladas (ASE 5). `skipped` son los turnos sin contenedores en las localidades elegidas.
+
+### `SelectionPlan.Fleet`
+
+Campos: `trucks`, `lowerBound`, `sharedAcrossShifts`, `declared`, `warning`
+
+`trucks` son los camiones de cargue lateral del reparto de viajes; ningún reparto usa menos de `lowerBound`. Si `sharedAcrossShifts`, los turnos no se cruzan y un mismo camión trabaja en todos. `declared` son los que declara el operador, o `null`. `warning` dice cuántos pide el plan por encima de esos, o `null`.
+
+### `SelectionPlan.Shift`
+
+Campos: `name`, `start`, `seconds`, `plan`
+
+`plan` es un `DemoPlan` del turno, con sus horas desde `start`.

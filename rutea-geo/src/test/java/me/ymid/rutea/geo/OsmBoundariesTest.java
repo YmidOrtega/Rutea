@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -57,6 +58,28 @@ class OsmBoundariesTest {
         assertThat(upz.get(1).polygon().contains(47_050_000, -740_950_000)).isTrue();
         assertThat(upz.get(1).polygon().contains(47_050_000, -740_850_000)).isFalse();
         assertThat(upz.get(0).polygon().contains(47_050_000, -740_850_000)).isTrue();
+    }
+
+    @Test
+    void readsTheSubareasOfSeveralParentsInOnePass() throws IOException {
+        Path pbf = twoUpz(new Block()
+                .relation(200, new int[] {RELATION}, new long[] {101}, new String[] {"subarea"}, "type", "boundary")
+                .relation(201, new int[] {RELATION}, new long[] {100}, new String[] {"subarea"}, "type", "boundary"));
+
+        Map<Long, List<OsmBoundaries.Boundary>> upz = OsmBoundaries.subareas(pbf, List.of(201L, 200L));
+
+        assertThat(upz.keySet()).containsExactly(201L, 200L);
+        assertThat(upz.get(201L)).extracting(OsmBoundaries.Boundary::ref).containsExactly("1");
+        assertThat(upz.get(200L)).extracting(OsmBoundaries.Boundary::ref).containsExactly("2");
+    }
+
+    @Test
+    void readsBoundariesByIdWithoutAParent() throws IOException {
+        Path pbf = twoUpz(new Block());
+
+        assertThat(OsmBoundaries.of(pbf, List.of(100L, 101L))).extracting(OsmBoundaries.Boundary::ref)
+                .containsExactly("1", "2");
+        assertThatThrownBy(() -> OsmBoundaries.of(pbf, List.of(100L, 999L))).hasMessageContaining("no está el límite 999");
     }
 
     @Test

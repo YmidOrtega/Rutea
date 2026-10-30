@@ -1,0 +1,22 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+ASE1Noche-n14-f100,13,alns,1,60000,,54792,,,true,60000.006,1,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE1Noche-n14-f100,13,alns,2,60000,,54792,,,true,60000.007,1,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE1Noche-n14-f100,13,alns,3,60000,,54792,,,true,60000.007,1,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE3Dia-n92-s7-f100,91,alns,1,60000,,119514,,,true,60000.008,2,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE3Dia-n92-s7-f100,91,alns,2,60000,,119514,,,true,60000.009,2,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE3Dia-n92-s7-f100,91,alns,3,60000,,119514,,,true,60000.006,2,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE1Dia-n156-f100,155,alns,1,60000,,118842,,,true,60000.038,4,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE1Dia-n156-f100,155,alns,2,60000,,118842,,,true,60000.007,4,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE1Dia-n156-f100,155,alns,3,60000,,118842,,,true,60000.006,4,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaNoche-n321-s7-f100,320,alns,1,60000,,772673,,,true,60000.010,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaNoche-n321-s7-f100,320,alns,2,60000,,773853,,,true,60000.008,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaNoche-n321-s7-f100,320,alns,3,60000,,773110,,,true,60000.008,14,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Noche-n382-f100,381,alns,1,60000,,316847,,,true,60000.378,16,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Noche-n382-f100,381,alns,2,60000,,316793,,,true,60000.011,16,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Noche-n382-f100,381,alns,3,60000,,317444,,,true,60000.014,16,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Dia-n610-f100,609,alns,1,60000,,587220,,,true,60000.054,26,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Dia-n610-f100,609,alns,2,60000,,587310,,,true,60000.009,26,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE2Dia-n610-f100,609,alns,3,60000,,587449,,,true,60000.040,26,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE4Dia-n764-f100,763,alns,1,60000,,991340,,,true,60000.781,35,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE4Dia-n764-f100,763,alns,2,60000,,991072,,,true,60000.100,35,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+ASE4Dia-n764-f100,763,alns,3,60000,,991654,,,true,60000.046,35,true,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13

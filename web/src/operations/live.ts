@@ -7,6 +7,8 @@ export interface BreakdownEvent {
   type: 'breakdown'
   /** Orden del evento en la sesión del servidor. */
   seq: number
+  /** La ASE de la operación en vivo, de 1 a 5. */
+  area: number
   truck: string
   atSeconds: number
   dispatchSeconds: number
@@ -27,6 +29,8 @@ export interface BreakdownEvent {
 export interface OverflowEvent {
   type: 'overflow'
   seq: number
+  /** La ASE de la operación en vivo, de 1 a 5. */
+  area: number
   container: string
   atSeconds: number
   /** "reporte", "sensor" si lo detectó su sensor de llenado, o "avería de C-03" si el camión que lo iba a recoger se averió. */
@@ -45,6 +49,8 @@ export interface OverflowEvent {
 export interface ClosureEvent {
   type: 'closure'
   seq: number
+  /** La ASE de la operación en vivo, de 1 a 5. */
+  area: number
   atSeconds: number
   roadClass: string
   path: LonLat[]
@@ -74,6 +80,8 @@ export interface EventsPage {
 export interface ShiftMessage {
   type: 'shift'
   shift: number
+  /** La ASE de la operación en vivo, de 1 a 5. */
+  area: number
   /** El último evento del turno; 0 si todavía no hay ninguno. */
   seq: number
 }

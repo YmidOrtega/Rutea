@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.domain.WasteStream;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -56,10 +57,37 @@ class SectorsTest {
 
     @Test
     void theCommittedUpzOfSubaAreTheTwelveOfTheLocality() {
-        List<DemoPlan.Sector> sectors = Sectors.suba().schedule(List.of());
+        List<DemoPlan.Sector> sectors = Sectors.of(ServiceAreas.ASE_5).schedule(List.of());
 
         assertThat(sectors).isEmpty();
-        assertThat(Sectors.suba().locate(47_416_000, -740_833_000)).as("plaza fundacional de Suba").isEqualTo("27");
+        assertThat(Sectors.of(ServiceAreas.ASE_5).locate(47_416_000, -740_833_000)).as("plaza fundacional de Suba").isEqualTo("27");
+    }
+
+    @Test
+    void aUpzInSeveralPartsLocatesInAnyAndDrawsTheLargest() {
+        Sectors parts = Sectors.read(JsonMapper.builder().build().readTree("""
+                {"type": "FeatureCollection", "features": [
+                 {"type": "Feature", "properties": {"ref": "60", "name": "Partida"}, "geometry": {
+                  "type": "MultiPolygon", "coordinates": [
+                   [[[-74.10, 4.70], [-74.099, 4.70], [-74.099, 4.701], [-74.10, 4.701], [-74.10, 4.70]]],
+                   [[[-74.09, 4.70], [-74.08, 4.70], [-74.08, 4.71], [-74.09, 4.71], [-74.09, 4.70]]]]}}
+                ]}"""));
+
+        assertThat(parts.locate(47_005_000, -740_995_000)).isEqualTo("60");
+        assertThat(parts.locate(47_050_000, -740_850_000)).isEqualTo("60");
+        assertThat(parts.locate(47_050_000, -740_950_000)).isEqualTo(Sectors.RURAL);
+        assertThat(parts.schedule(List.of(container("N1", "C-01", 0, "60"))).getFirst().outline())
+                .hasSize(5).first().satisfies(point -> assertThat(point).containsExactly(-74.09, 4.70));
+    }
+
+    @Test
+    void everyAreaReadsTheUpzOfItsUrbanLocalities() {
+        assertThat(Sectors.of(ServiceAreas.ASE_1).locate(45_981_000, -740_760_000)).as("plaza de Bolívar")
+                .isEqualTo("94");
+        assertThat(Sectors.of(ServiceAreas.ASE_2).locate(45_981_000, -740_760_000)).isEqualTo(Sectors.RURAL);
+        for (ServiceAreas.ServiceArea area : ServiceAreas.BOGOTA) {
+            assertThat(Sectors.of(area)).as(area.name()).isNotNull();
+        }
     }
 
     private static DemoPlan.Container container(String id, String route, int visitSeconds, String sector) {

@@ -1,0 +1,5 @@
+instance,containers,fill,kg_per_collection,collections_per_week,tonnes_per_day,share,seed,iterations,trips,solution_m,max_trips_per_truck,trucks_unload_40,lower_bound_unload_40,schedule_m_unload_40,trucks_unload_90,lower_bound_unload_90,schedule_m_unload_90
+SubaBase-n807-s1,806,,128454,6,110.1,0.1292,1,2000,17,1017481,3,9,9,1326507,16,16,1398668
+SubaNoche-n321-s1-f50,320,0.50,55290,6,47.4,0.0556,1,2000,7,492474,4,5,5,636782,7,7,654482
+SubaNoche-n321-s1-f75,320,0.75,82890,6,71.0,0.0834,1,2000,11,654217,4,6,6,856728,9,9,883699
+SubaNoche-n321-s1-f100,320,1.00,110490,6,94.7,0.1112,1,2000,14,796587,4,7,7,1051902,8,8,1060752

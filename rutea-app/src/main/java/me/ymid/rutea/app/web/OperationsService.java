@@ -24,16 +24,17 @@ import org.springframework.stereotype.Service;
 
 import me.ymid.rutea.app.operations.BreakdownReplanner;
 import me.ymid.rutea.app.operations.ContainerSensors;
+import me.ymid.rutea.app.operations.LiveOperation;
 import me.ymid.rutea.app.persistence.Command;
 import me.ymid.rutea.app.persistence.OperationLog;
-import me.ymid.rutea.app.operations.LiveOperation;
+import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.app.planning.ShiftScheduler;
-import me.ymid.rutea.app.planning.SubaPlanner;
+import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.SensitiveSites;
+import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.SimulatedContainers;
-import me.ymid.rutea.app.scenario.SubaFigures;
-import me.ymid.rutea.app.scenario.SubaScenario;
 import me.ymid.rutea.domain.CollectionRules;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
@@ -70,10 +71,13 @@ public class OperationsService {
      */
     static final double MAX_SPEED = 3_600;
 
+    /** La operación en vivo: los eventos llevan su número aunque el plan todavía no esté armado. */
+    static final ServiceAreas.ServiceArea AREA = ServiceAreas.ASE_5;
+
     private final Path graph;
     private final Path sites;
     private final boolean warmUp;
-    private SubaPlanner.Fleet waste;
+    private AreaPlanner.Fleet waste;
     private LiveOperation operation;
     private DemoPlan plan;
     private final List<OperationEvent> events = new ArrayList<>();
@@ -142,22 +146,22 @@ public class OperationsService {
             throw new IllegalArgumentException(truckId + " trabaja de 0 a " + end + " s; la avería a " + atSeconds
                     + " s queda fuera de su turno");
         }
-        SubaScenario scenario = operation.scenarioAt(atSeconds);
+        AreaScenario scenario = operation.scenarioAt(atSeconds);
         BreakdownReplanner.Replan replan = BreakdownReplanner.afterBreakdown(scenario, truck, atSeconds,
                 operation.pendingPlanned(truck, atSeconds), waste.schedule().unloadSeconds(), ITERATIONS,
-                SubaPlanner.DEFAULT_SEED);
-        long dispatch = atSeconds + SubaFigures.RESERVE_DISPATCH_SECONDS;
+                AreaPlanner.DEFAULT_SEED);
+        long dispatch = atSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS;
         List<DemoPlan.Route> reserve = new ArrayList<>();
         if (replan.orphans().length > 0) {
-            DemoPlan drawn = SubaPlanner.planReserve(scenario, replan.trips(), replan.reserve(),
-                    SubaPlanner.DEFAULT_SEED, ITERATIONS);
+            DemoPlan drawn = AreaPlanner.planReserve(scenario, replan.trips(), replan.reserve(),
+                    AreaPlanner.DEFAULT_SEED, ITERATIONS);
             for (int k = 0; k < drawn.routes().size(); k++) {
                 reserve.add(shifted(drawn.routes().get(k), "R-" + truckId.substring(2) + "-" + (k + 1), dispatch));
             }
         }
         List<String> orphans = Arrays.stream(replan.orphans())
                 .mapToObj(node -> waste.scenario().containers().get(node - 1).id()).toList();
-        BreakdownEvent event = new BreakdownEvent(events.size() + 1, truckId, atSeconds, dispatch, replan.latencyNanos() / 1e6, orphans,
+        BreakdownEvent event = new BreakdownEvent(events.size() + 1, AREA.number(), truckId, atSeconds, dispatch, replan.latencyNanos() / 1e6, orphans,
                 reserve, replan.firstPickupSeconds(), replan.lastPickupSeconds(), replan.meetsRecoveryRule(),
                 CollectionRules.BREAKDOWN_RECOVERY.citation());
         add(event);
@@ -187,7 +191,7 @@ public class OperationsService {
             if (events.get(i) instanceof OverflowEvent last && last.container().equals(containerId)) {
                 if (last.pickupSeconds() > atSeconds) {
                     throw new IllegalArgumentException(containerId + " ya está reportado: " + last.truck()
-                            + " lo recoge a las " + LocalTime.parse(SubaFigures.SHIFT_START)
+                            + " lo recoge a las " + LocalTime.parse(waste.scenario().operation().shiftStart())
                                     .plusSeconds(last.pickupSeconds()).format(DateTimeFormatter.ofPattern("HH:mm")));
                 }
                 break;
@@ -224,7 +228,7 @@ public class OperationsService {
     }
 
     private ClosureEvent close(int shape, long atSeconds) {
-        SubaScenario scenario = waste.scenario();
+        AreaScenario scenario = waste.scenario();
         RoadGraph graph = scenario.graph();
         LiveOperation.Closure closure = operation.close(shape, atSeconds);
         List<double[]> path = new ArrayList<>();
@@ -243,7 +247,7 @@ public class OperationsService {
                     visits.put(scenario.containers().get(node - 1).id(), seconds));
         }
         TravelMatrix.Repair repair = closure.repair();
-        ClosureEvent event = new ClosureEvent(events.size() + 1, atSeconds,
+        ClosureEvent event = new ClosureEvent(events.size() + 1, AREA.number(), atSeconds,
                 graph.roadClass(graph.edgesOn(shape)[0]).name(), path, closure.latencyNanos() / 1e6,
                 repair.rows() + repair.columns(), repair.matrix().size(), repair.changedPairs(),
                 ids(closure.isolated()), ids(closure.dropped()), changes, routes, visits,
@@ -291,7 +295,7 @@ public class OperationsService {
             return false;
         }
         operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
         events.clear();
         resetVehicles();
         clock.restart();
@@ -419,11 +423,11 @@ public class OperationsService {
 
     /** El turno en curso y su último {@code seq}, leídos juntos. */
     public synchronized ShiftMessage shiftMessage() {
-        return new ShiftMessage(shift, events.size());
+        return new ShiftMessage(shift, AREA.number(), events.size());
     }
 
     private OverflowEvent record(LiveOperation.Dispatch dispatch, String cause) {
-        SubaScenario scenario = waste.scenario();
+        AreaScenario scenario = waste.scenario();
         String container = scenario.containers().get(dispatch.node() - 1).id();
         String truck = dispatch.pickup() == LiveOperation.Pickup.RESERVE ? "R-" + container
                 : String.format("C-%02d", dispatch.truck() + 1);
@@ -441,16 +445,16 @@ public class OperationsService {
             case RESERVE -> {
                 Solution trip = Solution.of(new int[] {dispatch.node()});
                 ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, trip,
-                        SubaFigures.SERVICE_SECONDS_PER_CONTAINER, operation.unloadSeconds(), SubaFigures.SHIFT_SECONDS,
-                        1);
-                DemoPlan.Route drawn = SubaPlanner.planReserve(
-                        operation.scenarioAt(dispatch.atSeconds() + SubaFigures.RESERVE_DISPATCH_SECONDS), trip,
-                        schedule, SubaPlanner.DEFAULT_SEED, 0)
+                        BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, operation.unloadSeconds(),
+                        scenario.operation().shiftSeconds(), 1);
+                DemoPlan.Route drawn = AreaPlanner.planReserve(
+                        operation.scenarioAt(dispatch.atSeconds() + BogotaFigures.RESERVE_DISPATCH_SECONDS), trip,
+                        schedule, AreaPlanner.DEFAULT_SEED, 0)
                         .routes().getFirst();
-                routes.add(shifted(drawn, truck, dispatch.atSeconds() + SubaFigures.RESERVE_DISPATCH_SECONDS));
+                routes.add(shifted(drawn, truck, dispatch.atSeconds() + BogotaFigures.RESERVE_DISPATCH_SECONDS));
             }
         }
-        OverflowEvent event = new OverflowEvent(events.size() + 1, container, dispatch.atSeconds(), cause,
+        OverflowEvent event = new OverflowEvent(events.size() + 1, AREA.number(), container, dispatch.atSeconds(), cause,
                 dispatch.pickup(), truck, dispatch.pickupSeconds(), dispatch.extraMeters(),
                 dispatch.latencyNanos() / 1e6, routes, visits);
         add(event);
@@ -519,7 +523,7 @@ public class OperationsService {
         } catch (RuntimeException e) {
             LOG.warn("No se pudo retomar el turno {}; empieza uno nuevo", saved.get().id(), e);
             operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                    SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
             events.clear();
             resetVehicles();
             clock.seek(0);
@@ -590,14 +594,15 @@ public class OperationsService {
             }
         }
         try {
-            long seed = SubaPlanner.DEFAULT_SEED;
-            SubaScenario scenario = SubaScenario.build(RoadGraphFile.read(graph).graph(), seed)
+            long seed = AreaPlanner.DEFAULT_SEED;
+            AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(graph).graph(), AREA, seed)
                     .withSites(SensitiveSites.read(sites));
-            waste = SubaPlanner.fleet(scenario, SubaFigures.UNLOAD_SECONDS_LOW, seed);
+            waste = AreaPlanner.fleet(scenario, BogotaFigures.UNLOAD_SECONDS_LOW, seed);
             operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                    SubaFigures.SERVICE_SECONDS_PER_CONTAINER);
-            SubaScenario recyclables = SubaScenario.buildRecyclable(scenario.graph(), seed).withSites(scenario.sites());
-            plan = SubaPlanner.merge(waste.plan(), SubaPlanner.fleet(recyclables, SubaFigures.ECA_UNLOAD_SECONDS, seed).plan());
+                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            AreaScenario recyclables = AreaScenario.buildRecyclable(scenario.graph(), scenario.area(), seed).withSites(scenario.sites());
+            plan = AreaPlanner.merge(scenario.area(), waste.plan(),
+                    AreaPlanner.fleet(recyclables, BogotaFigures.ECA_UNLOAD_SECONDS, seed).plan());
             clock = new SimulationClock(CLOCK_SPEED, 1);
             resetVehicles();
             unloadSites = plan.sites().stream()
@@ -606,8 +611,8 @@ public class OperationsService {
             Map<String, Integer> plannedVisit = new HashMap<>();
             plan.containers().forEach(container -> plannedVisit.put(container.id(), container.visitSeconds()));
             sensors = ContainerSensors.of(scenario.containers(), scenario.containers().stream()
-                    .mapToInt(container -> plannedVisit.get(container.id())).toArray(), SubaFigures.CONTAINER_LITERS,
-                    ContainerSensors.Config.typical(seed));
+                    .mapToInt(container -> plannedVisit.get(container.id())).toArray(), scenario.operation().containerLiters(),
+                    scenario.operation().collectionsPerWeek(), ContainerSensors.Config.typical(seed));
             resume();
         } catch (IOException e) {
             throw new DataMissingException("No se pudo leer el grafo o los sitios: " + e.getMessage());

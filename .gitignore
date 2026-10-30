@@ -35,5 +35,11 @@ data/osm/*.pbf.md5
 data/osm/*.rgraph
 data/osm/*.csv
 
+# Extractos de los operadores (se descargan; ver data/ase/README.md)
+data/ase/*.csv
+
 # Instancias de Suba (se generan; ver data/suba/README.md)
 data/suba/*.vrp
+
+# Instancias de Bogotá por ASE (se generan; ver data/bogota/README.md)
+data/bogota/*.vrp
