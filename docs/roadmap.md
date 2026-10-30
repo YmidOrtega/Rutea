@@ -14,6 +14,7 @@ Duraciones orientativas, trabajando unas 10 horas por semana.
 | F5 | Operación en tiempo real | Completa |
 | F6 | Producto y publicación | Completa |
 | F7 | Bogotá por ASE | Completa |
+| F8 | En vivo por localidad, con puerta a puerta | **En curso** |
 
 ## F0 — Fundamentos (1–2 semanas)
 
@@ -404,9 +405,20 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
 - **Toneladas:** cada plan dice qué parte de las toneladas de su ASE cubre. Las ASE 1 a 4 dan la cifra con su fuente. El ASE 5 dice «sin dato», porque su operador no publica sus toneladas, y no se inventa la cifra.
 - **Suba:** el grafo, los sitios, las UPZ y las instancias `.vrp` de Suba conservan sus SHA-256. `plan-suba.json` cambió solo en la etiqueta de la base, al quitar los nombres de los operadores. La diferencia sobre el grafo de Bogotá está en `docs/benchmarks/f7-bogota-graph/`.
 
-## Más adelante (sin fase asignada)
+## F8 — En vivo por localidad, con puerta a puerta (4–6 semanas)
 
-- **Modelo de recolección por localidad.** Una localidad con contenedores (CVRP: el camión visita puntos) y otra casa por casa (CARP: el camión recorre calles completas recogiendo a lado y lado). El casa por casa se transforma en un CVRP equivalente, con cada tramo de calle con demanda como cliente, para reutilizar el solver y el evaluador. Verificado en 2026 (ADR 0013): todas las ASE combinan los dos esquemas, y en el ASE 3 casi todo es puerta a puerta. El modelo va en su propio ADR, después de medir cuántos nodos daría el ASE más grande.
+Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localidad que se elija, con su recolección completa: contenedores y puerta a puerta. "Ciudad" sigue siendo la vista general del cargue lateral de varias localidades. El puerta a puerta va primero: con los contenedores de 2026, la mayoría de las localidades casi no tiene qué mostrar (Santa Fe 0, Chapinero 2, Teusaquillo 30).
+
+- [ ] Puerta a puerta medido en Suba (ADR 0014): tramos de calle local agrupados en trozos como clientes del CVRP, con la demanda de la localidad repartida por longitud. Se decide el tamaño del trozo con mediciones: clientes, tiempo de la matriz, tiempo de ALNS y pérdida frente a los tramos sin agrupar en una zona chica. Las cifras sin fuente (frecuencia, velocidad de recolección, capacidad de carga trasera) quedan `PENDIENTE_VERIFICAR`.
+  - Medido al proponerlo: Suba tiene 9.121 tramos de calle local (693,9 km, 76 m de media). Le tocan 929,7 t/día de las 5.614 de la UAESP, repartidas por la población urbana del DANE para 2026.
+- [x] Población y toneladas por localidad en `docs/datos.md` (2026-10-29): población urbana de 2026 del DANE (serie de 2021) y las 5.614 t/día de la UAESP repartidas por población. Suba: 1.347.097 habitantes, 929,7 t/día. La actualización de 2025 de las proyecciones no se encontró publicada por localidad.
+- [ ] Instancia de una localidad con contenedores y puerta a puerta juntos, sobre el grafo de Bogotá, con su fila en el arnés.
+- [ ] "En vivo" para cualquier localidad: el servidor arma su plan y su operación (averías, desbordes, cierres, sensores y telemetría) para la localidad elegida. El mapa la elige con un clic. La UI dice qué es real y qué es simulado.
+- [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
+
+**Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.
+
+## Más adelante (sin fase asignada)
 
 ## Después (fuera de alcance por ahora)
 
