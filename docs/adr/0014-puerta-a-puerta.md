@@ -21,16 +21,16 @@ En el puerta a puerta el camión recorre la calle y recoge a lado y lado. Es un 
 Un tramo mide 76 m en promedio: más o menos una cuadra. Con un cliente por tramo, la matriz de Suba tendría 9.122² celdas, unos 330 MB en `int`, y el solver trabajaría con 11 veces más clientes que los 807 de `SubaBase-n807-s1`.
 
 **Demanda, con fuente:**
-- La UAESP dispone en promedio **5.614 t/día** de no aprovechables en Doña Juana ([El Espectador, 18 sep. 2025](https://www.elespectador.com/bogota/a-diario-se-recogen-mas-de-5600-toneladas-de-residuos-no-aprovechables-en-bogota/)).
+- El servicio ordinario lleva a Doña Juana unas **5.680 t/día** (UAESP, primer trimestre de 2026; `docs/datos.md`, "Cifras con fuente").
 - La población urbana proyectada para 2026 es de **8.134.378** habitantes, **1.347.097** de ellos en Suba ([DANE, proyecciones por localidad 2018–2035](https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion/proyecciones-de-poblacion/proyecciones-de-poblacion-bogota), serie de 2021; hay una actualización de 2025, del Contrato 500 entre el DANE y la SDP, que no se encontró publicada).
-- Repartidas por población, a Suba le tocan **929,7 t/día**. De esas, lo que recoge el cargue lateral de sus contenedores ya está en el plan de la ciudad, y el resto es puerta a puerta.
+- Repartidas por población, a Suba le tocan **940,6 t/día**. De esas, lo que recoge el cargue lateral de sus contenedores ya está en el plan de la ciudad, y el resto es puerta a puerta.
 
 ## Decisión
 
 Propuesta, para cerrar con mediciones en el paso 1 de F8:
 
 1. **Un cliente por grupo de tramos, no por tramo.** Los tramos de calle local se agrupan en trozos contiguos, cada uno de longitud acotada. Cada trozo es un cliente del CVRP: el camión entra por un extremo, lo recorre recogiendo y sale por el otro. La matriz va de la salida de un trozo a la entrada del siguiente. El recorrido interno del trozo entra como tiempo de servicio, a velocidad de recolección, y no como distancia de la matriz.
-2. **Demanda por longitud de calle.** Las toneladas de la localidad (las de la UAESP repartidas por población, menos lo que recogen sus contenedores) se reparten entre los trozos según su longitud, el mismo indicador que ya usan los contenedores simulados. Es un supuesto, y así se marca: con más datos, por ejemplo edificios o viviendas por manzana, se reemplaza.
+2. **Demanda por longitud de calle.** Las toneladas de la localidad (las de la ciudad repartidas por población, menos lo que recogen sus contenedores) se reparten entre los trozos según su longitud, el mismo indicador que ya usan los contenedores simulados. Es un supuesto, y así se marca: con más datos, por ejemplo edificios o viviendas por manzana, se reemplaza.
 3. **Los dos esquemas en la misma instancia.** Los contenedores de la localidad siguen siendo clientes puntuales, y los trozos se suman a ellos. El solver, el `Evaluator` y el arnés no cambian.
 4. **El tamaño del trozo se decide midiendo**, no aquí. Se prueban varias longitudes máximas en Suba, y se mide cuántos clientes salen, cuánto tarda la matriz, cuánto tarda ALNS y cuánto se aleja el costo del de los tramos sin agrupar, en una zona chica donde eso último todavía se pueda resolver.
 

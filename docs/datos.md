@@ -192,34 +192,34 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
 
 ## Población y toneladas por localidad (F8)
 
-La demanda del puerta a puerta (ADR 0014) sale de las toneladas de no aprovechables que dispone la UAESP, repartidas por la población urbana de cada localidad.
+La demanda del puerta a puerta (ADR 0014) sale de las toneladas del servicio ordinario que entran a Doña Juana, repartidas por la población urbana de cada localidad.
 
 - **Población:** población urbana ("Cabecera Municipal") proyectada para 2026, columna `TOTAL`, hoja "Localidades" del anexo del DANE [`anexo-proyecciones-poblacion-bogota-desagreacion-loc-2018-2035-UPZ-2018-2024.xlsx`](https://www.dane.gov.co/files/censo2018/proyecciones-de-poblacion/Bogota/anexo-proyecciones-poblacion-bogota-desagreacion-loc-2018-2035-UPZ-2018-2024.xlsx) (convenio 095 de 2020, actualizado en noviembre de 2021; SHA-256 del archivo descargado el 2026-10-29: `bb734f6f…`). Existe una actualización de 2025, del Contrato Interadministrativo 500 entre el DANE, la SDP y la Región Metropolitana, que el Observatorio de Salud de Bogotá cita, pero no se encontró publicada por localidad. Cuando aparezca, reemplaza esta tabla.
-- **Toneladas:** 5.614 t/día dispuestas en Doña Juana en promedio en 2025, según la UAESP ([El Espectador, 18 sep. 2025](https://www.elespectador.com/bogota/a-diario-se-recogen-mas-de-5600-toneladas-de-residuos-no-aprovechables-en-bogota/)). Incluyen lo que recogen los contenedores; el puerta a puerta es el resto.
+- **Toneladas:** las 5.680 t/día del servicio ordinario que entran a Doña Juana (primer trimestre de 2026; ver "Cifras con fuente"), las mismas que ya usa Rutea (`BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY`). Incluyen lo que recogen los contenedores; el puerta a puerta es el resto.
 - **Supuesto:** cada habitante produce lo mismo en cualquier localidad. La UAESP midió la producción por estrato y localidad en 2017, pero esa tabla no está publicada (ver "Patrón por zona" en "Supuestos").
 
-| N.º | Localidad | Población urbana 2026 | Parte | t/día (5.614 × parte) |
+| N.º | Localidad | Población urbana 2026 | Parte | t/día (5.680 × parte) |
 |---:|---|---:|---:|---:|
-| 1 | Usaquén | 610.405 | 7,50 % | 421,3 |
-| 2 | Chapinero | 186.028 | 2,29 % | 128,4 |
-| 3 | Santa Fe | 107.300 | 1,32 % | 74,1 |
-| 4 | San Cristóbal | 413.746 | 5,09 % | 285,5 |
-| 5 | Usme | 419.136 | 5,15 % | 289,3 |
-| 6 | Tunjuelito | 187.698 | 2,31 % | 129,5 |
-| 7 | Bosa | 741.537 | 9,12 % | 511,8 |
-| 8 | Kennedy | 1.045.353 | 12,85 % | 721,5 |
-| 9 | Fontibón | 415.054 | 5,10 % | 286,5 |
-| 10 | Engativá | 825.633 | 10,15 % | 569,8 |
-| 11 | Suba | 1.347.097 | 16,56 % | 929,7 |
-| 12 | Barrios Unidos | 161.766 | 1,99 % | 111,6 |
-| 13 | Teusaquillo | 163.391 | 2,01 % | 112,8 |
-| 14 | Los Mártires | 82.764 | 1,02 % | 57,1 |
-| 15 | Antonio Nariño | 87.204 | 1,07 % | 60,2 |
-| 16 | Puente Aranda | 260.371 | 3,20 % | 179,7 |
-| 17 | La Candelaria | 19.207 | 0,24 % | 13,3 |
-| 18 | Rafael Uribe Uribe | 395.986 | 4,87 % | 273,3 |
-| 19 | Ciudad Bolívar | 664.702 | 8,17 % | 458,7 |
-| | **Bogotá urbana** | **8.134.378** | **100 %** | **5.614,0** |
+| 1 | Usaquén | 610.405 | 7,50 % | 426,2 |
+| 2 | Chapinero | 186.028 | 2,29 % | 129,9 |
+| 3 | Santa Fe | 107.300 | 1,32 % | 74,9 |
+| 4 | San Cristóbal | 413.746 | 5,09 % | 288,9 |
+| 5 | Usme | 419.136 | 5,15 % | 292,7 |
+| 6 | Tunjuelito | 187.698 | 2,31 % | 131,1 |
+| 7 | Bosa | 741.537 | 9,12 % | 517,8 |
+| 8 | Kennedy | 1.045.353 | 12,85 % | 729,9 |
+| 9 | Fontibón | 415.054 | 5,10 % | 289,8 |
+| 10 | Engativá | 825.633 | 10,15 % | 576,5 |
+| 11 | Suba | 1.347.097 | 16,56 % | 940,6 |
+| 12 | Barrios Unidos | 161.766 | 1,99 % | 113,0 |
+| 13 | Teusaquillo | 163.391 | 2,01 % | 114,1 |
+| 14 | Los Mártires | 82.764 | 1,02 % | 57,8 |
+| 15 | Antonio Nariño | 87.204 | 1,07 % | 60,9 |
+| 16 | Puente Aranda | 260.371 | 3,20 % | 181,8 |
+| 17 | La Candelaria | 19.207 | 0,24 % | 13,4 |
+| 18 | Rafael Uribe Uribe | 395.986 | 4,87 % | 276,5 |
+| 19 | Ciudad Bolívar | 664.702 | 8,17 % | 464,1 |
+| | **Bogotá urbana** | **8.134.378** | **100 %** | **5.680,0** |
 
 Sumapaz no tiene población urbana en la proyección.
 
