@@ -8,6 +8,9 @@
   --fg: #eee5d6;
   --fg-muted: #9d8f7b;
   --sodium: #f5a524;
+  /* El mapa base es grafito neutro: así las rutas, los operadores y el sodio no compiten con la ciudad de fondo */
+  --map-bg: #0b0c0e;
+  --map-street: #8892a4;
 
   --ok: #93cf9f;
   /* Más claro y amarillo que el sodio: una advertencia no se confunde con lo que pasa ahora */

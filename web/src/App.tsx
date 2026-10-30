@@ -3,7 +3,7 @@ import MapGL, { type MapRef } from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
 import { DATA_ATTRIBUTION, initialViewState } from './map/view'
-import { sodiumBasemap } from './map/basemap'
+import { graphiteBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
   cityRoutesLayer,
@@ -107,7 +107,7 @@ export default function App() {
   const [sensors, setSensors] = useState<Sensors>(emptySensors)
   const palette = useMemo(() => readPalette(), [])
   const [initialView] = useState(initialViewState)
-  const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof sodiumBasemap>> | null>(null)
+  const [basemap, setBasemap] = useState<Awaited<ReturnType<typeof graphiteBasemap>> | null>(null)
   const map = useRef<MapRef>(null)
 
   // La ciudad: elegir localidades y ver cada ASE con su flota. Necesita la API; el plan estático es solo Suba.
@@ -203,7 +203,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    void sodiumBasemap(palette).then(setBasemap)
+    void graphiteBasemap(palette).then(setBasemap)
   }, [palette])
 
   const shift = useRef<number | null>(null)

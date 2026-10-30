@@ -19,6 +19,8 @@ function token(name: string): RGB {
 export function readPalette() {
   return {
     bg: token('--bg'),
+    mapBg: token('--map-bg'),
+    mapStreet: token('--map-street'),
     fg: token('--fg'),
     fgMuted: token('--fg-muted'),
     ok: token('--ok'),

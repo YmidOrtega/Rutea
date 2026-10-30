@@ -1,6 +1,6 @@
 # Diseño visual
 
-Rutea se ve como un **instrumento de despacho nocturno**, no como un dashboard con un mapa detrás. La recolección de no aprovechables en Bogotá ocurre sobre todo de noche, así que el diseño parte de ahí: la ciudad vista desde arriba bajo sus luminarias de sodio, que vuelven todo monocromo ámbar. Lo único que rompe ese monocromo son los colores oficiales de las corrientes y las alertas.
+Rutea se ve como un **instrumento de despacho nocturno**, no como un dashboard con un mapa detrás. La recolección de no aprovechables en Bogotá ocurre sobre todo de noche, así que el diseño parte de ahí: el tablero de un despachador de noche, con instrumentos en tonos cálidos y el sodio como único acento, sobre una ciudad en grafito que no compite con lo que se dibuja encima. Lo único que rompe ese monocromo son los colores oficiales de las corrientes, los de los operadores y las alertas.
 
 La referencia es el tablero de un hiperauto: una pieza hecha para esta máquina, donde la forma es la función. Los paneles son instrumentos opacos de canto recto, con líneas finas y marcas de registro en las esquinas; no hay vidrio difuminado, píldoras ni esquinas redondeadas.
 
@@ -19,7 +19,8 @@ Definidos en `web/src/styles/tokens.css`. Ningún componente usa colores literal
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--bg` | `#0d0b08` | Fondo detrás del mapa: negro cálido, el de una calle bajo sodio |
+| `--bg` | `#0d0b08` | Fondo de la interfaz: negro cálido, el de los instrumentos |
+| `--map-bg` / `--map-street` | `#0b0c0e` / `#8892a4` | El mapa base, de su fondo a sus calles más claras (las avenidas llegan al 40 %): grafito neutro |
 | `--panel` | `rgb(13 11 8 / 0.94)` | Instrumentos y paneles, casi opacos y sin difuminado |
 | `--line` / `--line-strong` | `rgb(201 168 120 / 0.16)` / `0.34` | Líneas finas, divisores, marcas de escala y de registro |
 | `--fg` | `#eee5d6` | Texto principal |
@@ -57,7 +58,7 @@ Cada ASE tiene el color de su operador, que se usa en sus rutas, su muestra y su
 ## Mapa
 
 - Motor: MapLibre GL. Capas de datos: deck.gl.
-- Estilo base: CARTO Dark Matter sin etiquetas (`dark-matter-nolabels-gl-style`), con atribución visible a © OpenStreetMap y © CARTO, en un recuadro de línea fina como el resto del tablero y no en la píldora blanca de MapLibre. Al cargar, `web/src/map/basemap.ts` vuelve a pintar cada color del estilo por su luminancia, de `--bg` hacia `--sodium`, sin pasar del 40 %: las avenidas brillan como bajo sus luminarias, pero el sodio pleno queda para lo que pasa ahora. El agua queda más oscura. Si el estilo no se puede leer, se usa sin teñir. Fuera de Suba, una máscara de `--bg` al 67 % deja la localidad en primer plano sin borrar la ciudad. Para producción, evaluar teselas propias (Protomaps / PMTiles) con la misma zona.
+- Estilo base: CARTO Dark Matter sin etiquetas (`dark-matter-nolabels-gl-style`), con atribución visible a © OpenStreetMap y © CARTO, en un recuadro de línea fina como el resto del tablero y no en la píldora blanca de MapLibre. Al cargar, `web/src/map/basemap.ts` vuelve a pintar cada color del estilo por su luminancia, de `--map-bg` hacia `--map-street`, sin pasar del 40 %. Queda un solo grafito neutro, donde las avenidas son las más claras. Así nada de la ciudad de fondo compite con las rutas, los colores de los operadores o el sodio de lo que pasa ahora (2026-10-29; antes era un monocromo de sodio, y con las cinco ASE encima el mapa se veía marrón). El agua queda más oscura. Si el estilo no se puede leer, se usa sin repintar. Fuera de Suba, una máscara de `--map-bg` al 67 % deja la localidad en primer plano sin borrar la ciudad. Para producción, evaluar teselas propias (Protomaps / PMTiles) con la misma zona.
 - Capas:
   - `PathLayer`: rutas completas, en el color de su corriente mezclado al 22 % con `--bg` y opaco: el plan es el fondo y la estela es lo que brilla. Opaco porque una docena de recorridos comparten cada avenida y, con transparencia, se suman hasta verse blancos.
   - `TripsLayer`: el recorrido ya hecho por cada camión, con estela.
@@ -77,7 +78,7 @@ Cada ASE tiene el color de su operador, que se usa en sus rutas, su muestra y su
 - **Sensores de llenado (F5)**: un punto en el centro del contenedor, `--warn` desde el 70 % y `--crit` desbordado; los que están bien no llevan punto, porque 806 puntos verdes no dicen nada que la ausencia no diga. El borde sigue siendo el de R07 y el color, el de la corriente. El tooltip y la tarjeta dicen el porcentaje, los litros y que el sensor es simulado. Un desborde que detecta un sensor aparece en el panel como "lleno según su sensor".
 - **Horarios de paso (R04)**: una sección plegable del panel, al final, con cada UPZ y la ventana de cada corriente (su muestra de color y las horas). Elegir una UPZ marca su borde en `--sodium` sobre el mapa, porque es una selección; la zona rural no tiene borde y no se elige. "Descargar por vehículo (CSV)" baja una fila por pasada de vehículo. La tarjeta del contenedor dice su UPZ y su horario publicado, y si hoy llega antes o después, cuántos minutos, en `--crit`: el horario publicado sale del plan y no cambia con los eventos.
 - **Modo y ciudad (F7)**: arriba de todo, un selector grabado de dos posiciones: "En vivo · Suba" (todo lo anterior) y "Ciudad". La posición elegida lleva un filo `--sodium` abajo. Sin la API, "Ciudad" queda deshabilitado y su título dice cómo arrancarla, porque el plan estático es solo Suba. En la ciudad, el mapa mismo es el selector:
-  - Cada localidad es un polígono con su borde fino. Las elegidas quedan bajo la luz de sodio (relleno `--sodium` al 10 %, borde al 60 %) y la que está bajo el puntero, o con el foco en la lista, marca su borde en `--fg`. Un clic la elige o la suelta. El tooltip dice su ASE y su operador.
+  - Cada localidad es un polígono con su borde fino. Las elegidas se levantan sobre el grafito (relleno `--fg` al 5 %, borde `--sodium` al 60 %) y la que está bajo el puntero, o con el foco en la lista, marca su borde en `--fg`. Un clic la elige o la suelta. El tooltip dice su ASE y su operador.
   - El panel lista las localidades agrupadas por ASE, porque es la ASE la que planifica (ADR 0012). Cada una tiene una casilla grabada que se llena de sodio al elegirla, como en el mapa. Arriba, "Urbanas" elige las 19 urbanas y "Ninguna" limpia.
   - "Planificar" es el único botón con el acento. Mientras el servidor planifica, el pie cuenta los segundos en lugar de un porcentaje inventado, porque el servidor no informa avance. Al terminar, el pie dice cuánto tardó.
   - Cada ASE lleva la muestra del color de su operador. Debajo va su flota: una celda por camión del plan, en ese color, en `--warn` las que pasan de la flota declarada y vacías las declaradas que no se usan. Así se lee de un vistazo si al operador le alcanza. Siguen los kg/día de sus contenedores, si son del operador o simulados, qué parte de sus toneladas cubren ("sin dato" si el operador no las publica) y una fila por turno con su horario, sus contenedores y las paradas R02 y R07.
