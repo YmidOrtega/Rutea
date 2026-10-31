@@ -41,18 +41,21 @@ class PostgresOperationLogTest {
     }
 
     @Test
-    void theLastShiftComesBackWithItsCommandsInOrderAndWhereTheClockWas() {
-        log.newShift();
-        long shift = log.newShift();
+    void theLastShiftOfAnOperationComesBackWithItsCommandsInOrderAndWhereTheClockWas() {
+        log.newShift("11-LMVNoche");
+        long shift = log.newShift("11-LMVNoche");
+        long other = log.newShift("8-MJSDia");
         log.command(shift, 1, new Command.Breakdown("C-03", 600));
         log.command(shift, 2, new Command.Overflow("N0001", 900, "sensor"));
         log.command(shift, 3, new Command.Closure(4_242, 1_200));
         log.positions(shift, List.of(new OperationLog.Position("C-03", 590.5, Optional.empty(), -74.08, 4.73),
                 new OperationLog.Position("C-03", 600, Optional.of("BROKEN"), -74.081, 4.731)));
 
-        OperationLog.Shift saved = log.lastShift().orElseThrow();
+        OperationLog.Shift saved = log.lastShift("11-LMVNoche").orElseThrow();
 
         assertThat(saved.id()).isEqualTo(shift);
+        assertThat(log.lastShift("8-MJSDia").orElseThrow().id()).isEqualTo(other);
+        assertThat(log.lastShift("3-LMVDia")).isEmpty();
         assertThat(saved.commands()).containsExactly(new Command.Breakdown("C-03", 600),
                 new Command.Overflow("N0001", 900, "sensor"), new Command.Closure(4_242, 1_200));
         assertThat(saved.lastSeconds()).isEqualTo(600);
@@ -60,7 +63,7 @@ class PostgresOperationLogTest {
 
     @Test
     void positionsArePostgisPointsThatSqlCanMeasure() {
-        long shift = log.newShift();
+        long shift = log.newShift("11-LMVNoche");
         log.positions(shift, List.of(new OperationLog.Position("C-01", 0, Optional.empty(), -74.1, 4.7),
                 new OperationLog.Position("C-01", 60, Optional.of("DRIVING"), -74.1, 4.71)));
 

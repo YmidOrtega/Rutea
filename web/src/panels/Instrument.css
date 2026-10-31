@@ -80,8 +80,9 @@
 }
 
 .instrument-figures {
-  display: flex;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
   margin: 0;
   white-space: nowrap;
 }

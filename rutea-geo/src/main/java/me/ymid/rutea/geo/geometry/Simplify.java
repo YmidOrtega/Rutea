@@ -40,7 +40,6 @@ public final class Simplify {
         return keep;
     }
 
-    /** Entre {@code from} y {@code to} (el índice {@code n} vuelve al vértice 0). */
     private static void mark(int[] lat, int[] lon, double cosLat, double tolerance, int from, int to, boolean[] keep) {
         int n = lat.length;
         int[] stack = new int[2 * n + 2];

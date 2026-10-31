@@ -1,13 +1,12 @@
 import { km } from '../format'
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
+import { FIRST_KEY, liveApi, sameKey, type LiveKey } from './key'
 import { apiError, fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
   type: 'breakdown'
-  /** Orden del evento en la sesión del servidor. */
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   truck: string
   atSeconds: number
@@ -29,7 +28,6 @@ export interface BreakdownEvent {
 export interface OverflowEvent {
   type: 'overflow'
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   container: string
   atSeconds: number
@@ -49,7 +47,6 @@ export interface OverflowEvent {
 export interface ClosureEvent {
   type: 'closure'
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   atSeconds: number
   roadClass: string
@@ -80,58 +77,55 @@ export interface EventsPage {
 export interface ShiftMessage {
   type: 'shift'
   shift: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
+  locality: number
+  slot: string
   /** El último evento del turno; 0 si todavía no hay ninguno. */
   seq: number
 }
 
-/** Los eventos con seq mayor a after: lo que le falta a quien ya tiene hasta after. */
-export const fetchEvents = (after = 0) =>
-  fetch(`/api/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
+export const fetchEvents = (key: LiveKey, after = 0) =>
+  fetch(`${liveApi(key)}/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
 
 export interface LoadedPlan {
   plan: DemoPlan
   /** Con la API detrás se puede simular averías; con el plan estático, solo mirar. */
   live: boolean
-  /** Lo que ya ocurrió en el turno del servidor; sin API, nada. */
   events: EventsPage | null
   /** Los vehículos en la calle y el reloj del servidor; sin API, el mapa reproduce el plan por su cuenta. */
   telemetry: TelemetryMessage | null
   sensors: SensorsMessage | null
 }
 
-/** Recién arrancada, la API tarda unos 27 s en armar el plan. */
 const API_TIMEOUT_MS = 60_000
 
-export async function loadPlan(): Promise<LoadedPlan> {
+export async function loadPlan(key: LiveKey): Promise<LoadedPlan> {
   const abort = new AbortController()
   const timer = setTimeout(() => abort.abort(), API_TIMEOUT_MS)
   try {
-    const response = await fetch('/api/plan', { signal: abort.signal })
-    if (response.ok) {
+    const response = await fetch(`${liveApi(key)}/plan`, { signal: abort.signal }).catch(() => null)
+    if (response?.ok) {
       const plan = (await response.json()) as DemoPlan
-      const [events, telemetry, sensors] = await Promise.all([
-        fetchEvents(),
-        fetchTelemetry(),
-        fetchSensors(),
-      ])
+      const [events, telemetry, sensors] = await Promise.all([fetchEvents(key), fetchTelemetry(key), fetchSensors(key)])
       return { plan, live: true, events, telemetry, sensors }
     }
-  } catch {
-    // Sin API: se sigue con el plan estático.
+    if (response && (response.status === 400 || response.status === 503)) throw await apiError(response)
   } finally {
     clearTimeout(timer)
   }
+  if (!sameKey(key, FIRST_KEY)) throw new Error('Sin la API solo está el plan de demo de Suba')
   return { plan: await loadDemoPlan(), live: false, events: null, telemetry: null, sensors: null }
 }
 
 /** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. Todo a la hora del servidor. */
-export const requestBreakdown = (truck: string) => post<OperationEvent[]>('/api/breakdowns', { truck })
+export const requestBreakdown = (key: LiveKey, truck: string) =>
+  post<OperationEvent[]>(`${liveApi(key)}/breakdowns`, { truck })
 
-export const requestOverflow = (container: string) => post<OverflowEvent>('/api/overflows', { container })
+export const requestOverflow = (key: LiveKey, container: string) =>
+  post<OverflowEvent>(`${liveApi(key)}/overflows`, { container })
 
-export const requestClosure = ([lon, lat]: LonLat) => post<ClosureEvent>('/api/closures', { lon, lat })
+export const requestClosure = (key: LiveKey, [lon, lat]: LonLat) =>
+  post<ClosureEvent>(`${liveApi(key)}/closures`, { lon, lat })
 
 async function post<T extends object>(url: string, request: object): Promise<T> {
   const response = await fetch(url, {
@@ -152,7 +146,7 @@ export interface Listeners {
 }
 
 /** Escucha la operación; reconecta con espera creciente si se cae. Devuelve cómo cerrar. */
-export function listen(listeners: Listeners): () => void {
+export function listen(key: LiveKey, listeners: Listeners): () => void {
   let socket: WebSocket | null = null
   let retry = 1_000
   let closed = false
@@ -160,7 +154,7 @@ export function listen(listeners: Listeners): () => void {
   let opened = 0
   const connect = () => {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    socket = new WebSocket(`${scheme}://${window.location.host}/ws/events`)
+    socket = new WebSocket(`${scheme}://${window.location.host}/ws/live/${key.locality}/${key.slot}`)
     socket.onopen = () => {
       retry = 1_000
       opened++
@@ -195,14 +189,11 @@ export function listen(listeners: Listeners): () => void {
 export interface CurrentPlan {
   /** El plan con los turnos que cambiaron por un desborde y las horas de visita corridas. */
   plan: DemoPlan
-  /** Rutas de reserva, de averías y de desbordes. */
   reserve: Route[]
   /** Contenedor huérfano → la reserva que lo recoge tras la avería. */
   orphanRoute: Map<string, string>
-  /** Contenedor → su último desborde. */
   overflows: Map<string, OverflowEvent>
   closures: ClosureEvent[]
-  /** Contenedor → el cierre que lo dejó sin acceso. */
   isolated: Map<string, ClosureEvent>
 }
 
@@ -250,7 +241,6 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
 /** Las rutas de reserva, tras una avería o un desborde, empiezan por R- (R-03-1, R-N0123). */
 export const isReserveId = (id: string) => id.startsWith('R-')
 
-/** Quién recoge un desborde, en una frase: la usan el tooltip, la tarjeta y el panel. */
 export function overflowPickup(event: OverflowEvent, at: (seconds: number) => string): string {
   const minutes = Math.round((event.pickupSeconds - event.atSeconds) / 60)
   switch (event.pickup) {

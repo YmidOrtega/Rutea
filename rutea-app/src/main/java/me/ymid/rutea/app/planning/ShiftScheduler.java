@@ -59,7 +59,6 @@ public final class ShiftScheduler {
             this(trucks, unloadSeconds, shiftSeconds, trucks.size());
         }
 
-        /** Se sabe que no hay reparto con menos camiones. */
         public boolean fewestTrucks() {
             return trucks.size() == lowerBound;
         }
@@ -77,13 +76,13 @@ public final class ShiftScheduler {
     private ShiftScheduler() {
     }
 
-    public static Schedule schedule(AreaScenario scenario, Solution solution, int serviceSeconds, int unloadSeconds,
-            int shiftSeconds, int maxTripsPerTruck) {
+    public static Schedule schedule(AreaScenario scenario, Solution solution, int unloadSeconds, int shiftSeconds,
+            int maxTripsPerTruck) {
         if (maxTripsPerTruck < 1 || maxTripsPerTruck > MAX_TRIPS_PER_TRUCK) {
             throw new IllegalArgumentException("de 1 a " + MAX_TRIPS_PER_TRUCK + " viajes por camión, no "
                     + maxTripsPerTruck);
         }
-        Trips trips = new Trips(scenario, solution, serviceSeconds);
+        Trips trips = new Trips(scenario, solution);
         int n = solution.routeCount();
         List<Truck> trucks = new ArrayList<>();
         if (n <= MAX_EXACT_TRIPS) {
@@ -444,8 +443,8 @@ public final class ShiftScheduler {
      * A qué hora llega el camión a cada contenedor, con la misma cuenta que {@link #schedule}: manejo por la
      * matriz, paradas y descargas. La última hora es la del regreso a la base.
      */
-    public static List<Visit> timeline(AreaScenario scenario, Solution solution, Truck truck, int serviceSeconds,
-            int unloadSeconds, long startSeconds) {
+    public static List<Visit> timeline(AreaScenario scenario, Solution solution, Truck truck, int unloadSeconds,
+            long startSeconds) {
         TravelMatrix travel = scenario.travel();
         int gate = scenario.gate();
         List<Visit> visits = new ArrayList<>();
@@ -458,7 +457,7 @@ public final class ShiftScheduler {
                 int node = solution.customer(k, truck.reversed()[i] ? length - 1 - p : p);
                 clock += travel.seconds(previous, node);
                 visits.add(new Visit(node, i, clock));
-                clock += serviceSeconds;
+                clock += scenario.serviceSeconds(node);
                 previous = node;
             }
             clock += travel.seconds(previous, gate) + unloadSeconds;
@@ -468,16 +467,16 @@ public final class ShiftScheduler {
 
     private static final class Trips {
 
+        private final AreaScenario scenario;
         private final TravelMatrix travel;
         private final int gate;
-        private final int serviceSeconds;
         /** {metros, segundos} de cada viaje: [viaje][desde la base, desde la portería][al derecho, al revés]. */
         private final long[][][][] legs;
 
-        Trips(AreaScenario scenario, Solution solution, int serviceSeconds) {
+        Trips(AreaScenario scenario, Solution solution) {
+            this.scenario = scenario;
             this.travel = scenario.travel();
             this.gate = scenario.gate();
-            this.serviceSeconds = serviceSeconds;
             legs = new long[solution.routeCount()][2][2][];
             for (int k = 0; k < legs.length; k++) {
                 int[] stops = new int[solution.routeLength(k)];
@@ -509,7 +508,6 @@ public final class ShiftScheduler {
             return new Truck(sequence, reversed, meters, seconds);
         }
 
-        /** Segundos del viaje desde la portería o desde la base, en su sentido más rápido. */
         long fastestSeconds(int trip, boolean fromGate) {
             long[][] from = legs[trip][fromGate ? 1 : 0];
             return Math.min(from[0][1], from[1][1]);
@@ -522,12 +520,12 @@ public final class ShiftScheduler {
         /** {metros, segundos} de {@code from} a la portería pasando por las paradas, con el servicio. */
         private long[] leg(int[] path, int from, boolean reversed) {
             long meters = 0;
-            long seconds = (long) serviceSeconds * path.length;
+            long seconds = 0;
             int previous = from;
             for (int p = 0; p < path.length; p++) {
                 int stop = reversed ? path[path.length - 1 - p] : path[p];
-                meters += travel.meters(previous, stop);
-                seconds += travel.seconds(previous, stop);
+                meters += travel.meters(previous, stop) + scenario.collectingMeters(stop);
+                seconds += travel.seconds(previous, stop) + scenario.serviceSeconds(stop);
                 previous = stop;
             }
             meters += travel.meters(previous, gate);

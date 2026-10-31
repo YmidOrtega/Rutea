@@ -5,12 +5,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.ToDoubleFunction;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.ServiceAreas.Operation;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
+import me.ymid.rutea.app.scenario.StreetChunks;
 import me.ymid.rutea.domain.DieselEmissions;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.geo.RoadGraph;
@@ -60,19 +62,18 @@ public final class AreaPlanner {
         return plan(scenario, solution, solver.name(), settings.seed(), settings.iterationLimit());
     }
 
-    /** Un camión por viaje. */
     public static DemoPlan plan(AreaScenario scenario, Solution solution, String method, long seed, long iterations) {
         return plan(scenario, solution, oneTripEach(scenario, solution, BogotaFigures.UNLOAD_SECONDS_HIGH), method, seed,
                 iterations);
     }
 
     public static ShiftScheduler.Schedule oneTripEach(AreaScenario scenario, Solution solution, int unloadSeconds) {
-        return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
+        return ShiftScheduler.schedule(scenario, solution, unloadSeconds,
                 scenario.operation().shiftSeconds(), 1);
     }
 
     public static ShiftScheduler.Schedule fewestTrucks(AreaScenario scenario, Solution solution, int unloadSeconds) {
-        return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
+        return ShiftScheduler.schedule(scenario, solution, unloadSeconds,
                 scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
     }
 
@@ -114,8 +115,8 @@ public final class AreaPlanner {
         RoadGraph graph = scenario.graph();
         ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
         List<Container> containers = scenario.containers();
-        String[] routeOf = new String[containers.size()];
-        int[] visitSeconds = new int[containers.size()];
+        String[] routeOf = new String[scenario.instance().size() - 1];
+        int[] visitSeconds = new int[routeOf.length];
         List<DemoPlan.Route> routes = new ArrayList<>();
         for (int t = 0; t < schedule.trucks().size(); t++) {
             routes.add(drawTruck(scenario, paths, solution, schedule.trucks().get(t), schedule.unloadSeconds(),
@@ -148,7 +149,13 @@ public final class AreaPlanner {
                 BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
                 BogotaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
                 "© colaboradores de OpenStreetMap (ODbL 1.0)", assumptions(area));
-        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks(), List.of());
+        List<DemoPlan.Street> streets = new ArrayList<>(scenario.chunks().size());
+        for (int node = containers.size() + 1; node < scenario.gate(); node++) {
+            StreetChunks.Chunk chunk = scenario.chunk(node);
+            streets.add(new DemoPlan.Street(scenario.stopId(node), routeOf[node - 1],
+                    scenario.instance().demand(node), chunk.meters(), streetPath(chunk)));
+        }
+        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks(), List.of(), streets);
     }
 
     /** Tras un cierre, un turno pasa por grafos distintos y cada índice de arco es de su grafo. */
@@ -175,6 +182,7 @@ public final class AreaPlanner {
         }
         Instance instance = scenario.instance();
         List<String> stops = new ArrayList<>();
+        List<Integer> arrivals = new ArrayList<>();
         int[] tripLoads = new int[trips.size()];
         Geometry geometry = new Geometry(scenario.graph());
         geometry.start(scenario.depotVertex());
@@ -183,8 +191,9 @@ public final class AreaPlanner {
         for (int i = 0; i < trips.size(); i++) {
             for (int customer : trips.get(i)) {
                 meters += geometry.follow(legs.get(leg++));
-                geometry.stop(BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
-                stops.add(scenario.containers().get(customer - 1).id());
+                arrivals.add(geometry.seconds());
+                meters += serve(geometry, scenario, customer);
+                stops.add(scenario.stopId(customer));
                 tripLoads[i] += instance.demand(customer);
             }
             meters += geometry.follow(legs.get(leg++));
@@ -192,14 +201,15 @@ public final class AreaPlanner {
         }
         meters += geometry.follow(legs.get(leg));
         return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
-                geometry.seconds(), tripLoads, stops, geometry.path,
-                geometry.times.stream().mapToInt(Integer::intValue).toArray());
+                geometry.seconds(), tripLoads, stops, arrivals.stream().mapToInt(Integer::intValue).toArray(),
+                geometry.path, geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     private static DemoPlan.Route drawTruck(AreaScenario scenario, ShortestPaths paths, Solution solution,
             ShiftScheduler.Truck truck, int unloadSeconds, String id, String[] routeOf, int[] visitSeconds) {
         Instance instance = scenario.instance();
         List<String> stops = new ArrayList<>();
+        List<Integer> arrivals = new ArrayList<>();
         int[] tripLoads = new int[truck.trips().length];
         Geometry geometry = new Geometry(scenario.graph());
         geometry.start(scenario.depotVertex());
@@ -211,9 +221,10 @@ public final class AreaPlanner {
                 int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
                 meters += leg(paths, geometry, scenario, previous, customer, id);
                 visitSeconds[customer - 1] = geometry.seconds();
-                geometry.stop(BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                arrivals.add(geometry.seconds());
+                meters += serve(geometry, scenario, customer);
                 routeOf[customer - 1] = id;
-                stops.add(scenario.containers().get(customer - 1).id());
+                stops.add(scenario.stopId(customer));
                 tripLoads[i] += instance.demand(customer);
                 previous = customer;
             }
@@ -226,8 +237,8 @@ public final class AreaPlanner {
                     + " s; la asignación dice " + truck.meters() + " m y " + truck.seconds() + " s");
         }
         return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
-                geometry.seconds(), tripLoads, stops, geometry.path,
-                geometry.times.stream().mapToInt(Integer::intValue).toArray());
+                geometry.seconds(), tripLoads, stops, arrivals.stream().mapToInt(Integer::intValue).toArray(),
+                geometry.path, geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     /** Lo que el plan supone sin dato publicado: el panel lo muestra tal cual. Fuentes en docs/datos.md. */
@@ -252,15 +263,13 @@ public final class AreaPlanner {
                 fleet(recyclables, BogotaFigures.ECA_UNLOAD_SECONDS, seed).plan());
     }
 
-    /** Una flota planificada, con lo que hace falta para replanificarla: su solución y su asignación de turnos. */
     public record Fleet(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, DemoPlan plan) {
     }
 
     public static Fleet fleet(AreaScenario scenario, int unloadSeconds, long seed) {
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
-        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new Fleet(scenario, solution, schedule, plan(scenario, solution, schedule, "alns", seed, ITERATIONS));
     }
 
@@ -290,7 +299,7 @@ public final class AreaPlanner {
         List<DemoPlan.Sector> sectors = Sectors.of(area).schedule(containers);
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
-        return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors);
+        return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors, waste.streets());
     }
 
     /**
@@ -298,7 +307,7 @@ public final class AreaPlanner {
      * portería) y comprueba que mida lo mismo que la matriz con la que se optimizó.
      */
     private static long leg(ShortestPaths paths, Geometry geometry, AreaScenario scenario, int from, int to, String id) {
-        long meters = follow(paths, geometry, vertex(scenario, from), vertex(scenario, to));
+        long meters = follow(paths, geometry, scenario.travel().source(from), scenario.travel().target(to));
         if (meters != scenario.travel().meters(from, to)) {
             throw new IllegalStateException(id + ": el tramo dibujado mide " + meters + " m y la matriz dice "
                     + scenario.travel().meters(from, to));
@@ -306,11 +315,40 @@ public final class AreaPlanner {
         return meters;
     }
 
-    private static int vertex(AreaScenario scenario, int place) {
-        if (place == 0) {
-            return scenario.depotVertex();
+    /** El trozo en su sentido de recolección, con los puntos de forma de cada arco. */
+    private static List<double[]> streetPath(StreetChunks.Chunk chunk) {
+        RoadGraph graph = chunk.graph();
+        List<double[]> path = new ArrayList<>();
+        path.add(lonLat(graph.latE7(chunk.entry()), graph.lonE7(chunk.entry())));
+        for (int edge : chunk.arcs()) {
+            int shape = graph.shape(edge);
+            boolean reversed = shape < 0;
+            int base = reversed ? ~shape : shape;
+            int first = graph.firstShapePoint(base);
+            int count = graph.endShapePoint(base) - first;
+            for (int i = 1; i < count; i++) {
+                int point = first + (reversed ? count - 1 - i : i);
+                double[] here = lonLat(graph.shapeLatE7(point), graph.shapeLonE7(point));
+                if (!Arrays.equals(path.getLast(), here)) {
+                    path.add(here);
+                }
+            }
         }
-        return place == scenario.gate() ? scenario.gateVertex() : scenario.points()[place];
+        return path;
+    }
+
+    /** Un contenedor detiene el camión; un trozo de calle lo lleva por sus arcos a paso de recolección. */
+    private static long serve(Geometry geometry, AreaScenario scenario, int node) {
+        if (!scenario.isChunk(node)) {
+            geometry.stop(scenario.serviceSeconds(node));
+            return 0;
+        }
+        StreetChunks.Chunk chunk = scenario.chunk(node);
+        List<Arc> arcs = new ArrayList<>(chunk.arcs().length);
+        for (int edge : chunk.arcs()) {
+            arcs.add(new Arc(chunk.graph(), edge));
+        }
+        return geometry.collect(arcs, scenario.serviceSeconds(node), chunk.meters());
     }
 
     private static long follow(ShortestPaths paths, Geometry geometry, int from, int to) {
@@ -343,6 +381,17 @@ public final class AreaPlanner {
         }
 
         long follow(List<Arc> arcs) {
+            return walk(arcs, Arc::seconds);
+        }
+
+        long collect(List<Arc> arcs, int seconds, int meters) {
+            double end = clock + seconds;
+            long walked = walk(arcs, arc -> (double) seconds * arc.meters() / meters);
+            clock = end;
+            return walked;
+        }
+
+        private long walk(List<Arc> arcs, ToDoubleFunction<Arc> secondsOf) {
             long meters = 0;
             for (Arc arc : arcs) {
                 RoadGraph graph = arc.graph();
@@ -358,15 +407,16 @@ public final class AreaPlanner {
                     length += segment(first, count, reversed, i);
                 }
                 // El tiempo del arco se reparte entre sus tramos según su largo.
+                double arcSeconds = secondsOf.applyAsDouble(arc);
                 double edgeStart = clock;
                 double done = 0;
                 for (int i = 1; i < count; i++) {
                     done += segment(first, count, reversed, i);
-                    clock = edgeStart + (length == 0 ? 1 : done / length) * graph.seconds(edge);
+                    clock = edgeStart + (length == 0 ? 1 : done / length) * arcSeconds;
                     int point = first + (reversed ? count - 1 - i : i);
                     add(graph.shapeLatE7(point), graph.shapeLonE7(point));
                 }
-                clock = edgeStart + graph.seconds(edge);
+                clock = edgeStart + arcSeconds;
             }
             return meters;
         }
@@ -385,8 +435,13 @@ public final class AreaPlanner {
             times.add((int) Math.round(clock));
         }
 
+        /** Un punto repetido es una parada: dos puntos de calle a menos de un metro redondean igual y se funden. */
         private void add(int latE7, int lonE7) {
-            path.add(lonLat(latE7, lonE7));
+            double[] point = lonLat(latE7, lonE7);
+            if (!path.isEmpty() && Arrays.equals(path.getLast(), point)) {
+                return;
+            }
+            path.add(point);
             times.add((int) Math.round(clock));
         }
 

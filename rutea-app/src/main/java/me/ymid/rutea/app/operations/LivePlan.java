@@ -29,7 +29,6 @@ import me.ymid.rutea.solver.Solution;
  */
 final class LivePlan {
 
-    /** Una parada en el plan: el camión, su viaje, la posición en el viaje y la hora de llegada. */
     record Stop(int truck, int trip, int position, int node, long arriveSeconds) {
     }
 
@@ -55,7 +54,6 @@ final class LivePlan {
     }
 
     private final AreaScenario scenario;
-    private final int serviceSeconds;
     private final int unloadSeconds;
     private final int shiftSeconds;
     private final List<List<int[]>> trucks = new ArrayList<>();
@@ -66,16 +64,15 @@ final class LivePlan {
     private final Map<Integer, List<Leg>> legs = new HashMap<>();
     private final Map<RoadGraph, ShortestPaths> searches = new IdentityHashMap<>();
 
-    private LivePlan(AreaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
+    private LivePlan(AreaScenario scenario, int unloadSeconds, int shiftSeconds) {
         this.scenario = scenario;
-        this.serviceSeconds = serviceSeconds;
         this.unloadSeconds = unloadSeconds;
         this.shiftSeconds = shiftSeconds;
         networks.add(new Network(0, scenario.travel(), new boolean[scenario.graph().shapeCount()]));
     }
 
-    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, int serviceSeconds) {
-        LivePlan live = new LivePlan(scenario, serviceSeconds, schedule.unloadSeconds(), schedule.shiftSeconds());
+    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule) {
+        LivePlan live = new LivePlan(scenario, schedule.unloadSeconds(), schedule.shiftSeconds());
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             List<int[]> trips = new ArrayList<>();
             List<int[]> marks = new ArrayList<>();
@@ -118,8 +115,8 @@ final class LivePlan {
         return shiftSeconds;
     }
 
-    int serviceSeconds() {
-        return serviceSeconds;
+    int serviceSeconds(int node) {
+        return scenario.serviceSeconds(node);
     }
 
     AreaScenario scenario() {
@@ -173,7 +170,7 @@ final class LivePlan {
             for (int p = 0; p < trip.length; p++) {
                 Leg leg = leg(i, p, previous, trip[p], clock);
                 legs.add(leg);
-                clock = leg.arriveSeconds() + serviceSeconds;
+                clock = leg.arriveSeconds() + scenario.serviceSeconds(trip[p]);
                 previous = trip[p];
             }
             Leg toGate = leg(i, TO_GATE, previous, gate, clock);
@@ -213,7 +210,6 @@ final class LivePlan {
         return leave;
     }
 
-    /** Fin del turno del camión: cuando vuelve a la base. */
     long endSeconds(int truck) {
         return legs(truck).getLast().arriveSeconds();
     }
@@ -221,7 +217,7 @@ final class LivePlan {
     long meters(int truck) {
         long meters = 0;
         for (Leg leg : legs(truck)) {
-            meters += leg.meters();
+            meters += leg.meters() + (leg.position() >= 0 ? scenario.collectingMeters(leg.to()) : 0);
         }
         return meters;
     }
@@ -324,15 +320,16 @@ final class LivePlan {
                 continue;
             }
             RoadGraph graph = closing.travel().graph();
-            int here = at == 0 ? vertex(from) : arcs.get(at - 1).graph().target(arcs.get(at - 1).edge());
+            int here = at == 0 ? travel.source(from) : arcs.get(at - 1).graph().target(arcs.get(at - 1).edge());
+            int target = travel.target(to);
             ShortestPaths search = search(graph);
-            search.distances(here, new int[] {vertex(to)});
-            if (search.distance(vertex(to)) == ShortestPaths.UNREACHABLE) {
+            search.distances(here, new int[] {target});
+            if (search.distance(target) == ShortestPaths.UNREACHABLE) {
                 // El destino quedó aislado con el camión ya en camino: llega.
                 continue;
             }
             List<AreaPlanner.Arc> rest = new ArrayList<>(arcs.subList(0, at));
-            for (int edge : search.pathEdges(vertex(to))) {
+            for (int edge : search.pathEdges(target)) {
                 rest.add(new AreaPlanner.Arc(graph, edge));
             }
             arcs = rest;
@@ -355,16 +352,13 @@ final class LivePlan {
 
     private List<AreaPlanner.Arc> path(RoadGraph graph, int from, int to) {
         ShortestPaths search = search(graph);
-        search.distances(vertex(from), new int[] {vertex(to)});
+        int target = scenario.travel().target(to);
+        search.distances(scenario.travel().source(from), new int[] {target});
         List<AreaPlanner.Arc> arcs = new ArrayList<>();
-        for (int edge : search.pathEdges(vertex(to))) {
+        for (int edge : search.pathEdges(target)) {
             arcs.add(new AreaPlanner.Arc(graph, edge));
         }
         return arcs;
-    }
-
-    private int vertex(int place) {
-        return scenario.travel().vertex(place);
     }
 
     private int networkAt(long seconds) {

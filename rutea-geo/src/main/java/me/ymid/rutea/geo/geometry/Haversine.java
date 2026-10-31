@@ -20,12 +20,10 @@ public final class Haversine {
         return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
-    /** Grados de latitud (en 1e-7) que equivalen a {@code meters} hacia el norte o el sur. */
     public static int latitudeE7(double meters) {
         return (int) Math.ceil(meters / EARTH_RADIUS_METERS * 180 / Math.PI * 1e7);
     }
 
-    /** Grados de longitud (en 1e-7) que equivalen a {@code meters} hacia el este o el oeste a esa latitud. */
     public static int longitudeE7(double meters, int latE7) {
         return (int) Math.ceil(latitudeE7(meters) / Math.cos(latE7 * E7_TO_RADIANS));
     }

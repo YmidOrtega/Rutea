@@ -9,11 +9,6 @@ import java.nio.file.StandardCopyOption;
 
 import me.ymid.rutea.solver.Instance;
 
-/**
- * Escribe una instancia en formato TSPLIB/CVRPLIB con la matriz completa ({@code EDGE_WEIGHT_TYPE :
- * EXPLICIT}, {@code FULL_MATRIX}): la forma estándar de guardar una instancia asimétrica, que el
- * {@link CvrplibReader} y el arnés leen igual que las del set X.
- */
 public final class CvrplibWriter {
 
     private CvrplibWriter() {

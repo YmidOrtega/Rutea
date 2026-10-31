@@ -147,7 +147,6 @@ public final class CompareBaseline {
         return String.format(Locale.ROOT, "%02d:%02d", (total / 3600) % 24, (total % 3600) / 60);
     }
 
-    /** Nunca pisa una corrida anterior: si el archivo ya existe, falla. */
     static void writeCsv(Path csv, List<PlanReport> reports, String instance, long seed, long iterations)
             throws IOException {
         Files.createDirectories(csv.toAbsolutePath().getParent());

@@ -63,7 +63,6 @@ public final class ShortestPaths {
         return result;
     }
 
-    /** Como {@link #distances(int, int[])}, escribiendo en {@code into}: para llenar una matriz fila por fila. */
     public void distances(int source, int[] targets, int[] into) {
         runUntil(source, targets);
         for (int i = 0; i < targets.length; i++) {
@@ -80,7 +79,6 @@ public final class ShortestPaths {
         return secondary[vertex];
     }
 
-    /** Como {@link #distances(int, int[], int[])}, y además el otro peso de cada camino en {@code secondaryInto}. */
     public void distances(int source, int[] targets, int[] into, int[] secondaryInto) {
         distances(source, targets, into);
         for (int i = 0; i < targets.length; i++) {
@@ -88,7 +86,6 @@ public final class ShortestPaths {
         }
     }
 
-    /** Arcos del camino más corto desde la última fuente hasta {@code target}, en orden. */
     public int[] pathEdges(int target) {
         if (distance[target] == UNREACHABLE) {
             throw new IllegalArgumentException("el vértice " + target + " no se alcanza desde " + source);
@@ -163,7 +160,6 @@ public final class ShortestPaths {
         parentEdge[vertex] = edge;
     }
 
-    /** Limpia solo lo que tocó la búsqueda anterior. */
     private void reset() {
         for (int i = 0; i < touchedCount; i++) {
             distance[touched[i]] = UNREACHABLE;

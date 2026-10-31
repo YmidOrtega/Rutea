@@ -6,7 +6,6 @@ import './Timeline.css'
 
 interface Props {
   shiftStart: string
-  /** Segundos desde el inicio del turno hasta donde llega la línea. */
   end: number
   time: number
   progress: Progress

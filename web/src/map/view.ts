@@ -26,9 +26,12 @@ export function initialViewState(): MapViewState {
   const { longitude, latitude, zoom } = new WebMercatorViewport({
     width: window.innerWidth,
     height: window.innerHeight,
-  }).fitBounds(SUBA_BOUNDS, {
-    padding: narrow ? { top: 170, bottom: 230, left: 16, right: 16 } : { top: 24, bottom: 250, left: 368, right: 40 },
-  })
+  }).fitBounds(SUBA_BOUNDS, { padding: livePadding() })
   // El encuadre se calcula de frente; inclinado, el norte se aleja y en escritorio Suba se ve más chica de lo que cabe
   return { longitude, latitude, zoom: zoom + (narrow ? 0 : 0.2), pitch: 45, bearing: -15 }
 }
+
+export const livePadding = () =>
+  window.matchMedia('(max-width: 640px)').matches
+    ? { top: 170, bottom: 230, left: 16, right: 16 }
+    : { top: 24, bottom: 250, left: 368, right: 40 }

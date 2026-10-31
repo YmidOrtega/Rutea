@@ -82,8 +82,7 @@ public final class OverflowBenchmark {
                 long reserveDelay = BogotaFigures.RESERVE_DISPATCH_SECONDS + scenario.travel().seconds(0, node);
                 boolean warmup = e < BreakdownBenchmark.WARMUP;
                 for (Policy policy : Policy.values()) {
-                    Dispatch dispatch = new LiveOperation(scenario, solution, schedule,
-                            BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, policy).overflow(node, at);
+                    Dispatch dispatch = new LiveOperation(scenario, solution, schedule, policy).overflow(node, at);
                     if (e == 0 && policy == Policy.EARLIEST) {
                         coldNanos = dispatch.latencyNanos();
                     }

@@ -20,6 +20,16 @@ public final class BogotaFigures {
      */
     public static final int BOGOTA_ORDINARY_TONNES_PER_DAY = 5_680;
 
+    /**
+     * Población urbana proyectada para 2026 por número de localidad (DANE, proyecciones por localidad 2018–2035, serie
+     * de 2021; tabla en {@code docs/datos.md}, "Población y toneladas por localidad"). Sumapaz no tiene.
+     */
+    private static final int[] URBAN_POPULATION_2026 = {0, 610_405, 186_028, 107_300, 413_746, 419_136, 187_698,
+            741_537, 1_045_353, 415_054, 825_633, 1_347_097, 161_766, 163_391, 82_764, 87_204, 260_371, 19_207,
+            395_986, 664_702, 0};
+
+    public static final int BOGOTA_URBAN_POPULATION = 8_134_378;
+
     /** "La mitad para residuos no aprovechables y la mitad para promover el reciclaje" (UAESP, 2025). */
     public static final double NON_RECYCLABLE_CONTAINER_SHARE = 0.5;
 
@@ -71,6 +81,18 @@ public final class BogotaFigures {
     public static final int ECA_UNLOAD_SECONDS = 20 * 60;
 
     private BogotaFigures() {
+    }
+
+    public static int urbanPopulation(ServiceAreas.Locality locality) {
+        return URBAN_POPULATION_2026[locality.number()];
+    }
+
+    /**
+     * Supuesto: kilos por día del servicio ordinario de la localidad, las toneladas de la ciudad repartidas por
+     * población urbana. Cada habitante produce lo mismo en cualquier localidad.
+     */
+    public static double kgPerDay(ServiceAreas.Locality locality) {
+        return BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * urbanPopulation(locality) / BOGOTA_URBAN_POPULATION;
     }
 
     /**

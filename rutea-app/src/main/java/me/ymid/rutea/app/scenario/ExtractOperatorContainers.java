@@ -92,7 +92,6 @@ public final class ExtractOperatorContainers {
                 .filter(c -> !serviceArea.localities().contains(localities.locate(c.latE7(), c.lonE7()))).count();
     }
 
-    /** Todas las páginas de la consulta, en orden de OBJECTID. */
     static List<Container> download(HttpClient http, Layer layer) throws IOException, InterruptedException {
         List<Container> containers = new ArrayList<>();
         for (int offset = 0;; offset += PAGE) {

@@ -36,13 +36,12 @@ class InsertionTest {
         // Cargas chicas: los viajes quedan con capacidad de sobra para absorber huérfanos.
         scenario = AreaScenarioFixture.town(dir, 24, 400);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(4, Duration.ofMinutes(1), 200));
-        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER,
-                BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 1);
+        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 1);
     }
 
     @Test
     void livePlanReproducesTheScheduledShifts() {
-        LivePlan live = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan live = LivePlan.of(scenario, solution, schedule);
 
         for (int t = 0; t < live.truckCount(); t++) {
             assertThat(live.endSeconds(t)).isEqualTo(schedule.trucks().get(t).seconds());
@@ -51,8 +50,23 @@ class InsertionTest {
     }
 
     @Test
+    void livePlanAlsoCountsTheStreetsATruckCollects() throws IOException {
+        AreaScenario streets = AreaScenarioFixture.doorToDoorTown(dir);
+        Solution routes = new AlnsSolver().solve(streets.instance(), new SolverSettings(4, Duration.ofMinutes(1), 200));
+        ShiftScheduler.Schedule shifts = ShiftScheduler.schedule(streets, routes, BogotaFigures.UNLOAD_SECONDS_LOW,
+                24 * 3600, 1);
+
+        LivePlan live = LivePlan.of(streets, routes, shifts);
+
+        for (int t = 0; t < live.truckCount(); t++) {
+            assertThat(live.endSeconds(t)).isEqualTo(shifts.trucks().get(t).seconds());
+            assertThat(live.meters(t)).isEqualTo(shifts.trucks().get(t).meters());
+        }
+    }
+
+    @Test
     void insertsOnlyWithinCapacityAndShiftAndNeverIntoTheExcludedTruck() {
-        LivePlan live = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan live = LivePlan.of(scenario, solution, schedule);
         List<Integer> pending = new ArrayList<>(Arrays.stream(stops(schedule.trucks().getFirst())).boxed().toList());
         long before = live.meters();
 
@@ -71,7 +85,7 @@ class InsertionTest {
 
     @Test
     void neverInsertsIntoThePastOfARoute() {
-        LivePlan live = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan live = LivePlan.of(scenario, solution, schedule);
         long afterEveryone = schedule.trucks().stream().mapToLong(ShiftScheduler.Truck::seconds).max().orElseThrow();
         List<Integer> pending = new ArrayList<>(List.of(stops(schedule.trucks().getFirst())[0]));
 

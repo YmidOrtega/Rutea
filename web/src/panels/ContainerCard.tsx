@@ -26,7 +26,6 @@ interface Props {
   clock: (secondsFromShiftStart: number) => string
 }
 
-/** El contenedor que se tocó en el mapa y lo que se puede hacer con él: reportarlo desbordado. */
 export function ContainerCard({
   container,
   fill,

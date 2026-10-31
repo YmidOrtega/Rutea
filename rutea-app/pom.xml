@@ -159,6 +159,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>door-to-door</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.MeasureDoorToDoor</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f8-door-to-door</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>second-area</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.planning.PlanSecondArea</mainClass>
@@ -203,6 +213,15 @@
             </configuration>
           </execution>
           <execution>
+            <id>urban-perimeter</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractUrbanPerimeter</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>localities</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExtractLocalities</mainClass>
@@ -219,6 +238,49 @@
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
                 <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f5-breakdowns</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>live-localities</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.CheckLiveLocalities</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota-sitios-sensibles.csv</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f8-live-localities</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>suba-live</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.planning.CompareSubaLive</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/suba-sitios-sensibles.csv</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota-sitios-sensibles.csv</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f8-suba-live</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>locality-breakdowns</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f8-breakdowns</argument>
+                <argument>--locality</argument>
+                <argument>11</argument>
+                <argument>--slot</argument>
+                <argument>LMVNoche</argument>
+                <argument>--seed</argument>
+                <argument>7</argument>
+                <argument>--containers</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
               </arguments>
             </configuration>
           </execution>
@@ -256,6 +318,17 @@
             <id>bogota-instances</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportBogotaInstances</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/bogota</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>locality-instances</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExportLocalityInstances</mainClass>
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>

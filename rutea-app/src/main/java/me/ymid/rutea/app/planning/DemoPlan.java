@@ -9,7 +9,7 @@ import me.ymid.rutea.domain.WasteStream;
  * Las calles son reales (OSM); los contenedores y sus cargas son simulados.
  */
 public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, List<Route> routes,
-        List<Compliance.Check> compliance, List<Sector> sectors) {
+        List<Compliance.Check> compliance, List<Sector> sectors, List<Street> streets) {
 
     /**
      * @param shiftStart hora a la que los camiones salen de la base, "HH:mm"
@@ -60,9 +60,18 @@ public record DemoPlan(Meta meta, List<Site> sites, List<Container> containers, 
      * vuelve a la base. {@code tripLoadsKg[i]} es la carga del viaje {@code i}, que nunca pasa de
      * {@code capacityKg}. {@code times[i]} son los segundos desde la salida hasta {@code path[i]}, con las
      * velocidades del grafo, las paradas en los contenedores y las descargas; {@code distanceMeters} incluye el
-     * regreso a la base.
+     * regreso a la base. {@code arrivals[k]} es la hora a la que llega a {@code stops[k]}.
      */
     public record Route(String id, WasteStream stream, int capacityKg, int loadKg, long distanceMeters,
-            int durationSeconds, int[] tripLoadsKg, List<String> stops, List<double[]> path, int[] times) {
+            int durationSeconds, int[] tripLoadsKg, List<String> stops, int[] arrivals, List<double[]> path,
+            int[] times) {
+    }
+
+    /**
+     * Un trozo de calle del puerta a puerta (ADR 0014), en el sentido en que se recoge.
+     *
+     * @param route el vehículo del plan que lo recoge
+     */
+    public record Street(String id, String route, int kg, int meters, List<double[]> path) {
     }
 }

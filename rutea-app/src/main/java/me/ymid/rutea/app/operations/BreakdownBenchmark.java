@@ -9,14 +9,21 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.SplittableRandom;
 
 import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.ShiftScheduler;
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.DoorToDoor;
+import me.ymid.rutea.app.scenario.OperatorContainers;
 import me.ymid.rutea.app.scenario.ServiceAreas;
+import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
@@ -28,7 +35,11 @@ import me.ymid.rutea.solver.alns.AlnsSolver;
  * avería elige un camión y una hora de su turno al azar, con semilla fija. Las primeras {@link #WARMUP} calientan la
  * JVM y no cuentan; la primera de todas se reporta aparte como latencia en frío.
  *
- * <p>Uso: {@code BreakdownBenchmark <grafo.rgraph> <dir-salida> [--events <n>] [--seed <n>]}
+ * <p>Con {@code --locality}, {@code --slot} y {@code --containers}, sobre la operación en vivo de una localidad en una
+ * franja del puerta a puerta (F8), con el grafo de Bogotá.
+ *
+ * <p>Uso: {@code BreakdownBenchmark <grafo.rgraph> <dir-salida> [--events <n>] [--seed <n>] [--locality <n> --slot
+ * <franja> --containers <data/ase>]}
  */
 public final class BreakdownBenchmark {
 
@@ -44,21 +55,31 @@ public final class BreakdownBenchmark {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
-            System.err.println("uso: BreakdownBenchmark <grafo.rgraph> <dir-salida> [--events <n>] [--seed <n>]");
+            System.err.println("uso: BreakdownBenchmark <grafo.rgraph> <dir-salida> [--events <n>] [--seed <n>]"
+                    + " [--locality <n> --slot <franja> --containers <data/ase>]");
             System.exit(2);
         }
         Path outDir = Path.of(args[1]);
         int events = 500;
         long seed = 1;
+        int locality = 0;
+        String slot = null;
+        Path containers = null;
         for (int i = 2; i + 1 < args.length; i += 2) {
             switch (args[i]) {
                 case "--events" -> events = Integer.parseInt(args[i + 1]);
                 case "--seed" -> seed = Long.parseLong(args[i + 1]);
+                case "--locality" -> locality = Integer.parseInt(args[i + 1]);
+                case "--slot" -> slot = args[i + 1];
+                case "--containers" -> containers = Path.of(args[i + 1]);
                 default -> throw new IllegalArgumentException("argumento no reconocido: " + args[i]);
             }
         }
 
-        AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(Path.of(args[0])).graph(), ServiceAreas.ASE_5, seed);
+        RoadGraph graph = RoadGraphFile.read(Path.of(args[0])).graph();
+        AreaScenario scenario = locality == 0 ? AreaScenario.build(graph, ServiceAreas.ASE_5, seed)
+                : doorToDoor(graph, locality, Objects.requireNonNull(slot, "--slot"),
+                        Objects.requireNonNull(containers, "--containers"));
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
         ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
@@ -175,6 +196,19 @@ public final class BreakdownBenchmark {
      * {latencia en ns, metros de la reserva} resolviendo los mismos huérfanos con ALNS desde cero. Los viajes pasan
      * por el mismo reparto en camiones, así los metros se comparan igual que en el arranque en caliente.
      */
+    private static AreaScenario doorToDoor(RoadGraph graph, int number, String code, Path containers)
+            throws IOException {
+        ServiceAreas.Locality locality = ServiceAreas.locality(number)
+                .orElseThrow(() -> new IllegalArgumentException("no hay localidad " + number));
+        DoorToDoor.Slot slot = DoorToDoor.Slot.ALL.stream().filter(candidate -> candidate.code().equals(code))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("no hay franja " + code));
+        Map<Integer, List<OperatorContainers.Container>> real = new LinkedHashMap<>();
+        for (OperatorContainers.Layer layer : OperatorContainers.LAYERS) {
+            real.put(layer.area(), OperatorContainers.read(containers.resolve(layer.file())));
+        }
+        return DoorToDoor.live(graph, locality, slot, real).scenario();
+    }
+
     private static long[] fromScratch(AreaScenario scenario, BreakdownReplanner.Replan replan,
             ShiftScheduler.Schedule schedule, long seed) {
         if (replan.orphans().length == 0) {
@@ -184,8 +218,7 @@ public final class BreakdownBenchmark {
         Instance part = BreakdownReplanner.subInstance(scenario.instance(), replan.orphans());
         Solution solved = new AlnsSolver().solve(part, new SolverSettings(seed, Duration.ofMinutes(10), REPLAN_ITERATIONS));
         Solution trips = BreakdownReplanner.toOriginalNodes(solved, replan.orphans());
-        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
+        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips, schedule.unloadSeconds(),
                 scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new long[] {System.nanoTime() - start, reserve.meters()};
     }

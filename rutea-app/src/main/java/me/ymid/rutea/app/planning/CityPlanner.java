@@ -99,7 +99,6 @@ public final class CityPlanner {
                     shared ? bounds.max().orElse(0) : bounds.sum(), shared, SideLoading.of(area).sideLoaders());
         }
 
-        /** Camiones que pide el plan por encima de los que declara el operador; 0 si alcanzan o no declara. */
         public int beyondDeclared() {
             return declared.isPresent() ? Math.max(0, trucks - declared.getAsInt()) : 0;
         }
@@ -193,10 +192,9 @@ public final class CityPlanner {
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
         return new DemoPlan(meta(drawn.meta(), SideLoading.of(scenario.area())), drawn.sites(), drawn.containers(),
-                drawn.routes(), checks, sectors);
+                drawn.routes(), checks, sectors, drawn.streets());
     }
 
-    /** Lo que es real y lo que se supone en un plan de cargue lateral, que no lleva aprovechables. */
     private static DemoPlan.Meta meta(DemoPlan.Meta drawn, SideLoading.Area area) {
         boolean simulated = area.planned().isPresent();
         List<String> assumptions = new ArrayList<>();

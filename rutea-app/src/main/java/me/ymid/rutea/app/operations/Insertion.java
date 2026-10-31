@@ -12,7 +12,6 @@ import me.ymid.rutea.geo.TravelMatrix;
  */
 final class Insertion {
 
-    /** Dónde quedó un contenedor y cuánto costó: metros y segundos que se le suman a ese camión. */
     record Placement(int node, int truck, int trip, long extraMeters, long extraSeconds) {
     }
 
@@ -65,7 +64,7 @@ final class Insertion {
                             long meters = travel.meters(previous, node) + travel.meters(node, next)
                                     - travel.meters(previous, next);
                             long seconds = travel.seconds(previous, node) + travel.seconds(node, next)
-                                    - travel.seconds(previous, next) + live.serviceSeconds();
+                                    - travel.seconds(previous, next) + live.serviceSeconds(node);
                             if (seconds <= slack && meters < bestMeters) {
                                 bestMeters = meters;
                                 bestSeconds = seconds;
@@ -88,7 +87,6 @@ final class Insertion {
         return placed;
     }
 
-    /** Hora de llegada a cada parada, por viaje y posición. */
     private static long[][] arrivals(LivePlan live, int truck) {
         long[][] arrive = new long[live.tripCount(truck)][];
         for (int i = 0; i < arrive.length; i++) {

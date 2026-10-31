@@ -17,7 +17,6 @@ public sealed interface OperationEvent permits BreakdownEvent, OverflowEvent, Cl
 
     int seq();
 
-    /** La ASE de la operación donde pasó, de 1 a 5. */
     int area();
 
     long atSeconds();

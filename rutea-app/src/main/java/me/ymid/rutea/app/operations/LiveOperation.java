@@ -32,7 +32,6 @@ import me.ymid.rutea.solver.local.LocalSearch;
  */
 public final class LiveOperation {
 
-    /** Quién recoge el contenedor desbordado. */
     public enum Pickup { PLANNED, IN_SERVICE, RESERVE }
 
     /**
@@ -52,7 +51,6 @@ public final class LiveOperation {
             long latencyNanos) {
     }
 
-    /** Se miden en {@link ClosureBenchmark}. */
     public enum ClosurePolicy {
         REROUTE,
         /**
@@ -86,14 +84,13 @@ public final class LiveOperation {
     private final Set<Integer> outOfService = new HashSet<>();
     private int nextTag = 1;
 
-    public LiveOperation(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
-            int serviceSeconds) {
-        this(scenario, solution, schedule, serviceSeconds, Policy.EARLIEST);
+    public LiveOperation(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule) {
+        this(scenario, solution, schedule, Policy.EARLIEST);
     }
 
     public LiveOperation(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
-            int serviceSeconds, Policy policy) {
-        live = LivePlan.of(scenario, solution, schedule, serviceSeconds);
+            Policy policy) {
+        live = LivePlan.of(scenario, solution, schedule);
         this.policy = policy;
     }
 
@@ -226,7 +223,7 @@ public final class LiveOperation {
     public int[] pendingPlanned(int truck, long atSeconds) {
         return live.timeline(truck).stream()
                 .filter(stop -> live.tag(truck, stop.trip(), stop.position()) == 0
-                        && stop.arriveSeconds() + live.serviceSeconds() > atSeconds)
+                        && stop.arriveSeconds() + live.serviceSeconds(stop.node()) > atSeconds)
                 .mapToInt(LivePlan.Stop::node).toArray();
     }
 
@@ -259,7 +256,6 @@ public final class LiveOperation {
         return live.shiftSeconds();
     }
 
-    /** Los viajes del camión, con las recogidas extra en su lugar. */
     public List<int[]> trips(int truck) {
         List<int[]> trips = new ArrayList<>(live.tripCount(truck));
         for (int i = 0; i < live.tripCount(truck); i++) {
@@ -276,7 +272,6 @@ public final class LiveOperation {
         return live.endSeconds(truck);
     }
 
-    /** Cada llegada del camión a un contenedor, de su plan o extra: cuando lo vacía. */
     public record Visit(int node, long arriveSeconds) {
     }
 
@@ -303,7 +298,6 @@ public final class LiveOperation {
         return arrivals;
     }
 
-    /** La visita del plan que todavía no termina, si su camión sigue en servicio. */
     private Slot plannedVisit(int node, long atSeconds) {
         for (int t = 0; t < live.truckCount(); t++) {
             if (outOfService.contains(t)) {
@@ -311,7 +305,7 @@ public final class LiveOperation {
             }
             for (LivePlan.Stop stop : live.timeline(t)) {
                 if (stop.node() == node && live.tag(t, stop.trip(), stop.position()) == 0
-                        && stop.arriveSeconds() + live.serviceSeconds() > atSeconds) {
+                        && stop.arriveSeconds() + live.serviceSeconds(node) > atSeconds) {
                     return new Slot(t, stop.trip(), stop.position(), Math.max(stop.arriveSeconds(), atSeconds), 0);
                 }
             }
@@ -349,7 +343,7 @@ public final class LiveOperation {
                     TravelMatrix travel = live.travelAt(leave[i][p]);
                     int previous = p == 0 ? live.tripStart(i) : trip[p - 1];
                     int next = p == trip.length ? gate : trip[p];
-                    long seconds = travel.seconds(previous, node) + live.serviceSeconds() + travel.seconds(node, next)
+                    long seconds = travel.seconds(previous, node) + live.serviceSeconds(node) + travel.seconds(node, next)
                             - travel.seconds(previous, next);
                     if (seconds > slack) {
                         continue;

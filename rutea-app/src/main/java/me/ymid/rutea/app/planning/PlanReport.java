@@ -39,7 +39,6 @@ public record PlanReport(String method, List<Line> lines, Line total) {
         return lines.size();
     }
 
-    /** Ahorro relativo de este plan frente a {@code baseline}: positivo si este gasta menos. */
     public double savingsVs(PlanReport baseline, ToDoubleFunction<Line> metric) {
         double base = metric.applyAsDouble(baseline.total);
         return (base - metric.applyAsDouble(total)) / base;

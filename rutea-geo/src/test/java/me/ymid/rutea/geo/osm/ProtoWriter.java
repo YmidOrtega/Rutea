@@ -49,7 +49,6 @@ final class ProtoWriter {
         return packed(field, encoded);
     }
 
-    /** Codifica con diferencias, como hace OSM con ids, coordenadas y referencias. */
     ProtoWriter packedDeltaSint64(int field, long... values) {
         long[] deltas = new long[values.length];
         long previous = 0;

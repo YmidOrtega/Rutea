@@ -2,18 +2,23 @@ package me.ymid.rutea.app.web;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.sim.Track;
 
-/**
- * Un vehículo en la calle: su recorrido vigente, los contenedores que recoge en orden y, si se averió, desde cuándo
- * está detenido.
- */
-record Vehicle(String id, WasteStream stream, Track track, List<String> stops, double brokenAtSeconds) {
+/** @param arrivals la hora a la que llega a cada parada de {@code stops} */
+record Vehicle(String id, WasteStream stream, Track track, List<String> stops, int[] arrivals, double brokenAtSeconds) {
 
     static final double NOT_BROKEN = Double.POSITIVE_INFINITY;
+
+    Vehicle {
+        if (arrivals.length != stops.size()) {
+            throw new IllegalArgumentException(id + ": " + arrivals.length + " horas de llegada para " + stops.size()
+                    + " paradas");
+        }
+    }
 
     static Vehicle of(DemoPlan.Route route) {
         int n = route.path().size();
@@ -26,42 +31,21 @@ record Vehicle(String id, WasteStream stream, Track track, List<String> stops, d
             times[i] = route.times()[i];
         }
         return new Vehicle(route.id(), route.stream(), new Track(lon, lat, times), List.copyOf(route.stops()),
-                NOT_BROKEN);
+                route.arrivals(), NOT_BROKEN);
     }
 
     Vehicle brokenAt(double seconds) {
-        return new Vehicle(id, stream, track, stops, seconds);
+        return new Vehicle(id, stream, track, stops, arrivals, seconds);
     }
 
-    /**
-     * La hora en que llega a cada contenedor que alcanza a recoger, en el orden de {@link #stops}. Cada parada es un
-     * punto repetido del recorrido; las que caen en un sitio de descarga no son contenedores.
-     */
-    List<Double> arrivals(List<double[]> unloadSites) {
-        double[] lon = track.lon();
-        double[] lat = track.lat();
-        double[] times = track.times();
-        List<Double> arrivals = new ArrayList<>(stops.size());
-        for (int i = 0; i + 1 < times.length; i++) {
-            if (lon[i] != lon[i + 1] || lat[i] != lat[i + 1] || times[i + 1] <= times[i] || unloads(lon[i], lat[i],
-                    unloadSites)) {
-                continue;
-            }
-            arrivals.add(times[i]);
-        }
-        if (arrivals.size() != stops.size()) {
-            throw new IllegalStateException(id + ": " + arrivals.size() + " paradas en el recorrido para "
-                    + stops.size() + " contenedores");
-        }
-        return arrivals.stream().filter(seconds -> seconds < brokenAtSeconds).toList();
-    }
-
-    private static boolean unloads(double lon, double lat, List<double[]> sites) {
-        for (double[] site : sites) {
-            if (site[0] == lon && site[1] == lat) {
-                return true;
+    /** Las paradas a las que alcanza a llegar, en orden, con su hora; una parada puede repetirse tras un desvío. */
+    List<Map.Entry<String, Double>> reached() {
+        List<Map.Entry<String, Double>> reached = new ArrayList<>(stops.size());
+        for (int k = 0; k < stops.size(); k++) {
+            if (arrivals[k] < brokenAtSeconds) {
+                reached.add(Map.entry(stops.get(k), (double) arrivals[k]));
             }
         }
-        return false;
+        return reached;
     }
 }

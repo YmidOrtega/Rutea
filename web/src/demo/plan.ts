@@ -53,8 +53,7 @@ export interface ComplianceCheck {
 
 /**
  * El turno de un compactador: base → viaje → descarga en el relleno → … → base. `tripLoadsKg[i]` es la carga
- * del viaje `i`. `times[i]`: segundos desde la salida hasta `path[i]`; en cada parada (contenedor o descarga)
- * el punto se repite con la hora en que el camión vuelve a arrancar.
+ * del viaje `i`. `times[i]`: segundos desde la salida hasta `path[i]`.
  */
 export interface Route {
   id: string
@@ -65,8 +64,17 @@ export interface Route {
   durationSeconds: number
   tripLoadsKg: number[]
   stops: string[]
+  arrivals: number[]
   path: LonLat[]
   times: number[]
+}
+
+export interface Street {
+  id: string
+  route: string
+  kg: number
+  meters: number
+  path: LonLat[]
 }
 
 export interface Site {
@@ -100,6 +108,7 @@ export interface DemoPlan {
   routes: Route[]
   compliance: ComplianceCheck[]
   sectors: Sector[]
+  streets: Street[]
 }
 
 export interface Trip {
@@ -128,13 +137,11 @@ export function toTrips(routes: Route[]): Trip[] {
   return routes.map((route) => ({ id: route.id, stream: route.stream, path: route.path, timestamps: route.times }))
 }
 
-/** "18:00" → segundos desde la medianoche. */
 export function secondsOfDay(hhmm: string): number {
   const [hours, minutes] = hhmm.split(':').map(Number)
   return hours * 3600 + minutes * 60
 }
 
-/** Segundos desde la medianoche (o más de un día) → "HH:MM". */
 export function clock(seconds: number): string {
   const day = ((Math.floor(seconds) % 86_400) + 86_400) % 86_400
   const hours = Math.floor(day / 3600)

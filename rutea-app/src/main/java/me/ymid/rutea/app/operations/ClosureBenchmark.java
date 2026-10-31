@@ -65,11 +65,13 @@ public final class ClosureBenchmark {
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
         ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
-        LivePlan original = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan original = LivePlan.of(scenario, solution, schedule);
         RoadGraph graph = scenario.graph();
-        int[] vertices = new int[scenario.travel().size()];
-        for (int i = 0; i < vertices.length; i++) {
-            vertices[i] = scenario.travel().vertex(i);
+        int[] sources = new int[scenario.travel().size()];
+        int[] targets = new int[sources.length];
+        for (int i = 0; i < sources.length; i++) {
+            sources[i] = scenario.travel().source(i);
+            targets[i] = scenario.travel().target(i);
         }
         int threads = Runtime.getRuntime().availableProcessors();
 
@@ -110,14 +112,13 @@ public final class ClosureBenchmark {
                 int k = e - BreakdownBenchmark.WARMUP;
 
                 long fullStart = System.nanoTime();
-                TravelMatrix scratch = TravelMatrix.computeAllowingUnreachable(graph.closing(shape), vertices,
-                        threads);
+                TravelMatrix scratch = TravelMatrix.computeAllowingUnreachable(graph.closing(shape), sources,
+                        targets, threads);
                 long full = System.nanoTime() - fullStart;
                 boolean same = sameCells(probe.matrix(), scratch);
 
                 for (ClosurePolicy policy : ClosurePolicy.values()) {
-                    LiveOperation operation = new LiveOperation(scenario, solution, schedule,
-                            BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                    LiveOperation operation = new LiveOperation(scenario, solution, schedule);
                     operation.closurePolicy(policy);
                     Closure closure = operation.close(shape, at);
                     if (e == 0 && policy == ClosurePolicy.REROUTE) {
@@ -156,7 +157,7 @@ public final class ClosureBenchmark {
         System.out.printf(Locale.ROOT, "%n| Medida | P50 | P95 | P99 | Máx. |%n|---|---:|---:|---:|---:|%n");
         BreakdownBenchmark.row("Reparar la matriz (ms)", stats.get(ClosurePolicy.REROUTE).repair, 1e6);
         BreakdownBenchmark.row("Matriz completa de cero (ms)", fullNanos, 1e6);
-        BreakdownBenchmark.row("Filas + columnas recalculadas, de " + vertices.length, recomputed, 1);
+        BreakdownBenchmark.row("Filas + columnas recalculadas, de " + sources.length, recomputed, 1);
         for (ClosurePolicy policy : ClosurePolicy.values()) {
             Stats s = stats.get(policy);
             System.out.printf(Locale.ROOT, "%n%s:%n%n| Medida | P50 | P95 | P99 | Máx. |%n|---|---:|---:|---:|---:|%n",
@@ -171,7 +172,6 @@ public final class ClosureBenchmark {
         System.out.println("CSV: " + csv.toAbsolutePath());
     }
 
-    /** Trazos que el camión recorre después de {@code at}, en los tramos que todavía no termina. */
     private static List<Integer> streetsAhead(LivePlan plan, int truck, long at) {
         List<Integer> shapes = new ArrayList<>();
         for (LivePlan.Leg leg : plan.legs(truck)) {

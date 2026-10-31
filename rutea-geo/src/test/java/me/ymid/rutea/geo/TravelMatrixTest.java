@@ -105,6 +105,52 @@ class TravelMatrixTest {
     }
 
     @Test
+    void aPointCanLeaveFromOneVertexAndArriveAtAnother() {
+        int[] sources = new SplittableRandom(5).ints(40, 0, CITY.vertexCount()).toArray();
+        int[] targets = new SplittableRandom(6).ints(40, 0, CITY.vertexCount()).toArray();
+
+        TravelMatrix matrix = TravelMatrix.compute(CITY, sources, targets, 3);
+
+        ShortestPaths paths = new ShortestPaths(CITY, ShortestPaths.Weight.METERS);
+        for (int i = 0; i < sources.length; i++) {
+            int[] row = paths.distances(sources[i], targets);
+            for (int j = 0; j < targets.length; j++) {
+                assertThat(matrix.meters(i, j)).isEqualTo(row[j]);
+            }
+            assertThat(matrix.source(i)).isEqualTo(sources[i]);
+            assertThat(matrix.target(i)).isEqualTo(targets[i]);
+        }
+    }
+
+    @Test
+    void repairWithDifferentEntriesAndExitsEqualsComputingFromScratch() {
+        RoadGraph town = twoWayTown(300, 500, 11);
+        int[] sources = new SplittableRandom(12).ints(50, 0, town.vertexCount()).toArray();
+        int[] targets = new SplittableRandom(13).ints(50, 0, town.vertexCount()).toArray();
+        TravelMatrix matrix = TravelMatrix.compute(town, sources, targets, 2);
+        SplittableRandom random = new SplittableRandom(14);
+
+        for (int round = 0; round < 20; round++) {
+            int[] shapes = random.ints(1 + random.nextInt(3), 0, town.shapeCount()).toArray();
+            matrix = matrix.closing(shapes, 1 + round % 4).matrix();
+
+            TravelMatrix scratch = TravelMatrix.computeAllowingUnreachable(matrix.graph(), sources, targets, 2);
+            for (int i = 0; i < sources.length; i++) {
+                for (int j = 0; j < targets.length; j++) {
+                    assertThat(matrix.seconds(i, j)).isEqualTo(scratch.seconds(i, j));
+                }
+            }
+            assertThat(matrix.metersRows()).isDeepEqualTo(scratch.metersRows());
+        }
+    }
+
+    @Test
+    void rejectsADifferentNumberOfEntriesAndExits() {
+        assertThatThrownBy(() -> TravelMatrix.compute(CITY, new int[] {0, 1}, new int[] {0}, 1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void aClosureOffEveryShortestPathTouchesNothing() {
         // 0 ─ 1 ─ 2 corto y un rodeo 0 ─ 3 ─ 2 largo: cerrar el rodeo no cambia ninguna celda.
         RoadGraph graph = TestGraphs.streets(4, new int[] {0, 1, 100, 10}, new int[] {1, 2, 100, 10},

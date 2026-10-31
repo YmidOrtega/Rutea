@@ -190,6 +190,49 @@ Lo que publican la UAESP y los operadores sobre la operación de 2026. Rutea tod
     - **Frecuencias:** lunes-miércoles-viernes, martes-jueves-sábado, de lunes a sábado, y domingo.
   - La capa de cuartelillos trae puntos de los equipos de barrido con el nombre del propietario de cada predio. No es la base de operaciones, y no se copia porque son datos personales.
 
+## Población y toneladas por localidad (F8)
+
+La demanda del puerta a puerta (ADR 0014) sale de las toneladas del servicio ordinario que entran a Doña Juana, repartidas por la población urbana de cada localidad.
+
+- **Población:** población urbana ("Cabecera Municipal") proyectada para 2026, columna `TOTAL`, hoja "Localidades" del anexo del DANE [`anexo-proyecciones-poblacion-bogota-desagreacion-loc-2018-2035-UPZ-2018-2024.xlsx`](https://www.dane.gov.co/files/censo2018/proyecciones-de-poblacion/Bogota/anexo-proyecciones-poblacion-bogota-desagreacion-loc-2018-2035-UPZ-2018-2024.xlsx) (convenio 095 de 2020, actualizado en noviembre de 2021; SHA-256 del archivo descargado el 2026-10-29: `bb734f6f…`). Existe una actualización de 2025, del Contrato Interadministrativo 500 entre el DANE, la SDP y la Región Metropolitana, que el Observatorio de Salud de Bogotá cita, pero no se encontró publicada por localidad. Cuando aparezca, reemplaza esta tabla y `BogotaFigures.URBAN_POPULATION_2026`.
+- **Toneladas:** las 5.680 t/día del servicio ordinario que entran a Doña Juana (primer trimestre de 2026; ver "Cifras con fuente"), las mismas que ya usa Rutea (`BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY`). Incluyen lo que recogen los contenedores; el puerta a puerta es el resto.
+- **Supuesto:** cada habitante produce lo mismo en cualquier localidad. La UAESP midió la producción por estrato y localidad en 2017, pero esa tabla no está publicada (ver "Patrón por zona" en "Supuestos").
+
+| N.º | Localidad | Población urbana 2026 | Parte | t/día (5.680 × parte) |
+|---:|---|---:|---:|---:|
+| 1 | Usaquén | 610.405 | 7,50 % | 426,2 |
+| 2 | Chapinero | 186.028 | 2,29 % | 129,9 |
+| 3 | Santa Fe | 107.300 | 1,32 % | 74,9 |
+| 4 | San Cristóbal | 413.746 | 5,09 % | 288,9 |
+| 5 | Usme | 419.136 | 5,15 % | 292,7 |
+| 6 | Tunjuelito | 187.698 | 2,31 % | 131,1 |
+| 7 | Bosa | 741.537 | 9,12 % | 517,8 |
+| 8 | Kennedy | 1.045.353 | 12,85 % | 729,9 |
+| 9 | Fontibón | 415.054 | 5,10 % | 289,8 |
+| 10 | Engativá | 825.633 | 10,15 % | 576,5 |
+| 11 | Suba | 1.347.097 | 16,56 % | 940,6 |
+| 12 | Barrios Unidos | 161.766 | 1,99 % | 113,0 |
+| 13 | Teusaquillo | 163.391 | 2,01 % | 114,1 |
+| 14 | Los Mártires | 82.764 | 1,02 % | 57,8 |
+| 15 | Antonio Nariño | 87.204 | 1,07 % | 60,9 |
+| 16 | Puente Aranda | 260.371 | 3,20 % | 181,8 |
+| 17 | La Candelaria | 19.207 | 0,24 % | 13,4 |
+| 18 | Rafael Uribe Uribe | 395.986 | 4,87 % | 276,5 |
+| 19 | Ciudad Bolívar | 664.702 | 8,17 % | 464,1 |
+| | **Bogotá urbana** | **8.134.378** | **100 %** | **5.680,0** |
+
+Sumapaz no tiene población urbana en la proyección.
+
+## Perímetro urbano (F8)
+
+El puerta a puerta solo recorre calles dentro del suelo urbano del POT (Decreto 555 de 2021). Los límites de localidad de OSM incluyen suelo rural y de expansión, y sin el recorte los caminos rurales de Usme o Bosa recibían la misma carga por metro que una calle con casas.
+
+- **Fuente:** Secretaría Distrital de Planeación, capa "Clasificación del Suelo" del POT, [`POT555/NORMA_URBANÍSTICA_Y_OT/MapServer/28`](https://sinu.sdp.gov.co/serverp/rest/services/POT555/NORMA_URBAN%C3%8DSTICA_Y_OT/MapServer/28), con `CLASE_SUELO = 1` (urbano). Es la misma geometría que el conjunto [Perímetro urbano. POT Bogotá D.C.](https://datosabiertos.bogota.gov.co/dataset/12a704ee-e5bb-4c5d-bad6-a5069d12f90a) de Datos Abiertos Bogotá, licencia CC BY 4.0, modificado el 2026-08-11.
+- **Contenido:** seis polígonos. Uno es el perímetro del Decreto 555 (29 de diciembre de 2021). Los otros cinco son legalizaciones posteriores: Resolución 1183 de 2022, Resolución 1542 de 2022, dos de la Resolución 2814 de 2023 y Resolución 0946 de 2026.
+- **Copia en el repo:** `rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson`, descargado el 2026-10-30 con `mvn -pl rutea-app exec:java@urban-perimeter`. Los bordes están simplificados a 5 m, igual que las UPZ. Cada polígono guarda su acto administrativo y su fecha.
+- **Criterio:** una calle es urbana si el punto medio de su trazo cae dentro de algún polígono, el mismo criterio con que se asigna la localidad.
+- **Calles sin manzanas:** también se excluyen los tramos de más de 1 km sin ningún cruce (`DoorToDoor.MAX_STREET_METERS`). Es una decisión de modelado, no un dato de la fuente. En las 19 localidades solo hay cinco tramos así (10,7 km de 5.219 km de calles urbanas). El caso extremo es la vía OSM 91266728 de Bosa: 4,8 km sin pavimentar y sin nombre, que por sí sola cargaba 14,6 t, más que un compactador.
+
 ## Cifras con fuente
 
 | Dato | Valor | Fuente | Uso en Rutea |

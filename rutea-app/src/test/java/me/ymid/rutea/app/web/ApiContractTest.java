@@ -34,7 +34,7 @@ class ApiContractTest {
                 ClosureEvent.class, ClosureEvent.Change.class, TelemetryMessage.class, TelemetryMessage.Clock.class,
                 TelemetryMessage.Report.class, TelemetryMessage.VehicleState.class, SensorsMessage.class,
                 DemoPlan.class, DemoPlan.Meta.class, DemoPlan.Site.class, DemoPlan.Container.class,
-                DemoPlan.Route.class, DemoPlan.Sector.class, DemoPlan.Pass.class, WasteStream.class,
+                DemoPlan.Route.class, DemoPlan.Street.class, DemoPlan.Sector.class, DemoPlan.Pass.class, WasteStream.class,
                 Compliance.Check.class, Compliance.Status.class, SelectionPlan.class, SelectionPlan.Area.class,
                 SelectionPlan.Fleet.class, SelectionPlan.Shift.class, LocalityOutline.class);
     }
@@ -57,7 +57,6 @@ class ApiContractTest {
         return fields;
     }
 
-    /** La primera línea "Campos:" o "Valores:" después del título con el nombre del tipo. */
     private static List<String> documented(String name) throws IOException {
         List<String> lines = Files.readAllLines(CONTRACT);
         int heading = lines.indexOf("### `" + name + "`");

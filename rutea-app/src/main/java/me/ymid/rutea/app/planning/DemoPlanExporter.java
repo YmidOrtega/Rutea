@@ -9,7 +9,6 @@ import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.geo.RoadGraphFile;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Escribe el plan de Suba que dibuja el frontend ({@code pnpm demo:data}). */
 public final class DemoPlanExporter {
 
     private DemoPlanExporter() {

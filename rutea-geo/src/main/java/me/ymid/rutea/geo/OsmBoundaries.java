@@ -20,7 +20,6 @@ import me.ymid.rutea.geo.osm.OsmWay;
 import me.ymid.rutea.geo.osm.PbfReader;
 import me.ymid.rutea.geo.osm.PbfReader.Element;
 
-/** Los límites que una relación de OSM agrupa como subáreas: las UPZ de una localidad de Bogotá, por ejemplo. */
 public final class OsmBoundaries {
 
     /** Un límite con sus anillos en 1e-7 grados, cada uno sin repetir el punto que lo cierra. */
@@ -51,21 +50,10 @@ public final class OsmBoundaries {
     private OsmBoundaries() {
     }
 
-    /**
-     * Las subáreas de la relación {@code parent}, en el orden en que la relación las lista.
-     *
-     * @throws IOException si falta la relación, una subárea, una vía o un nodo, o un anillo no cierra
-     */
     public static List<Boundary> subareas(Path pbf, long parent) throws IOException {
         return subareas(pbf, List.of(parent)).get(parent);
     }
 
-    /**
-     * Las subáreas de cada relación de {@code parents}, con una sola lectura del extracto: las UPZ de todas las
-     * localidades de Bogotá, por ejemplo.
-     *
-     * @throws IOException si falta una relación, una subárea, una vía o un nodo, o un anillo no cierra
-     */
     public static Map<Long, List<Boundary>> subareas(Path pbf, List<Long> parents) throws IOException {
         Map<Long, Relation> relations = relations(pbf);
         List<Long> ids = new ArrayList<>();

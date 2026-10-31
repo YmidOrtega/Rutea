@@ -47,7 +47,7 @@ class TwoFleetsTest {
 
     private static DemoPlan plan(AreaScenario scenario, int unload) {
         Solution solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(1, Duration.ofMinutes(1), 200));
-        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, 60, unload, 8 * 3600, 3);
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, unload, 8 * 3600, 3);
         return AreaPlanner.plan(scenario, solution, schedule, "alns", 1, 200);
     }
 

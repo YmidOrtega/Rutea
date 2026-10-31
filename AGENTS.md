@@ -77,6 +77,7 @@ mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de
 mvn -pl rutea-app exec:java@bogota-sensitive-sites  # los mismos sitios en todo el Distrito → data/osm/bogota-sitios-sensibles.csv (F7)
 mvn -pl rutea-app exec:java@sectors          # las UPZ de las 19 localidades urbanas de OSM (R04) → rutea-app/src/main/resources/sectors/<localidad>-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@localities       # límites de las 20 localidades de OSM → rutea-app/src/main/resources/localities/bogota-localidades.geojson (se versiona)
+mvn -pl rutea-app exec:java@urban-perimeter   # suelo urbano del POT (Decreto 555 de 2021, SDP) para recortar el puerta a puerta → rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson (se versiona)
 mvn -pl rutea-app exec:java@operator-containers  # contenedores negros "en campo" de las ASE 1, 2 y 4 (ArcGIS de los operadores) → data/ase/*.csv (ADR 0013; se descarga)
 mvn -pl rutea-app exec:java@bogota-instances  # una instancia de cargue lateral por ASE y turno sobre el grafo de Bogotá → data/bogota/*.vrp (ver data/bogota/README.md)
 mvn -pl rutea-app exec:java@suba-2026        # Suba con los 806 contenedores simulados frente a los 320 de 2026 → docs/benchmarks/f7-suba-2026/*.csv
@@ -84,11 +85,16 @@ mvn -pl rutea-app exec:java@second-area      # cargue lateral del ASE 2 con sus 
 mvn -pl rutea-app exec:java@city-plan         # cargue lateral de 1, 5 y 20 localidades, una instancia por ASE y turno, con R02, R03, R04 y R07 revisadas: latencia en paralelo y en serie → docs/benchmarks/f7-city-plan/*.csv
 mvn -pl rutea-app exec:java@fleet             # camiones de cargue lateral de cada ASE frente a los declarados, con 50/75/100 % de llenado y 40/90 min de descarga → docs/benchmarks/f7-fleet/*.csv
 mvn -pl rutea-app exec:java@side-loading     # toneladas que cubre el cargue lateral de cada ASE con llenado de 50, 75 y 100 % → docs/benchmarks/f7-side-loading/*.csv
+mvn -pl rutea-app exec:java@locality-instances  # contenedores y puerta a puerta de una localidad (Suba sin argumentos), una instancia por franja (grupo de días y turno) con las UPZ repartidas → data/bogota/<Localidad><LMV|MJS><Dia|Noche>-n*.vrp
+mvn -pl rutea-app exec:java@door-to-door     # puerta a puerta en Suba: calles locales agrupadas en trozos de 150 a 1.200 m, clientes, matriz, ALNS y km frente a los tramos sueltos (ADR 0014) → docs/benchmarks/f8-door-to-door/*.csv
+mvn -pl rutea-app exec:java@suba-live        # Suba en vivo (cuatro franjas con puerta a puerta) frente al plan base de F3 a F6 → docs/benchmarks/f8-suba-live/*.csv
+mvn -pl rutea-app exec:java@live-localities  # las 19 localidades urbanas en sus cuatro franjas: factibilidad, paradas dibujadas, turno y tiempo de armado → docs/benchmarks/f8-live-localities/*.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
+mvn -pl rutea-app exec:java@locality-breakdowns  # las mismas 500 averías en la operación en vivo de Suba, LMV de noche, con puerta a puerta → docs/benchmarks/f8-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
 mvn -pl rutea-app exec:java@sensors          # desbordes según densidad, tamaño y día, con y sin sensores → docs/benchmarks/f5-sensors/*.csv
-mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan de cualquier selección de localidades (GET /api/areas), reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm y data/ase)
+mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan de cualquier selección de localidades (GET /api/areas) y operación en vivo por localidad y franja (/api/live/{n}/{franja}, WebSocket /ws/live/{n}/{franja}) (requiere los datos de data/osm y data/ase)
 
 # Frontend
 cd web && pnpm install
@@ -156,4 +162,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-Ninguna en curso. F7 (Bogotá por ASE, ADR 0012) cerró el 2026-10-29. La siguiente fase se define en `docs/roadmap.md`, a partir de "Más adelante", antes de empezar a trabajar en ella.
+**F8 — En vivo por localidad, con puerta a puerta**, cumplida el 2026-10-31. La siguiente fase todavía no está definida; ver "Más adelante" en `docs/roadmap.md`.

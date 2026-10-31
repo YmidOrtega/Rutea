@@ -15,9 +15,10 @@ import me.ymid.rutea.geo.geometry.Polygon;
 /** Escenario del ASE 5 sobre el pueblo de prueba: portería en el nodo 30 y base en el nodo 24. */
 public final class AreaScenarioFixture {
 
-    /** Todo el pueblo es Suba. */
     static final Localities SUBA_TOWN = new Localities(
             Map.of(ServiceAreas.locality(11).orElseThrow(), rectangle(-1, -1, 11, 11)));
+
+    static final UrbanPerimeter URBAN_TOWN = new UrbanPerimeter(List.of(rectangle(-1, -1, 11, 11)));
 
     /**
      * Una ASE de prueba con la operación de Torca: el pueblo partido en dos por la longitud del paso 6, y una
@@ -46,6 +47,17 @@ public final class AreaScenarioFixture {
         return AreaScenario.build(graph, ServiceAreas.ASE_5, ServiceAreas.ASE_5.localities(), SUBA_TOWN,
                 WasteStream.RECYCLABLE, eca, eca, BogotaFigures.RECYCLABLE_VEHICLE_KG, containers, meanKg, 5,
                 "Reciclaje");
+    }
+
+    /** Puerta a puerta en todo el pueblo, con un contenedor en el nodo 20 y un kilo por metro de calle. */
+    public static AreaScenario doorToDoorTown(Path dir) throws IOException {
+        RoadGraph graph = SampleTown.graph(dir);
+        int vertex = graph.vertexOf(20).orElseThrow();
+        SimulatedContainers.Container container = new SimulatedContainers.Container("oeste",
+                WasteStream.NON_RECYCLABLE, graph.latE7(vertex), graph.lonE7(vertex), vertex, 0, 300);
+        return AreaScenario.buildDoorToDoor(graph, ServiceAreas.ASE_5, ServiceAreas.ASE_5.verified(),
+                List.of(container), StreetChunks.of(graph, shape -> true, DoorToDoor.MAX_CHUNK_METERS),
+                graph.vertexOf(24).orElseThrow(), graph.vertexOf(30).orElseThrow(), 1, "prueba");
     }
 
     /** Rectángulo en pasos de 0,001° desde (4,70; -74,00), como {@link SampleTown}. */

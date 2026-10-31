@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -12,28 +13,27 @@ import me.ymid.rutea.sim.Track;
 
 class VehicleTest {
 
-    private static final double[] DUMP = {9, 9};
+    private static final Track TRACK = new Track(new double[] {0, 1, 2}, new double[] {0, 1, 2},
+            new double[] {0, 100, 1000});
 
-    /** Dos contenedores en el mismo punto (100 y 160 s), la descarga (300 a 900 s) y otro contenedor (1.000 s). */
-    private static final Vehicle TRUCK = new Vehicle("C-01", WasteStream.NON_RECYCLABLE, new Track(
-            new double[] {0, 1, 1, 1, 9, 9, 2, 2}, new double[] {0, 1, 1, 1, 9, 9, 2, 2},
-            new double[] {0, 100, 160, 220, 300, 900, 1000, 1060}), List.of("N1", "N2", "N3"), Vehicle.NOT_BROKEN);
+    /** Dos contenedores, un trozo de calle que recorre sin detenerse y otro contenedor. */
+    private static final Vehicle TRUCK = new Vehicle("C-01", WasteStream.NON_RECYCLABLE, TRACK,
+            List.of("N1", "N2", "T-1", "N3"), new int[] {100, 160, 400, 1000}, Vehicle.NOT_BROKEN);
 
     @Test
-    void eachRepeatedPointOffTheDumpIsAContainerInOrder() {
-        assertThat(TRUCK.arrivals(List.of(DUMP))).containsExactly(100.0, 160.0, 1000.0);
+    void reachesEveryStopAtItsArrival() {
+        assertThat(TRUCK.reached()).containsExactly(Map.entry("N1", 100.0), Map.entry("N2", 160.0),
+                Map.entry("T-1", 400.0), Map.entry("N3", 1000.0));
     }
 
     @Test
-    void aBrokenTruckOnlyEmptiesWhatItReachedBeforeBreakingDown() {
-        assertThat(TRUCK.brokenAt(500).arrivals(List.of(DUMP))).containsExactly(100.0, 160.0);
+    void aBrokenTruckOnlyReachesWhatItGotToBeforeBreakingDown() {
+        assertThat(TRUCK.brokenAt(500).reached()).extracting(Map.Entry::getKey).containsExactly("N1", "N2", "T-1");
     }
 
     @Test
-    void refusesATrackThatDoesNotMatchItsStops() {
-        Vehicle wrong = new Vehicle("C-02", WasteStream.NON_RECYCLABLE, TRUCK.track(), List.of("N1"),
-                Vehicle.NOT_BROKEN);
-
-        assertThatThrownBy(() -> wrong.arrivals(List.of(DUMP))).hasMessageContaining("3 paradas");
+    void refusesArrivalsThatDoNotMatchItsStops() {
+        assertThatThrownBy(() -> new Vehicle("C-02", WasteStream.NON_RECYCLABLE, TRACK, List.of("N1"),
+                new int[] {100, 160}, Vehicle.NOT_BROKEN)).hasMessageContaining("2 horas de llegada para 1 paradas");
     }
 }

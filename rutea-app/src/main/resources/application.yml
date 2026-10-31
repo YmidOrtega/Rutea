@@ -16,11 +16,9 @@ server:
 
 rutea:
   # Relativo al directorio desde el que se lanza la app (mvn -pl rutea-app spring-boot:run corre en rutea-app/).
-  graph: ../data/osm/suba.rgraph
-  sites: ../data/osm/suba-sitios-sensibles.csv
-  # GET /api/areas: cualquier selección de localidades sobre el grafo de Bogotá (F7).
+  # La vista de ciudad (GET /api/areas) y la operación en vivo de cada localidad van sobre el grafo de Bogotá.
   bogota-graph: ../data/osm/bogota.rgraph
   bogota-sites: ../data/osm/bogota-sitios-sensibles.csv
   operator-containers: ../data/ase
-  # Arma el plan apenas arranca (unos 25 s en otro hilo). Los tests lo apagan.
+  # Arma Suba de noche apenas arranca, en otro hilo. Los tests lo apagan.
   warm-up: true

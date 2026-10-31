@@ -114,7 +114,6 @@ public final class PbfReader {
         T run() throws PbfFormatException;
     }
 
-    /** Agrega a cualquier error de formato el archivo y el bloque donde ocurrió. */
     private static <T> T inBlock(String where, Decoding<T> decoding) throws PbfFormatException {
         try {
             return decoding.run();
@@ -456,7 +455,6 @@ public final class PbfReader {
             lonE7.add(toE7(lonOffset + granularity * lon));
         }
 
-        /** De nanogrados a 1e-7 grados, redondeando al más cercano. */
         private static long toE7(long nanodegrees) {
             return Math.floorDiv(nanodegrees + 50, 100);
         }

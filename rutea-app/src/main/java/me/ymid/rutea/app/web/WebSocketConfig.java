@@ -18,6 +18,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // El mapa llega servido por la misma app, por el proxy de Vite o directo desde localhost en cualquier puerto.
-        registry.addHandler(hub, "/ws/events").setAllowedOriginPatterns("http://localhost:[*]", "http://127.0.0.1:[*]");
+        registry.addHandler(hub, "/ws/live/*/*").setAllowedOriginPatterns("http://localhost:[*]", "http://127.0.0.1:[*]");
     }
 }
