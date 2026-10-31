@@ -72,10 +72,18 @@ Reloj de simulación acelerable (`SimulationClock`) y recorridos con la hora de 
 
 ### rutea-app
 
-Spring Boot. Paquetes:
+Spring Boot, en capas ([ADR 0015](adr/0015-capas-y-herramientas-aparte.md)). Cada paquete importa solo los de abajo, y `LayersTest` lo comprueba:
 
-- `planning`: traduce el problema de residuos a instancias CVRP y las rutas de vuelta a geometrías.
-- `web`: REST (`/api/...`) y WebSocket (`/ws/events`). El contrato está en [`api.md`](api.md) ([ADR 0011](adr/0011-api-estable.md)).
+```
+web          → application, planning (DemoPlan)
+application  → operations, planning, scenario, persistence
+operations   → planning, scenario
+planning     → scenario
+```
+
+- `web`: los adaptadores. REST (`/api/...`) y WebSocket (`/ws/live/{n}/{franja}`), sin lógica. El contrato está en [`api.md`](api.md) ([ADR 0011](adr/0011-api-estable.md)). `EventsHub` transmite cada `LiveUpdate` que publica la aplicación.
+- `application`: los casos de uso. `OperationsService` arma y guarda las sesiones en vivo por localidad y franja, recibe averías, desbordes, cierres y el reloj, y publica lo que cambia. Aquí viven también los tipos que devuelve la API.
+- `operations`, `planning`, `scenario`: el modelo, sin Spring. `scenario` arma el problema de residuos (contenedores, puerta a puerta, sectores, sitios sensibles). `planning` lo traduce a instancias CVRP y las rutas de vuelta a geometrías. `operations` replanifica en caliente.
 - `persistence`: PostgreSQL + PostGIS ([ADR 0010](adr/0010-un-comando-y-persistencia.md)). Guarda las órdenes de cada turno, que se repiten al arrancar, y cada posición transmitida como punto. Por ejemplo, kilómetros y minutos detenidos por vehículo en el último turno:
 
   ```sql
@@ -92,6 +100,10 @@ Spring Boot. Paquetes:
   ```
 
   Y qué vehículos pasaron a menos de 50 m de un punto: `ST_DWithin(position::geography, ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, 50)`. Se corren con `docker compose exec db psql -U rutea`.
+
+### rutea-tools
+
+Los programas de línea de comandos: extractores de OSM y de los operadores, exportadores de instancias `.vrp` y las mediciones de cada fase. Uno por ejecución de `exec-maven-plugin` (`mvn -pl rutea-tools -am compile exec:java@<id>`; la lista está en `AGENTS.md`). Depende de `rutea-app` y nada depende de él.
 
 ## Flujo de una replanificación (F5)
 

@@ -36,7 +36,7 @@ public final class LiveOperation {
 
     /**
      * Qué camión en servicio se desvía: el que llega primero, o el que menos kilómetros agrega aunque llegue más
-     * tarde. Las dos se miden en {@link OverflowBenchmark}.
+     * tarde. Las dos se miden en {@code OverflowBenchmark}, en rutea-tools.
      */
     public enum Policy { EARLIEST, SHORTEST_DETOUR }
 

@@ -34,18 +34,17 @@ La recolección de no aprovechables de una localidad: sus contenedores y el puer
 
 - **Nodos:** primero los contenedores, que se visitan en un vértice, y después los trozos. Llegar a un trozo cuesta el camino hasta su entrada más lo que mide recorrerlo recogiendo; de él se sale por su último vértice.
 - **Demanda de un trozo:** sus metros × los kg por metro de la localidad, que el `COMMENT` trae con su cuenta. Las 3 pasadas por semana, los turnos fuera del ASE 1 y los 8.000 kg del compactador de carga trasera son `PENDIENTE_VERIFICAR`.
-- **Otras localidades:** la misma clase con sus números, desde la raíz del repo: `mvn -pl rutea-app exec:java -Dexec.mainClass=me.ymid.rutea.app.scenario.ExportLocalityInstances -Dexec.args="data/osm/bogota.rgraph data/ase data/bogota 2 8"` (Chapinero y Kennedy).
+- **Otras localidades:** la misma clase con sus números, desde la raíz del repo: `mvn -pl rutea-tools -am compile exec:java@locality-instances -Dexec.args="data/osm/bogota.rgraph data/ase data/bogota 2 8"` (Chapinero y Kennedy).
 
 ## Generar
 
 Los `.vrp` no se suben al repo (pesan unos 6,1 MB entre los siete de las ASE y 20 MB entre los cuatro de Suba):
 
 ```bash
-mvn -pl rutea-geo compile exec:java@bogota            # data/osm/bogota.rgraph
-mvn -pl rutea-app exec:java@operator-containers        # data/ase/*.csv
-mvn -pl rutea-app -am install -DskipTests
-mvn -pl rutea-app exec:java@bogota-instances           # data/bogota/ASE*.vrp y SubaNoche-*.vrp
-mvn -pl rutea-app exec:java@locality-instances         # data/bogota/SubaLMV*.vrp y SubaMJS*.vrp
+mvn -pl rutea-geo compile exec:java@bogota                     # data/osm/bogota.rgraph
+mvn -pl rutea-tools -am compile exec:java@operator-containers  # data/ase/*.csv
+mvn -pl rutea-tools -am compile exec:java@bogota-instances     # data/bogota/ASE*.vrp y SubaNoche-*.vrp
+mvn -pl rutea-tools -am compile exec:java@locality-instances   # data/bogota/SubaLMV*.vrp y SubaMJS*.vrp
 ```
 
 ## Datos de entrada

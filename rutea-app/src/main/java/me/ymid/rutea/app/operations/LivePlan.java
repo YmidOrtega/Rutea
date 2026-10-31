@@ -27,16 +27,16 @@ import me.ymid.rutea.solver.Solution;
  * del camino pasa por ella, termina el arco en que va y sigue por la red nueva. Un camión que quedó dentro de una
  * zona aislada sale por donde entró.
  */
-final class LivePlan {
+public final class LivePlan {
 
     record Stop(int truck, int trip, int position, int node, long arriveSeconds) {
     }
 
     /** @param position parada a la que llega, {@link #TO_GATE} o {@link #TO_BASE} */
-    record Leg(int trip, int position, int from, int to, long departSeconds, long seconds, long meters, int network,
+    public record Leg(int trip, int position, int from, int to, long departSeconds, long seconds, long meters, int network,
             boolean rerouted) {
 
-        long arriveSeconds() {
+        public long arriveSeconds() {
             return departSeconds + seconds;
         }
     }
@@ -71,7 +71,7 @@ final class LivePlan {
         networks.add(new Network(0, scenario.travel(), new boolean[scenario.graph().shapeCount()]));
     }
 
-    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule) {
+    public static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule) {
         LivePlan live = new LivePlan(scenario, schedule.unloadSeconds(), schedule.shiftSeconds());
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             List<int[]> trips = new ArrayList<>();
@@ -91,7 +91,7 @@ final class LivePlan {
         return live;
     }
 
-    int truckCount() {
+    public int truckCount() {
         return trucks.size();
     }
 
@@ -156,7 +156,7 @@ final class LivePlan {
         return networks.get(networkAt(seconds)).travel();
     }
 
-    List<Leg> legs(int truck) {
+    public List<Leg> legs(int truck) {
         return legs.computeIfAbsent(truck, this::walk);
     }
 
@@ -230,7 +230,7 @@ final class LivePlan {
         return total;
     }
 
-    List<AreaPlanner.Arc> arcs(Leg leg) {
+    public List<AreaPlanner.Arc> arcs(Leg leg) {
         Detour detour = detour(leg.from(), leg.to(), leg.departSeconds(), leg.network());
         if (detour != null) {
             return detour.arcs();

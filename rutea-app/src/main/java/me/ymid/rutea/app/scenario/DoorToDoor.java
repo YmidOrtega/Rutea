@@ -10,8 +10,6 @@ import java.util.OptionalDouble;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 
-import me.ymid.rutea.app.planning.AreaPlanner;
-import me.ymid.rutea.app.planning.Sectors;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.geo.RoadGraph;
@@ -160,10 +158,10 @@ public final class DoorToDoor {
      * @throws IllegalArgumentException si la localidad no recoge nada en esa franja
      */
     public static Live live(RoadGraph graph, Locality locality, Slot slot,
-            Map<Integer, List<OperatorContainers.Container>> real) {
+            Map<Integer, List<OperatorContainers.Container>> real, long seed) {
         ServiceAreas.ServiceArea area = ServiceAreas.split(List.of(locality)).keySet().iterator().next();
         Plan plan = plan(graph, area, locality, Sectors.of(area)::locate, containers(graph, area, locality, real,
-                SideLoading.MEAN_FILL, AreaPlanner.DEFAULT_SEED), "");
+                SideLoading.MEAN_FILL, seed), "");
         Turn turn = plan.turns().stream().filter(candidate -> candidate.slot().equals(slot)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(locality.name() + " no recoge nada " + slot.label()));
         return new Live(plan, scenario(graph, area, plan, turn));

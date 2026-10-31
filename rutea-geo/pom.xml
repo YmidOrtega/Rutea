@@ -63,8 +63,15 @@
         </configuration>
         <executions>
           <execution>
+            <id>default-cli</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
             <id>bogota</id>
             <configuration>
+              <skip>false</skip>
               <arguments>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/colombia-261019.osm.pbf</argument>
                 <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>

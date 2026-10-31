@@ -50,6 +50,14 @@
             <argument>${project.build.directory}/benchmarks</argument>
           </arguments>
         </configuration>
+        <executions>
+          <execution>
+            <id>default-cli</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

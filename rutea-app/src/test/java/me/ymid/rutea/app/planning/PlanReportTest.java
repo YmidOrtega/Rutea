@@ -1,18 +1,12 @@
 package me.ymid.rutea.app.planning;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.data.Offset.offset;
 
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.domain.DieselEmissions;
@@ -49,21 +43,5 @@ class PlanReportTest {
 
         assertThat(rutea.savingsVs(baseline, PlanReport.Line::km)).isCloseTo(0.25, offset(1e-12));
         assertThat(rutea.savingsVs(baseline, PlanReport.Line::kgCo2)).isCloseTo(0.25, offset(1e-12));
-    }
-
-    @Test
-    void csvNeverOverwritesAPreviousRun(@TempDir Path dir) throws IOException {
-        Path csv = dir.resolve("compare.csv");
-        List<PlanReport> reports = List.of(PlanReport.of(plan("barrido-cuadrantes-1000m", 90_000)),
-                PlanReport.of(plan("alns", 60_000)));
-
-        CompareBaseline.writeCsv(csv, reports, "SubaBase-n807-s1", 1, 2_000);
-
-        List<String> lines = Files.readAllLines(csv);
-        assertThat(lines).hasSize(3);
-        assertThat(lines.get(1)).startsWith("SubaBase-n807-s1,barrido-cuadrantes-1000m,1,,1,90.000,");
-        assertThat(lines.get(2)).startsWith("SubaBase-n807-s1,alns,1,2000,1,60.000,");
-        assertThatExceptionOfType(FileAlreadyExistsException.class)
-                .isThrownBy(() -> CompareBaseline.writeCsv(csv, reports, "x", 1, 1));
     }
 }

@@ -31,7 +31,7 @@ public final class UrbanPerimeter {
             try (InputStream in = UrbanPerimeter.class.getResourceAsStream(RESOURCE)) {
                 if (in == null) {
                     throw new IllegalStateException(
-                            "falta " + RESOURCE + "; se genera con mvn -pl rutea-app exec:java@urban-perimeter");
+                            "falta " + RESOURCE + "; se genera con mvn -pl rutea-tools -am compile exec:java@urban-perimeter");
                 }
                 bogota = read(JsonMapper.builder().build().readTree(in));
             } catch (IOException e) {

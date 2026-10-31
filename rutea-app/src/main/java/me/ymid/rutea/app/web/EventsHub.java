@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -11,6 +12,10 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import me.ymid.rutea.app.application.LiveKey;
+import me.ymid.rutea.app.application.LiveUpdate;
+import me.ymid.rutea.app.application.OperationsService;
+import me.ymid.rutea.app.application.ShiftMessage;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -53,8 +58,8 @@ public class EventsHub extends TextWebSocketHandler {
         Client client = new Client(key, new ConcurrentWebSocketSessionDecorator(session, SEND_TIME_LIMIT_MILLIS,
                 BUFFER_LIMIT_BYTES));
         clients.put(session.getId(), client);
-        operations.ready(key).ifPresent(live ->
-                send(session.getId(), client.session(), new TextMessage(json.writeValueAsString(live.shiftMessage()))));
+        operations.shift(key).ifPresent(shift ->
+                send(session.getId(), client.session(), new TextMessage(json.writeValueAsString(shift))));
     }
 
     @Override
@@ -66,10 +71,11 @@ public class EventsHub extends TextWebSocketHandler {
         return clients.size();
     }
 
-    public void broadcast(LiveKey key, Object event) {
-        TextMessage message = new TextMessage(json.writeValueAsString(event));
+    @EventListener
+    public void broadcast(LiveUpdate update) {
+        TextMessage message = new TextMessage(json.writeValueAsString(update.message()));
         clients.forEach((id, client) -> {
-            if (client.key().equals(key)) {
+            if (client.key().equals(update.key())) {
                 send(id, client.session(), message);
             }
         });

@@ -153,7 +153,7 @@ public final class BreakdownReplanner {
     }
 
     /** Los huérfanos con la misma matriz: el nodo 0 sale de la base y llega a la portería, como en el plan. */
-    static Instance subInstance(Instance whole, int[] orphans) {
+    public static Instance subInstance(Instance whole, int[] orphans) {
         int n = orphans.length + 1;
         int[] nodes = new int[n];
         System.arraycopy(orphans, 0, nodes, 1, orphans.length);
@@ -186,7 +186,7 @@ public final class BreakdownReplanner {
         return Solution.of(routes.toArray(int[][]::new));
     }
 
-    static Solution toOriginalNodes(Solution part, int[] orphans) {
+    public static Solution toOriginalNodes(Solution part, int[] orphans) {
         int[][] routes = new int[part.routeCount()][];
         for (int k = 0; k < routes.length; k++) {
             routes[k] = new int[part.routeLength(k)];
