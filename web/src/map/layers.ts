@@ -181,6 +181,7 @@ export function containersLayer(
   // Al minuto: recalcular el color de cada contenedor en cada cuadro no cambia nada que se vea
   const minute = Math.floor(seconds / 60)
   const collected = (container: Container) => collectedBy(firstVisit, container, minute * 60)
+  const age = (container: Container) => minute * 60 - (firstVisit.get(container.id) ?? Infinity)
   return new ScatterplotLayer<Container>({
     id: 'containers',
     data: containers,
@@ -190,7 +191,9 @@ export function containersLayer(
     getLineColor: (container) =>
       container.noCompaction
         ? palette.warn
-        : [...strokeColor(palette, container.stream), collected(container) ? 255 : PENDING],
+        : collected(container)
+          ? cleaned(palette, age(container))
+          : [...strokeColor(palette, container.stream), PENDING],
     getRadius: (container) => (collected(container) ? 10 : 5),
     radiusMinPixels: 1,
     radiusMaxPixels: 6,
@@ -203,29 +206,63 @@ export function containersLayer(
   })
 }
 
-export function streetsLayer(streets: Street[], firstVisit: Map<string, number>, seconds: number, palette: Palette) {
+export function streetsLayers(streets: Street[], firstVisit: Map<string, number>, seconds: number, palette: Palette) {
   const minute = Math.floor(seconds / 60)
-  const edge = strokeColor(palette, 'NON_RECYCLABLE')
-  const collected = (street: Street) => (firstVisit.get(street.id) ?? Infinity) <= minute * 60
-  return new PathLayer<Street>({
-    id: 'streets',
-    data: streets,
-    getPath: (street) => street.path,
-    getColor: (street) => mix(palette.mapBg, edge, collected(street) ? STREET_COLLECTED : STREET_PENDING),
-    getWidth: (street) => (collected(street) ? 3 : 2),
-    widthUnits: 'pixels',
-    jointRounded: true,
-    capRounded: true,
-    pickable: true,
-    autoHighlight: true,
-    highlightColor: [...palette.fg, 255],
-    updateTriggers: { getColor: minute, getWidth: minute },
-    parameters: FLAT,
-  })
+  const now = minute * 60
+  const age = (street: Street) => now - (firstVisit.get(street.id) ?? Infinity)
+  const color = (street: Street) =>
+    age(street) >= 0 ? cleaned(palette, age(street)) : mix(palette.mapBg, palette.clean, STREET_PENDING)
+  return [
+    new PathLayer<Street>({
+      id: 'streets-glow',
+      data: streets,
+      getPath: (street) => street.path,
+      getColor: (street) => (age(street) >= 0 ? [...color(street), GLOW_ALPHA] : [0, 0, 0, 0]),
+      getWidth: 40,
+      widthUnits: 'meters',
+      widthMinPixels: 6,
+      widthMaxPixels: 18,
+      jointRounded: true,
+      capRounded: true,
+      updateTriggers: { getColor: minute },
+      parameters: { ...FLAT, ...ADDITIVE },
+    }),
+    new PathLayer<Street>({
+      id: 'streets',
+      data: streets,
+      getPath: (street) => street.path,
+      getColor: color,
+      getWidth: (street) => (age(street) >= 0 ? 7 : 4),
+      widthUnits: 'meters',
+      widthMinPixels: 0.75,
+      widthMaxPixels: 4,
+      jointRounded: true,
+      capRounded: true,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [...palette.fg, 255],
+      updateTriggers: { getColor: minute, getWidth: minute },
+      parameters: FLAT,
+    }),
+  ]
 }
 
-const STREET_PENDING = 0.25
-const STREET_COLLECTED = 0.75
+const STREET_PENDING = 0.14
+const GLOW_ALPHA = 22
+const FRESH_SECONDS = 40 * 60
+
+const cleaned = (palette: Palette, age: number): RGB =>
+  mix(palette.sodium, palette.clean, Math.min(1, age / FRESH_SECONDS))
+
+const ADDITIVE = {
+  blend: true,
+  blendColorOperation: 'add',
+  blendColorSrcFactor: 'src-alpha',
+  blendColorDstFactor: 'one',
+  blendAlphaOperation: 'add',
+  blendAlphaSrcFactor: 'one',
+  blendAlphaDstFactor: 'one-minus-src-alpha',
+} as const
 
 const collectedBy = (firstVisit: Map<string, number>, container: Container, seconds: number) =>
   (firstVisit.get(container.id) ?? Infinity) <= seconds
@@ -352,6 +389,8 @@ export function operationLayers(
   ]
 }
 
+const TRAIL = 0.55
+
 /** Las reservas llevan el acento: son lo que está pasando ahora (docs/diseno.md). */
 export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, palette: Palette) {
   return new TripsLayer<Trip>({
@@ -359,8 +398,9 @@ export function tripsLayer(trips: Trip[], visible: Set<string>, time: number, pa
     data: trips.filter((trip) => visible.has(trip.id)),
     getPath: (trip) => trip.path,
     getTimestamps: (trip) => trip.timestamps,
-    getColor: (trip) => (isReserveId(trip.id) ? palette.sodium : strokeColor(palette, trip.stream)),
-    getWidth: 3,
+    getColor: (trip) =>
+      isReserveId(trip.id) ? palette.sodium : mix(palette.mapBg, strokeColor(palette, trip.stream), TRAIL),
+    getWidth: 2,
     widthUnits: 'pixels',
     jointRounded: true,
     capRounded: true,

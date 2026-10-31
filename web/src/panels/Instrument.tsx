@@ -1,6 +1,8 @@
 import { decimal, km, tonnes } from '../format'
 import { PlanningReading } from '../city/CityPanel'
 import type { Collected } from '../operations/progress'
+import { loadAt, stateAt, type Truck, type TruckState } from '../operations/fleet'
+import { isReserveId } from '../operations/live'
 import './Instrument.css'
 
 interface Props {
@@ -12,8 +14,8 @@ interface Props {
   totalContainers: number
   totalKg: number
   totalMeters: number
-  /** Vehículos que transmiten y no han terminado; sin API no se sabe. */
-  onStreet?: number
+  trucks: Truck[]
+  seconds: number
   planningSince: number | null
 }
 
@@ -22,7 +24,7 @@ interface Props {
  * tablero; el resto del plan queda en la ficha de abajo.
  */
 export function Instrument(props: Props) {
-  const { zone, provenance, time, shift, done, totalContainers, totalKg, totalMeters, onStreet, planningSince } = props
+  const { zone, provenance, time, shift, done, totalContainers, totalKg, totalMeters, trucks, seconds, planningSince } = props
   const share = done && totalKg > 0 ? done.kg / totalKg : 0
   return (
     <header className="instrument panel">
@@ -93,15 +95,47 @@ export function Instrument(props: Props) {
             </dd>
           </div>
         )}
-        {onStreet !== undefined && (
-          <div>
-            <dt className="label">En ruta</dt>
-            <dd className="num">
-              <strong>{onStreet}</strong>
-            </dd>
-          </div>
-        )}
       </dl>
+
+      {trucks.length > 0 && <Fleet trucks={trucks} seconds={seconds} />}
     </header>
+  )
+}
+
+const STATE_NAMES: Record<TruckState, string> = {
+  collecting: 'en ruta',
+  unloading: 'descargando',
+  broken: 'averiado',
+  done: 'terminó',
+}
+
+function Fleet({ trucks, seconds }: { trucks: Truck[]; seconds: number }) {
+  const states = trucks.map((truck) => stateAt(truck, seconds))
+  const onStreet = states.filter((state) => state === 'collecting' || state === 'unloading').length
+  return (
+    <div className="fleet">
+      <div className="fleet-head">
+        <span className="label">Flota</span>
+        <span className="num">
+          <strong>{onStreet}</strong>
+          <span className="of"> en ruta de {trucks.length}</span>
+        </span>
+      </div>
+      <ul className="fleet-bars" aria-label="Carga de cada compactador">
+        {trucks.map((truck, i) => {
+          const load = loadAt(truck, seconds)
+          const state = states[i]
+          return (
+            <li
+              key={truck.id}
+              className={`fleet-bar is-${state}${isReserveId(truck.id) ? ' is-reserve' : ''}`}
+              title={`${truck.id} · ${tonnes(load)} de ${tonnes(truck.capacityKg)} t · ${STATE_NAMES[state]}`}
+            >
+              <span className="fleet-fill" style={{ height: `${Math.min(1, load / truck.capacityKg) * 100}%` }} />
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }

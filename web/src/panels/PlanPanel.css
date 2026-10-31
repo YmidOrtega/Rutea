@@ -31,7 +31,6 @@
   scrollbar-color: var(--line-strong) transparent;
 }
 
-/* Ficha técnica: etiqueta, línea de puntos y la cifra a la derecha, como la de un catálogo de motores */
 .spec {
   display: grid;
   gap: 5px;
@@ -49,16 +48,8 @@
   color: var(--fg-muted);
 }
 
-.spec-row::after {
-  content: '';
-  order: 1;
-  flex: 1;
-  border-bottom: 1px dotted var(--line-strong);
-}
-
 .spec-row dd {
-  order: 2;
-  margin: 0;
+  margin: 0 0 0 auto;
 }
 
 .unit {

@@ -13,7 +13,7 @@ import {
   operationLayers,
   sectorLayer,
   staticLayers,
-  streetsLayer,
+  streetsLayers,
   SUBA,
   tripsLayer,
   vehiclesLayer,
@@ -64,13 +64,13 @@ import {
   fillState,
   type Feed,
   type Sensors,
-  type VehicleState,
 } from './operations/telemetry'
 import { ContainerCard } from './panels/ContainerCard'
 import { PlanPanel } from './panels/PlanPanel'
 import { Timeline } from './panels/Timeline'
 import { Instrument } from './panels/Instrument'
 import { collectedBy, firstVisit, progressOf } from './operations/progress'
+import { fleetOf } from './operations/fleet'
 import { FIRST_KEY, hashOfKey, keyFromHash, sameKey, SLOTS, type LiveKey } from './operations/key'
 import { windowAt } from './demo/schedule'
 import { CityInstrument, CityPanel } from './city/CityPanel'
@@ -436,7 +436,7 @@ export default function App() {
   )
   const baseLayers = [
     ...planLayers,
-    streetsLayer(shownStreets, firstAt, time, palette),
+    ...streetsLayers(shownStreets, firstAt, time, palette),
     containersLayer(shown, firstAt, time, palette),
     ...eventLayers,
   ]
@@ -453,7 +453,7 @@ export default function App() {
     const selector = localityLayers(localities, chosen, hovered, palette)
     if (!cityDrawn) return selector
     // Sin línea de tiempo: el plan de la ciudad se mira entero, con cada contenedor ya encendido.
-    const lit = new Map(cityDrawn.containers.map((container) => [container.id, 0]))
+    const lit = new Map(cityDrawn.containers.map((container) => [container.id, -Infinity]))
     return [
       ...selector,
       cityRoutesLayer(cityDrawn.routes, palette),
@@ -477,9 +477,7 @@ export default function App() {
   const finished = sim !== undefined && !sim.running && sim.seconds >= sim.endSeconds
   const end = Math.max(plan?.meta.shiftSeconds ?? 0, sim?.endSeconds ?? duration, progress?.lastSeconds ?? 0)
   const at = (seconds: number) => clock(secondsOfDay(plan?.meta.shiftStart ?? '00:00') + seconds)
-  const onStreet = feed
-    ? [...feed.vehicles.values()].filter((vehicle) => ON_STREET.includes(vehicle.state)).length
-    : undefined
+  const trucks = useMemo(() => (current ? fleetOf(current, events) : []), [current, events])
 
   const toggleRoute = (routeId: string) =>
     setVisible((current) => {
@@ -588,7 +586,8 @@ export default function App() {
           totalContainers={current?.plan.containers.length ?? 0}
           totalKg={progress?.kgBefore[progress.kgBefore.length - 1] ?? 0}
           totalMeters={progress?.metersBefore[progress.metersBefore.length - 1] ?? 0}
-          onStreet={onStreet}
+          trucks={trucks}
+          seconds={time}
           planningSince={loadingSince}
         />}
 
@@ -710,7 +709,6 @@ function PlayIcon({ state }: { state: 'play' | 'pause' | 'restart' }) {
 const sectorLabel = (sector: Sector) => (sector.ref === 'rural' ? sector.name : `UPZ ${sector.name}`)
 
 const STREAM_ORDER: WasteStream[] = ['NON_RECYCLABLE', 'RECYCLABLE', 'ORGANIC']
-const ON_STREET: VehicleState[] = ['DRIVING', 'COLLECTING', 'UNLOADING']
 const CONTAINER_LAYERS = ['containers', 'orphans', 'overflows']
 const CLOSURE_LAYERS = ['closures', 'closure-marks']
 

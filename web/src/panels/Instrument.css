@@ -101,6 +101,71 @@
   font-size: var(--text-12);
 }
 
+.fleet {
+  display: grid;
+  gap: 6px;
+}
+
+.fleet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--text-13);
+}
+
+.fleet-head strong {
+  font-weight: 500;
+}
+
+.fleet-head .of {
+  color: var(--fg-muted);
+  font-size: var(--text-12);
+}
+
+.fleet-bars {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-bar {
+  flex: 1;
+  position: relative;
+  min-width: 2px;
+  background: var(--line);
+}
+
+.fleet-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--fg);
+}
+
+.fleet-bar.is-unloading .fleet-fill {
+  background: var(--fg-muted);
+}
+
+.fleet-bar.is-reserve .fleet-fill {
+  background: var(--sodium);
+}
+
+.fleet-bar.is-broken {
+  box-shadow: inset 0 0 0 1px var(--crit);
+}
+
+.fleet-bar.is-broken .fleet-fill {
+  background: var(--crit);
+}
+
+.fleet-bar.is-done {
+  opacity: 0.35;
+}
+
 @media (max-width: 640px) {
   .instrument {
     gap: 8px;

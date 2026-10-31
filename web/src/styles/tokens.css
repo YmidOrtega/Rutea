@@ -1,14 +1,14 @@
 /* Ningún componente usa colores literales: todos salen de aquí (docs/diseno.md). */
 :root {
-  /* La ciudad bajo luz de sodio: negros y grises cálidos, no el gris pizarra de siempre */
-  --bg: #0d0b08;
-  --panel: rgb(13 11 8 / 0.94);
-  --line: rgb(201 168 120 / 0.16);
-  --line-strong: rgb(201 168 120 / 0.34);
-  --fg: #eee5d6;
-  --fg-muted: #9d8f7b;
+  /* La interfaz es del mismo grafito que el mapa: el sodio es la única luz cálida de la pantalla */
+  --bg: #0b0c0e;
+  --panel: rgb(11 12 14 / 0.94);
+  --line: rgb(136 146 164 / 0.16);
+  --line-strong: rgb(136 146 164 / 0.34);
+  --fg: #e8eaed;
+  --fg-muted: #8e95a1;
   --sodium: #f5a524;
-  /* El mapa base es grafito neutro: así las rutas, los operadores y el sodio no compiten con la ciudad de fondo */
+  --clean: #d6e4f2;
   --map-bg: #0b0c0e;
   --map-street: #8892a4;
 
@@ -18,10 +18,10 @@
   --crit: #ff5b48;
 
   /* Colores de la Resolución 2184 de 2019, adaptados al mapa oscuro. */
-  --stream-recyclable: #f4efe6;
+  --stream-recyclable: #f1f2f4;
   --stream-organic: #5fcb8b;
   --stream-non-recyclable: #0a0a0a;
-  --stream-non-recyclable-edge: #cdc3b3;
+  --stream-non-recyclable-edge: #c3c8d0;
 
   /*
    * Operadores en el modo Ciudad, por ASE: tonos fríos y rosa, a unos 35° uno de otro. Ninguno es rojo (alerta),

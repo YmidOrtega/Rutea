@@ -54,7 +54,7 @@ export function PlanPanel({
   onSector,
 }: Props) {
   const broken = new Set(events.flatMap((event) => (event.type === 'breakdown' ? [event.truck] : [])))
-  const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 640px)').matches)
+  const [open, setOpen] = useState(false)
   const totalMeters = plan.routes.reduce((sum, route) => sum + route.distanceMeters, 0)
   const totalSeconds = plan.routes.reduce((sum, route) => sum + route.durationSeconds, 0)
   const co2Kg = (totalMeters / 1000) * plan.meta.litersPerKm * plan.meta.kgCo2PerLiter

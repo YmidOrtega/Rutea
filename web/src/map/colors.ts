@@ -27,6 +27,7 @@ export function readPalette() {
     warn: token('--warn'),
     crit: token('--crit'),
     sodium: token('--sodium'),
+    clean: token('--clean'),
     stream: {
       RECYCLABLE: token('--stream-recyclable'),
       ORGANIC: token('--stream-organic'),
