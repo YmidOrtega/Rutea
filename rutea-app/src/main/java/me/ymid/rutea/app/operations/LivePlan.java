@@ -54,7 +54,6 @@ final class LivePlan {
     }
 
     private final AreaScenario scenario;
-    private final int serviceSeconds;
     private final int unloadSeconds;
     private final int shiftSeconds;
     private final List<List<int[]>> trucks = new ArrayList<>();
@@ -65,16 +64,15 @@ final class LivePlan {
     private final Map<Integer, List<Leg>> legs = new HashMap<>();
     private final Map<RoadGraph, ShortestPaths> searches = new IdentityHashMap<>();
 
-    private LivePlan(AreaScenario scenario, int serviceSeconds, int unloadSeconds, int shiftSeconds) {
+    private LivePlan(AreaScenario scenario, int unloadSeconds, int shiftSeconds) {
         this.scenario = scenario;
-        this.serviceSeconds = serviceSeconds;
         this.unloadSeconds = unloadSeconds;
         this.shiftSeconds = shiftSeconds;
         networks.add(new Network(0, scenario.travel(), new boolean[scenario.graph().shapeCount()]));
     }
 
-    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, int serviceSeconds) {
-        LivePlan live = new LivePlan(scenario, serviceSeconds, schedule.unloadSeconds(), schedule.shiftSeconds());
+    static LivePlan of(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule) {
+        LivePlan live = new LivePlan(scenario, schedule.unloadSeconds(), schedule.shiftSeconds());
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
             List<int[]> trips = new ArrayList<>();
             List<int[]> marks = new ArrayList<>();
@@ -117,8 +115,8 @@ final class LivePlan {
         return shiftSeconds;
     }
 
-    int serviceSeconds() {
-        return serviceSeconds;
+    int serviceSeconds(int node) {
+        return scenario.serviceSeconds(node);
     }
 
     AreaScenario scenario() {
@@ -172,7 +170,7 @@ final class LivePlan {
             for (int p = 0; p < trip.length; p++) {
                 Leg leg = leg(i, p, previous, trip[p], clock);
                 legs.add(leg);
-                clock = leg.arriveSeconds() + serviceSeconds;
+                clock = leg.arriveSeconds() + scenario.serviceSeconds(trip[p]);
                 previous = trip[p];
             }
             Leg toGate = leg(i, TO_GATE, previous, gate, clock);

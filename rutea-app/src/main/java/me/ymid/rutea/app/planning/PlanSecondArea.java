@@ -84,8 +84,7 @@ public final class PlanSecondArea {
                     }
                     long kg = scenario.containers().stream().mapToLong(c -> c.kg()).sum();
                     for (int unload : new int[] {BogotaFigures.UNLOAD_SECONDS_LOW, BogotaFigures.UNLOAD_SECONDS_HIGH}) {
-                        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution,
-                                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unload, shift.seconds(), scenario.operation().maxTripsPerTruck());
+                        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, unload, shift.seconds(), scenario.operation().maxTripsPerTruck());
                         long truckSeconds = schedule.trucks().stream().mapToLong(ShiftScheduler.Truck::seconds).sum();
                         out.write(String.format(Locale.ROOT, "%s,%s,%d,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,"
                                 + "%.1f,%.1f,%d%n", scenario.instance().name(), shift.name(),

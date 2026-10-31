@@ -184,8 +184,7 @@ public final class BreakdownBenchmark {
         Instance part = BreakdownReplanner.subInstance(scenario.instance(), replan.orphans());
         Solution solved = new AlnsSolver().solve(part, new SolverSettings(seed, Duration.ofMinutes(10), REPLAN_ITERATIONS));
         Solution trips = BreakdownReplanner.toOriginalNodes(solved, replan.orphans());
-        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
+        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips, schedule.unloadSeconds(),
                 scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new long[] {System.nanoTime() - start, reserve.meters()};
     }

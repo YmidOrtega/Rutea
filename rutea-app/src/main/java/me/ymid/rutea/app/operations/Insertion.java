@@ -64,7 +64,7 @@ final class Insertion {
                             long meters = travel.meters(previous, node) + travel.meters(node, next)
                                     - travel.meters(previous, next);
                             long seconds = travel.seconds(previous, node) + travel.seconds(node, next)
-                                    - travel.seconds(previous, next) + live.serviceSeconds();
+                                    - travel.seconds(previous, next) + live.serviceSeconds(node);
                             if (seconds <= slack && meters < bestMeters) {
                                 bestMeters = meters;
                                 bestSeconds = seconds;

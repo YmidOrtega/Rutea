@@ -82,11 +82,10 @@ public final class BreakdownReplanner {
         long start = System.nanoTime();
         ShiftScheduler.Truck broken = schedule.trucks().get(truck);
         List<Integer> pending = new ArrayList<>();
-        for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, broken,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
+        for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, broken, schedule.unloadSeconds(), 0)) {
             // Huérfano si el camión no alcanzó a terminar de recogerlo: averiado a mitad del servicio, lo recoge la
             // reserva.
-            if (visit.arriveSeconds() + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER > breakdownSeconds) {
+            if (visit.arriveSeconds() + scenario.serviceSeconds(visit.node()) > breakdownSeconds) {
                 pending.add(visit.node());
             }
         }
@@ -94,7 +93,7 @@ public final class BreakdownReplanner {
         List<Reassignment> reassigned = new ArrayList<>();
         if (strategy != Strategy.RESERVE_ONLY && orphans.length > 0) {
             List<Integer> left = new ArrayList<>(pending);
-            LivePlan live = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            LivePlan live = LivePlan.of(scenario, solution, schedule);
             List<Insertion.Placement> placed = Insertion.cheapest(live, left, breakdownSeconds, truck);
             if (strategy == Strategy.REASSIGN_FIRST || left.isEmpty()) {
                 for (Insertion.Placement placement : placed) {
@@ -138,16 +137,14 @@ public final class BreakdownReplanner {
         Solution warm = new AlnsSolver().solveFrom(part,
                 new SolverSettings(seed, Duration.ofMinutes(10), iterations), inPlanOrder(part));
         Solution trips = toOriginalNodes(warm, forReserve);
-        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
+        ShiftScheduler.Schedule reserve = ShiftScheduler.schedule(scenario, trips, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         long latency = System.nanoTime() - start;
 
         long dispatch = breakdownSeconds + BogotaFigures.RESERVE_DISPATCH_SECONDS;
         long first = Long.MAX_VALUE;
         long last = 0;
         for (ShiftScheduler.Truck reserveTruck : reserve.trucks()) {
-            List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, trips, reserveTruck,
-                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, dispatch);
+            List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, trips, reserveTruck, unloadSeconds, dispatch);
             first = Math.min(first, visits.getFirst().arriveSeconds());
             last = Math.max(last, visits.getLast().arriveSeconds());
         }

@@ -292,8 +292,7 @@ public class OperationsService {
             clock.play();
             return false;
         }
-        operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule());
         events.clear();
         resetVehicles();
         clock.restart();
@@ -439,8 +438,7 @@ public class OperationsService {
             }
             case RESERVE -> {
                 Solution trip = Solution.of(new int[] {dispatch.node()});
-                ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, trip,
-                        BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, operation.unloadSeconds(),
+                ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, trip, operation.unloadSeconds(),
                         scenario.operation().shiftSeconds(), 1);
                 DemoPlan.Route drawn = AreaPlanner.planReserve(
                         operation.scenarioAt(dispatch.atSeconds() + BogotaFigures.RESERVE_DISPATCH_SECONDS), trip,
@@ -517,8 +515,7 @@ public class OperationsService {
                     (System.nanoTime() - start) / 1_000_000, Math.round(last));
         } catch (RuntimeException e) {
             LOG.warn("No se pudo retomar el turno {}; empieza uno nuevo", saved.get().id(), e);
-            operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule());
             events.clear();
             resetVehicles();
             clock.seek(0);
@@ -593,8 +590,7 @@ public class OperationsService {
             AreaScenario scenario = AreaScenario.build(RoadGraphFile.read(graph).graph(), AREA, seed)
                     .withSites(SensitiveSites.read(sites));
             waste = AreaPlanner.fleet(scenario, BogotaFigures.UNLOAD_SECONDS_LOW, seed);
-            operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule(),
-                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+            operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule());
             AreaScenario recyclables = AreaScenario.buildRecyclable(scenario.graph(), scenario.area(), seed).withSites(scenario.sites());
             plan = AreaPlanner.merge(scenario.area(), waste.plan(),
                     AreaPlanner.fleet(recyclables, BogotaFigures.ECA_UNLOAD_SECONDS, seed).plan());

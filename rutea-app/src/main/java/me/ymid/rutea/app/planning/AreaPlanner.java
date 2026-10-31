@@ -66,12 +66,12 @@ public final class AreaPlanner {
     }
 
     public static ShiftScheduler.Schedule oneTripEach(AreaScenario scenario, Solution solution, int unloadSeconds) {
-        return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
+        return ShiftScheduler.schedule(scenario, solution, unloadSeconds,
                 scenario.operation().shiftSeconds(), 1);
     }
 
     public static ShiftScheduler.Schedule fewestTrucks(AreaScenario scenario, Solution solution, int unloadSeconds) {
-        return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
+        return ShiftScheduler.schedule(scenario, solution, unloadSeconds,
                 scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
     }
 
@@ -182,7 +182,7 @@ public final class AreaPlanner {
         for (int i = 0; i < trips.size(); i++) {
             for (int customer : trips.get(i)) {
                 meters += geometry.follow(legs.get(leg++));
-                geometry.stop(BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                geometry.stop(scenario.serviceSeconds(customer));
                 stops.add(scenario.containers().get(customer - 1).id());
                 tripLoads[i] += instance.demand(customer);
             }
@@ -210,7 +210,7 @@ public final class AreaPlanner {
                 int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
                 meters += leg(paths, geometry, scenario, previous, customer, id);
                 visitSeconds[customer - 1] = geometry.seconds();
-                geometry.stop(BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                geometry.stop(scenario.serviceSeconds(customer));
                 routeOf[customer - 1] = id;
                 stops.add(scenario.containers().get(customer - 1).id());
                 tripLoads[i] += instance.demand(customer);
@@ -257,8 +257,7 @@ public final class AreaPlanner {
     public static Fleet fleet(AreaScenario scenario, int unloadSeconds, long seed) {
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), ITERATIONS));
-        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, unloadSeconds, scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
         return new Fleet(scenario, solution, schedule, plan(scenario, solution, schedule, "alns", seed, ITERATIONS));
     }
 

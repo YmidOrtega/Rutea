@@ -66,8 +66,7 @@ public final class SensorBenchmark {
         int n = scenario.containers().size();
         int[] planned = new int[n];
         for (ShiftScheduler.Truck truck : schedule.trucks()) {
-            for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, truck,
-                    BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0)) {
+            for (ShiftScheduler.Visit visit : ShiftScheduler.timeline(scenario, solution, truck, schedule.unloadSeconds(), 0)) {
                 planned[visit.node() - 1] = (int) visit.arriveSeconds();
             }
         }
@@ -134,8 +133,7 @@ public final class SensorBenchmark {
      */
     private static String dispatchRow(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule,
             ContainerSensors sensors, List<Integer> sizes, Config config, BufferedWriter out) throws IOException {
-        LiveOperation operation = new LiveOperation(scenario, solution, schedule,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LiveOperation operation = new LiveOperation(scenario, solution, schedule);
         int n = sensors.size();
         List<List<Double>> reserve = new ArrayList<>();
         for (int i = 0; i < n; i++) {

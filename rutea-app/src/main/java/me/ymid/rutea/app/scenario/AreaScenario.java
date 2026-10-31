@@ -379,6 +379,14 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return travel.seconds(gate(), 0);
     }
 
+    public int serviceSeconds(int node) {
+        return BogotaFigures.SERVICE_SECONDS_PER_CONTAINER;
+    }
+
+    public int collectingMeters(int node) {
+        return 0;
+    }
+
     private static int vertex(RoadGraph graph, long osmNode, String what) {
         return graph.vertexOf(osmNode).orElseThrow(() -> new IllegalStateException(
                 "el grafo no tiene " + what + " (nodo " + osmNode + "); reconstrúyelo"));

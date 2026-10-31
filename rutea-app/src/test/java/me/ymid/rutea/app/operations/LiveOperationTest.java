@@ -41,12 +41,11 @@ class LiveOperationTest {
         // Cargas chicas: los viajes quedan con cupo para recogidas extra.
         scenario = AreaScenarioFixture.town(dir, 24, 400);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(4, Duration.ofMinutes(1), 200));
-        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER,
-                BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 1);
+        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 1);
     }
 
     private static LiveOperation fresh() {
-        return new LiveOperation(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        return new LiveOperation(scenario, solution, schedule);
     }
 
     @Test
@@ -136,8 +135,7 @@ class LiveOperationTest {
     @Test
     void aClosureAheadOfATruckSendsItAroundAndTheDrawingAvoidsTheStreet() {
         LiveOperation operation = fresh();
-        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule), 0);
 
         LiveOperation.Closure closure = operation.close(crossing.shape(), crossing.leg().departSeconds());
 
@@ -151,7 +149,7 @@ class LiveOperationTest {
     @Test
     void aTruckAlreadyOnItsWayWhenTheStreetClosesFinishesItsArcAndTurns() {
         LiveOperation operation = fresh();
-        LivePlan plan = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan plan = LivePlan.of(scenario, solution, schedule);
         Crossing crossing = firstCrossing(plan, 1);
         // Cerrar después de que arrancó: va por el primer arco cuando llega el aviso.
         long at = crossing.leg().departSeconds() + 1;
@@ -166,8 +164,7 @@ class LiveOperationTest {
 
     @Test
     void reorderingWhatIsLeftNeverDrivesMoreThanOnlyRerouting() {
-        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER), 0);
+        Crossing crossing = firstCrossing(LivePlan.of(scenario, solution, schedule), 0);
         LiveOperation reroute = fresh();
         LiveOperation resequence = fresh();
         resequence.closurePolicy(LiveOperation.ClosurePolicy.RESEQUENCE);
@@ -243,7 +240,7 @@ class LiveOperationTest {
 
     private static ShiftScheduler.Visit firstVisit(int truck) {
         return ShiftScheduler.timeline(scenario, solution, schedule.trucks().get(truck),
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0).getFirst();
+                schedule.unloadSeconds(), 0).getFirst();
     }
 
     private static long totalMeters(LiveOperation operation) {

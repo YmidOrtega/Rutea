@@ -36,15 +36,13 @@ class BreakdownReplannerTest {
     static void plan() throws IOException {
         scenario = AreaScenarioFixture.town(dir, 20, 1_600);
         solution = new AlnsSolver().solve(scenario.instance(), new SolverSettings(2, Duration.ofMinutes(1), 200));
-        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER,
-                BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 3);
+        schedule = ShiftScheduler.schedule(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW, scenario.operation().shiftSeconds(), 3);
     }
 
     @Test
     void timelineAddsUpToTheTruckShift() {
         ShiftScheduler.Truck truck = schedule.trucks().getFirst();
-        List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, solution, truck,
-                BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(), 0);
+        List<ShiftScheduler.Visit> visits = ShiftScheduler.timeline(scenario, solution, truck, schedule.unloadSeconds(), 0);
 
         assertThat(visits).extracting(ShiftScheduler.Visit::arriveSeconds).isSorted();
         int stops = Arrays.stream(truck.trips()).map(solution::routeLength).sum();

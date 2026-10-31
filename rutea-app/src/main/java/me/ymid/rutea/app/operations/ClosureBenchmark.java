@@ -65,7 +65,7 @@ public final class ClosureBenchmark {
         Solution solution = new AlnsSolver().solve(scenario.instance(),
                 new SolverSettings(seed, Duration.ofMinutes(10), AreaPlanner.ITERATIONS));
         ShiftScheduler.Schedule schedule = AreaPlanner.fewestTrucks(scenario, solution, BogotaFigures.UNLOAD_SECONDS_LOW);
-        LivePlan original = LivePlan.of(scenario, solution, schedule, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        LivePlan original = LivePlan.of(scenario, solution, schedule);
         RoadGraph graph = scenario.graph();
         int[] sources = new int[scenario.travel().size()];
         int[] targets = new int[sources.length];
@@ -118,8 +118,7 @@ public final class ClosureBenchmark {
                 boolean same = sameCells(probe.matrix(), scratch);
 
                 for (ClosurePolicy policy : ClosurePolicy.values()) {
-                    LiveOperation operation = new LiveOperation(scenario, solution, schedule,
-                            BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+                    LiveOperation operation = new LiveOperation(scenario, solution, schedule);
                     operation.closurePolicy(policy);
                     Closure closure = operation.close(shape, at);
                     if (e == 0 && policy == ClosurePolicy.REROUTE) {

@@ -104,7 +104,7 @@ public final class CompareSuba2026 {
     }
 
     private static ShiftScheduler.Schedule schedule(AreaScenario scenario, Solution solution, int unloadSeconds) {
-        return ShiftScheduler.schedule(scenario, solution, BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, unloadSeconds,
+        return ShiftScheduler.schedule(scenario, solution, unloadSeconds,
                 scenario.operation().shiftSeconds(), scenario.operation().maxTripsPerTruck());
     }
 }

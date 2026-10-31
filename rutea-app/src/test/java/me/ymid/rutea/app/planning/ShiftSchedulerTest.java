@@ -41,7 +41,7 @@ class ShiftSchedulerTest {
 
     @Test
     void oneTripPerTruckGivesOneTruckPerTrip() {
-        Schedule schedule = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 1);
+        Schedule schedule = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 1);
 
         assertThat(schedule.trucks()).hasSize(solution.routeCount())
                 .allSatisfy(truck -> assertThat(truck.trips()).hasSize(1));
@@ -49,8 +49,8 @@ class ShiftSchedulerTest {
 
     @Test
     void chainingNeverNeedsMoreTrucksAndCoversEveryTripOnce() {
-        Schedule single = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 1);
-        Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
+        Schedule single = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 1);
+        Schedule chained = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 3);
 
         assertThat(chained.trucks().size()).isLessThanOrEqualTo(single.trucks().size());
         int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
@@ -61,7 +61,7 @@ class ShiftSchedulerTest {
 
     @Test
     void chainsUpToFourTripsWhenAllowed() {
-        Schedule four = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 4);
+        Schedule four = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 4);
 
         assertThat(four.trucks().size()).isEqualTo((solution.routeCount() + 3) / 4);
         assertThat(four.trucks()).allSatisfy(truck -> assertThat(truck.trips().length).isLessThanOrEqualTo(4));
@@ -69,7 +69,7 @@ class ShiftSchedulerTest {
 
     @Test
     void anExactScheduleIsItsOwnLowerBound() {
-        Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
+        Schedule chained = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 3);
 
         assertThat(chained.lowerBound()).isEqualTo(chained.trucks().size());
         assertThat(chained.fewestTrucks()).isTrue();
@@ -84,7 +84,7 @@ class ShiftSchedulerTest {
         }
         Solution many = new Solution(routes);
 
-        Schedule chained = ShiftScheduler.schedule(scenario, many, SERVICE, UNLOAD, SHIFT, 3);
+        Schedule chained = ShiftScheduler.schedule(scenario, many, UNLOAD, SHIFT, 3);
 
         int[] covered = chained.trucks().stream().flatMapToInt(truck -> Arrays.stream(truck.trips())).sorted().toArray();
         assertThat(covered).isEqualTo(IntStream.range(0, routes.length).toArray());
@@ -100,7 +100,7 @@ class ShiftSchedulerTest {
             routes[i] = new int[] {i % scenario.containers().size() + 1};
         }
 
-        Schedule chained = ShiftScheduler.schedule(scenario, new Solution(routes), SERVICE, UNLOAD, SHIFT, 3);
+        Schedule chained = ShiftScheduler.schedule(scenario, new Solution(routes), UNLOAD, SHIFT, 3);
 
         assertThat(chained.trucks()).hasSize(14);
         assertThat(chained.fewestTrucks()).isTrue();
@@ -112,14 +112,14 @@ class ShiftSchedulerTest {
     @Test
     void chainsTripsWhenTheShiftAllowsIt() {
         // En el pueblo de prueba los viajes duran minutos: caben tres por camión.
-        Schedule chained = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 3);
+        Schedule chained = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 3);
 
         assertThat(chained.trucks().size()).isEqualTo((solution.routeCount() + 2) / 3);
     }
 
     @Test
     void countsDrivingStopsUnloadingAndTheReturnToBase() {
-        Schedule schedule = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, SHIFT, 1);
+        Schedule schedule = ShiftScheduler.schedule(scenario, solution, UNLOAD, SHIFT, 1);
         Truck truck = schedule.trucks().getFirst();
         int k = truck.trips()[0];
         TravelMatrix travel = scenario.travel();
@@ -142,7 +142,7 @@ class ShiftSchedulerTest {
 
     @Test
     void marksTripsThatDoNotFitEvenAloneAsOvertime() {
-        Schedule tight = ShiftScheduler.schedule(scenario, solution, SERVICE, UNLOAD, 60, 3);
+        Schedule tight = ShiftScheduler.schedule(scenario, solution, UNLOAD, 60, 3);
 
         assertThat(tight.trucks()).hasSize(solution.routeCount());
         assertThat(tight.overtimeTrucks()).isEqualTo(solution.routeCount());
