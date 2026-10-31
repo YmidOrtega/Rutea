@@ -274,6 +274,17 @@
             </configuration>
           </execution>
           <execution>
+            <id>locality-instances</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExportLocalityInstances</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/bogota</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>suba-instance</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExportAreaInstance</mainClass>

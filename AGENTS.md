@@ -84,6 +84,7 @@ mvn -pl rutea-app exec:java@second-area      # cargue lateral del ASE 2 con sus 
 mvn -pl rutea-app exec:java@city-plan         # cargue lateral de 1, 5 y 20 localidades, una instancia por ASE y turno, con R02, R03, R04 y R07 revisadas: latencia en paralelo y en serie → docs/benchmarks/f7-city-plan/*.csv
 mvn -pl rutea-app exec:java@fleet             # camiones de cargue lateral de cada ASE frente a los declarados, con 50/75/100 % de llenado y 40/90 min de descarga → docs/benchmarks/f7-fleet/*.csv
 mvn -pl rutea-app exec:java@side-loading     # toneladas que cubre el cargue lateral de cada ASE con llenado de 50, 75 y 100 % → docs/benchmarks/f7-side-loading/*.csv
+mvn -pl rutea-app exec:java@locality-instances  # contenedores y puerta a puerta de una localidad (Suba sin argumentos), una instancia por grupo de días con las UPZ repartidas → data/bogota/<Localidad><LMV|MJS>-n*.vrp
 mvn -pl rutea-app exec:java@door-to-door     # puerta a puerta en Suba: calles locales agrupadas en trozos de 150 a 1.200 m, clientes, matriz, ALNS y km frente a los tramos sueltos (ADR 0014) → docs/benchmarks/f8-door-to-door/*.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv

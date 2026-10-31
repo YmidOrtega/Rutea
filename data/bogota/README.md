@@ -21,15 +21,29 @@ Las instancias de cargue lateral de las cinco ASE sobre el grafo de todo Bogotá
 - **Lo que no entra:** el formato CVRPLIB solo tiene capacidad. El turno, los viajes por camión y la descarga los agrega `CityPlanner` al repartir los viajes en camiones; el arnés mide solo los km.
 - **Sin BKS:** el arnés deja vacíos la BKS y el gap.
 
+## Localidades con puerta a puerta (F8)
+
+La recolección de no aprovechables de una localidad: sus contenedores y el puerta a puerta por sus calles locales en trozos de hasta 500 m (ADR 0014), una instancia por grupo de días. Las UPZ se reparten entre lunes, miércoles y viernes (`LMV`) y martes, jueves y sábado (`MJS`), parejas en metros de calle.
+
+| Instancia | Grupo | Contenedores | Trozos |
+|---|---|---:|---:|
+| `SubaLMV-n2094-s7-f100` | lunes, miércoles y viernes | 320 simulados | 1.773 |
+| `SubaMJS-n1822-s7-f100` | martes, jueves y sábado | 320 simulados | 1.501 |
+
+- **Nodos:** primero los contenedores, que se visitan en un vértice, y después los trozos. Llegar a un trozo cuesta el camino hasta su entrada más lo que mide recorrerlo recogiendo; de él se sale por su último vértice.
+- **Demanda de un trozo:** sus metros × los kg por metro de la localidad, que el `COMMENT` trae con su cuenta. Las 3 pasadas por semana y los 8.000 kg del compactador de carga trasera son `PENDIENTE_VERIFICAR`.
+- **Otras localidades:** la misma clase con sus números, desde la raíz del repo: `mvn -pl rutea-app exec:java -Dexec.mainClass=me.ymid.rutea.app.scenario.ExportLocalityInstances -Dexec.args="data/osm/bogota.rgraph data/ase data/bogota 2 8"` (Chapinero y Kennedy).
+
 ## Generar
 
-Los `.vrp` no se suben al repo (pesan unos 6,1 MB entre los siete):
+Los `.vrp` no se suben al repo (pesan unos 6,1 MB entre los siete de las ASE y 39 MB entre los dos de Suba):
 
 ```bash
 mvn -pl rutea-geo compile exec:java@bogota            # data/osm/bogota.rgraph
 mvn -pl rutea-app exec:java@operator-containers        # data/ase/*.csv
 mvn -pl rutea-app -am install -DskipTests
-mvn -pl rutea-app exec:java@bogota-instances           # data/bogota/*.vrp
+mvn -pl rutea-app exec:java@bogota-instances           # data/bogota/ASE*.vrp y SubaNoche-*.vrp
+mvn -pl rutea-app exec:java@locality-instances         # data/bogota/SubaLMV-*.vrp y SubaMJS-*.vrp
 ```
 
 ## Datos de entrada

@@ -10,20 +10,18 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.DoorToDoor;
 import me.ymid.rutea.app.scenario.Localities;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.SideLoading;
 import me.ymid.rutea.app.scenario.StreetChunks;
 import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
-import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.geo.geometry.Haversine;
-import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Evaluation;
 import me.ymid.rutea.solver.Evaluator;
 import me.ymid.rutea.solver.Instance;
@@ -45,13 +43,6 @@ import me.ymid.rutea.solver.alns.AlnsSolver;
 public final class MeasureDoorToDoor {
 
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
-
-    /** Población urbana de 2026 (DANE): Suba y la ciudad. Fuente en docs/datos.md, "Población y toneladas". */
-    static final int SUBA_POPULATION = 1_347_097;
-    static final int BOGOTA_URBAN_POPULATION = 8_134_378;
-
-    /** {@code PENDIENTE_VERIFICAR}: veces por semana que el puerta a puerta pasa por cada calle. */
-    static final int COLLECTIONS_PER_WEEK = 3;
 
     static final int[] MAX_METERS = {0, 150, 300, 500, 800, 1_200};
 
@@ -77,9 +68,8 @@ public final class MeasureDoorToDoor {
         int gate = sideLoading.gateVertex();
         int capacity = area.verified().compactorKg();
 
-        double kgPerDay = BogotaFigures.BOGOTA_ORDINARY_TONNES_PER_DAY * 1000.0 * SUBA_POPULATION
-                / BOGOTA_URBAN_POPULATION;
-        double kgPerCollection = kgPerDay * 7 / COLLECTIONS_PER_WEEK;
+        double kgPerDay = BogotaFigures.kgPerDay(ServiceAreas.locality(11).orElseThrow());
+        double kgPerCollection = kgPerDay * 7 / DoorToDoor.COLLECTIONS_PER_WEEK;
         double localMeters = StreetChunks.of(graph, suba, 0).stream().mapToLong(StreetChunks.Chunk::meters).sum();
         double kgPerMeter = kgPerCollection / localMeters;
         IntPredicate zone = zone(graph, suba);
@@ -88,7 +78,7 @@ public final class MeasureDoorToDoor {
 
         System.out.printf(Locale.ROOT, "Suba: %.1f t/día, %.1f t por recolección (%d por semana), %.1f km de calle"
                 + " local, %.3f kg/m; ALNS con semilla %d y %d iteraciones%n%n", kgPerDay / 1000,
-                kgPerCollection / 1000, COLLECTIONS_PER_WEEK, localMeters / 1000, kgPerMeter, seed, iterations);
+                kgPerCollection / 1000, DoorToDoor.COLLECTIONS_PER_WEEK, localMeters / 1000, kgPerMeter, seed, iterations);
         System.out.println("| Zona | Trozo máx. | Clientes | m por trozo | Matriz | ALNS | km | Viajes |");
         System.out.println("|---|---:|---:|---:|---:|---:|---:|---:|");
 
@@ -114,7 +104,7 @@ public final class MeasureDoorToDoor {
             int depot, int gate, int capacity, double kgPerMeter, long seed, long iterations) throws IOException {
         List<StreetChunks.Chunk> chunks = StreetChunks.of(graph, area, maxMeters);
         long started = System.nanoTime();
-        Instance instance = instance(graph, chunks, depot, gate, capacity, kgPerMeter,
+        Instance instance = DoorToDoor.instance(graph, List.of(), chunks, depot, gate, capacity, kgPerMeter,
                 String.format(Locale.ROOT, "%s-d2d-%d", name, maxMeters));
         long matrixMs = (System.nanoTime() - started) / 1_000_000;
         started = System.nanoTime();
@@ -129,54 +119,6 @@ public final class MeasureDoorToDoor {
         System.out.printf(Locale.ROOT, "| %s | %d m | %d | %.0f | %d ms | %.1f s | %.1f | %d |%s%n", name, maxMeters,
                 chunks.size(), (double) collecting / chunks.size(), matrixMs, alnsMs / 1000.0,
                 evaluation.cost() / 1000.0, solution.routeCount(), evaluation.feasible() ? "" : " INFACTIBLE");
-    }
-
-    /**
-     * Nodo 0 es la base de ida y la portería de vuelta, como en el cargue lateral. Llegar a un trozo cuesta el camino
-     * hasta su entrada más lo que mide recorrerlo recogiendo; de él se sale por su último vértice.
-     */
-    static Instance instance(RoadGraph graph, List<StreetChunks.Chunk> chunks, int depot, int gate, int capacity,
-            double kgPerMeter, String name) {
-        int n = chunks.size() + 1;
-        int[] demands = new int[n];
-        int[] targets = new int[n];
-        targets[0] = gate;
-        for (int i = 1; i < n; i++) {
-            StreetChunks.Chunk chunk = chunks.get(i - 1);
-            demands[i] = Math.max(1, (int) Math.round(chunk.meters() * kgPerMeter));
-            if (demands[i] > capacity) {
-                throw new IllegalStateException("un trozo de " + chunk.meters() + " m no cabe en un camión");
-            }
-            targets[i] = chunk.entry();
-        }
-        int[][] distances = new int[n][n];
-        AtomicInteger nextRow = new AtomicInteger();
-        Runnable rows = () -> {
-            ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
-            for (int i = nextRow.getAndIncrement(); i < n; i = nextRow.getAndIncrement()) {
-                int source = i == 0 ? depot : chunks.get(i - 1).exit();
-                paths.distances(source, targets, distances[i]);
-                for (int j = 0; j < n; j++) {
-                    if (distances[i][j] == ShortestPaths.UNREACHABLE) {
-                        throw new IllegalStateException("no hay camino de " + source + " a " + targets[j]);
-                    }
-                    distances[i][j] = i == j ? 0 : distances[i][j] + (j == 0 ? 0 : chunks.get(j - 1).meters());
-                }
-            }
-        };
-        Thread[] threads = new Thread[Runtime.getRuntime().availableProcessors()];
-        for (int t = 0; t < threads.length; t++) {
-            threads[t] = Thread.ofPlatform().start(rows);
-        }
-        for (Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
-            }
-        }
-        return new Instance(name, capacity, demands, DistanceMatrix.of(distances));
     }
 
     /** Los tramos de Suba a menos de {@link #ZONE_RADIUS_METERS} del centro de sus calles locales. */
