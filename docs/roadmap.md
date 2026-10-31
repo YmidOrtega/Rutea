@@ -451,7 +451,25 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
     R05 (servicio restablecido en ≤ 3 h) se cumple en las 500. La fila de huérfanas del arnés todavía se llama «contenedores».
   - Pendiente: un cierre de vía que cae dentro de un trozo no lo parte; el trozo se sigue recogiendo entero.
 - [x] Mapa (2026-10-30): en vivo, un clic sobre otra localidad urbana la elige, y un selector de cuatro posiciones elige la franja (LMV o MJS, día o noche). La elección queda en la dirección (`#vivo=11-LMVNoche`). Cada pedido y el WebSocket van a la operación elegida. Mientras el servidor la arma, el instrumento cuenta los segundos. Los trozos de calle se dibujan y se encienden con su primera visita, y el instrumento suma sus toneladas y sus km. El sello toma de `meta.network` qué es real y qué es simulado, y el tooltip dice si un contenedor es del operador o simulado (`meta.simulated`, ahora también en vivo). Revisado en Chrome en escritorio con Suba (LMV noche y MJS día), Fontibón, Usaquén y Sumapaz (rechazada por rural), sin errores en la consola. Sin la API sigue el plan estático de Suba.
-- [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
+- [x] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (2026-10-30; `mvn -pl rutea-app exec:java@suba-live`; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-suba-live/`). Solo no aprovechables, los únicos que van casa por casa. Cada plan se arma como lo sirve la app: ALNS con semilla 7 y 2.000 iteraciones, determinista, y 40 min de descarga. La fila base reproduce las rutas de no aprovechables de `plan-suba.json`: 9 camiones, 17 viajes, 1.310,6 km y R07 en 79 paradas. Las cinco soluciones son factibles según el `Evaluator`.
+
+  | Plan | Grafo | Contenedores | Trozos | t por recolección | t/día de la semana | Camiones | Viajes | km | Horas de vehículo | t CO₂ | R02 | R07 | Armado |
+  |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+  | `SubaBase-n807-s1` (2022) | Suba | 806 | 0 | 129,1 | 110,7 | 9 | 17 | 1.310,6 | 64,1 | 2,8 | 335 | 79 | 27,5 s |
+  | LMV día | Bogotá | 0 | 976 | 459,3 | 196,8 | 20 | 58 | 3.751,0 | 165,9 | 8,0 | 0 | 0 | 38,5 s |
+  | LMV noche | Bogotá | 320 | 711 | 618,2 | 264,9 | 28 | 78 | 5.647,8 | 241,0 | 12,1 | 230 | 26 | 44,8 s |
+  | MJS día | Bogotá | 0 | 840 | 507,7 | 217,6 | 24 | 65 | 4.314,6 | 186,5 | 9,2 | 0 | 0 | 29,4 s |
+  | MJS noche | Bogotá | 320 | 747 | 609,7 | 261,3 | 28 | 77 | 5.002,6 | 222,3 | 10,7 | 66 | 26 | 40,0 s |
+
+  - **Lo que cubre:** la base recogía 110,7 t/día, el 11,8 % de las 940,6 t/día que le tocan a Suba por población; solo eran contenedores. En vivo se recogen las 940,7 t/día. Cada franja recoge tres días por semana, y cada calle carga lo de los días entre dos pasadas.
+  - **Un día de recolección:** la base usa 9 camiones, 1.310,6 km y 64,1 horas de vehículo para 129,1 t. Un día LMV usa 48 camiones entre día y noche (20 + 28), 136 viajes, 9.398,8 km y 406,9 horas para 1.077,5 t. Un día MJS usa 52 camiones (24 + 28), 142 viajes, 9.317,2 km y 408,9 horas para 1.117,4 t. Si cada camión trabaja los dos turnos, bastan 28 por día. La flota real de Suba no está publicada, así que no se compara con nada.
+  - **Por tonelada, el puerta a puerta rinde más:** 8,7 km/t (LMV) y 8,3 (MJS), frente a 10,2 de la base, y 18,7 y 17,9 kg de CO₂/t frente a 21,7. Las horas de vehículo también rinden más: 2,6 y 2,7 t por hora, frente a 2,0. Es esperable, porque una calle densa carga mucho más que un contenedor y los viajes salen más llenos. Con todo, el CO₂ se mueve con los km, porque el consumo de 0,8 L/km es supuesto (`PENDIENTE_VERIFICAR`).
+  - **Lo que no es comparable del todo:**
+    - El grafo cambia. En F7 se midió que el de Bogotá deja el plan de Suba un 1,13 % más corto, poco frente a esta diferencia.
+    - Los contenedores cambian: 806 simulados de 2022 frente a los 320 de 2026, también simulados.
+    - Las cargas del puerta a puerta salen de la población, no de pesajes.
+    - R02 y R07 se cuentan solo en los contenedores: los trozos de calle de noche todavía no se revisan contra R02.
+  - **Armado:** de 29,4 a 44,8 s por franja en este proceso, una tras otra. En la app, Suba de noche se armó en 23,0 s y MJS día en 27,8 s. El tiempo depende de lo que corra al lado; las cifras de la app son las que valen para el modo en vivo.
 
 **Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.
 
