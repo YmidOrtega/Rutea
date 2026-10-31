@@ -10,7 +10,7 @@
 [![CI](https://github.com/YmidOrtega/Rutea/actions/workflows/ci.yml/badge.svg)](https://github.com/YmidOrtega/Rutea/actions/workflows/ci.yml)
 [![CVRPLIB](https://img.shields.io/badge/CVRPLIB-set%20X-8A2BE2)](http://vrp.galgos.inf.puc-rio.br/)
 
-![Suba's night shift at 21:15: 909 of 1,612 containers collected, the R02 window and the overflows still to be picked up](docs/img/turno-suba.webp)
+![Suba live, Monday-Wednesday-Friday night shift at 00:28: 248 of 320 containers and 138 of 157 km of door-to-door streets collected, 23 of 28 trucks on route, inside the R02 night window](docs/img/turno-suba.webp)
 
 ---
 
