@@ -468,6 +468,34 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
     - Las cargas del puerta a puerta salen de la población, no de pesajes.
     - R02 y R07 se cuentan solo en los contenedores: los trozos de calle de noche todavía no se revisan contra R02.
   - **Armado:** de 12,7 a 19,9 s por franja en este proceso, una tras otra. La corrida anterior dio de 29,4 a 44,8 s, pero con otra carga en la máquina: la base, que no cambió, tardó 27,5 s frente a 11,9 s. El tiempo depende de lo que corra al lado; las cifras de la app son las que valen para el modo en vivo.
+- [x] Las 19 localidades urbanas en sus cuatro franjas (2026-10-31; `mvn -pl rutea-app exec:java@live-localities`; i5-14400F, 16 hilos, Java 21.0.13; ALNS con semilla 7 y 2.000 iteraciones; CSV `live-localities-20261030-234900-615.csv` en `docs/benchmarks/f8-live-localities/`). Cada franja se arma como la sirve la app: contenedores reales del operador donde los hay (`data/ase`), sitios sensibles y 40 min de descarga. Se revisa que el `Evaluator` la dé por factible, que cada parada se dibuje una sola vez y que el último camión termine dentro del turno.
+  - **Primera pasada:** 74 de 76 franjas salían bien. Usme y Bosa tenían un trozo que no cabía en un camión. La causa: los límites de localidad de OSM incluyen suelo rural, y sus caminos recibían la carga por metro de una calle con casas. Usme tenía un tramo terciario de 7,4 km con 11,6 t.
+  - **Arreglo:** el puerta a puerta se recorta con el suelo urbano del POT (Decreto 555 de 2021, SDP; fuente en `docs/datos.md`, "Perímetro urbano"). También se excluyen los tramos de más de 1 km sin cruces, que no dan a manzanas. Quedaba uno en Bosa, la vía OSM 91266728: 4,8 km sin pavimentar y 14,6 t. Los km de calle local pasan de 5.706,5 a 5.208,5, y la carga por metro sube: Suba de 2,851 a 3,164 kg/m.
+  - **Resultado:** las 76 franjas son factibles, con todas sus paradas dibujadas y dentro del turno. En total suman 520 camiones-turno, 25.040 trozos, 2.743 contenedores, 13.253 t y 73.829 km. El armado, una franja tras otra en un proceso, da P50 4,9 s, P95 17,5 s y máximo 23,6 s (Engativá MJS día, con 761 contenedores); las 76 tardan 476 s.
+
+    | Localidad | Contenedores (máx. por franja) | Trozos por franja (LMV día/noche, MJS día/noche) | t (cuatro franjas) | Camiones (máx.) | km (cuatro franjas) | Armado (máx.) |
+    |---|---:|---|---:|---:|---:|---:|
+    | Usaquén | 46 | 360/289/389/466 | 994,5 | 12 | 8.011,3 | 8,2 s |
+    | Chapinero | 2 | 214/178/147/77 | 303,1 | 5 | 1.991,9 | 3,2 s |
+    | Santa Fe | 0 | 197/72/76/119 | 174,8 | 3 | 920,0 | 2,8 s |
+    | San Cristóbal | 2 | 358/320/392/385 | 674,1 | 7 | 2.488,3 | 7,4 s |
+    | Usme | 107 | 500/493/321/362 | 682,9 | 7 | 1.904,6 | 9,9 s |
+    | La Candelaria | 0 | 114/2/2/4 | 31,3 | 2 | 303,1 | 1,4 s |
+    | Tunjuelito | 98 | 299/132/5/2 | 305,8 | 6 | 1.071,2 | 4,8 s |
+    | Bosa | 125 | 764/806/221/223 | 1.208,2 | 15 | 5.832,2 | 17,5 s |
+    | Teusaquillo | 30 | 180/177/155/160 | 266,2 | 3 | 1.566,3 | 2,7 s |
+    | Los Mártires | 0 | 269/177/2/4 | 134,8 | 4 | 806,7 | 4,1 s |
+    | Antonio Nariño | 0 | 264/108/2/5 | 142,1 | 4 | 708,0 | 3,9 s |
+    | Puente Aranda | 128 | 368/234/176/322 | 424,3 | 5 | 2.023,7 | 7,9 s |
+    | Rafael Uribe Uribe | 115 | 333/357/319/383 | 645,2 | 7 | 2.166,3 | 8,4 s |
+    | Ciudad Bolívar | 191 | 785/523/560/624 | 1.083,0 | 11 | 3.669,4 | 15,9 s |
+    | Kennedy | 68 | 841/843/679/664 | 1.703,2 | 14 | 7.138,7 | 17,8 s |
+    | Fontibón | 23 | 438/219/229/273 | 676,3 | 8 | 4.001,4 | 7,4 s |
+    | Engativá | 761 | 414/510/644/741 | 1.345,2 | 20 | 9.131,0 | 23,6 s |
+    | Barrios Unidos | 0 | 274/233/143/9 | 263,6 | 5 | 1.865,9 | 4,1 s |
+    | Suba | 320 | 933/729/771/677 | 2.194,8 | 28 | 18.228,8 | 20,2 s |
+
+  - **Límite conocido:** las UPZ se reparten enteras. En localidades con una o dos UPZ (La Candelaria, Tunjuelito, Los Mártires, Antonio Nariño), una o dos franjas se quedan con casi todo, y las demás solo con unos pocos trozos fuera de toda UPZ. Cada calle sigue pasando 3 veces por semana, pero los camiones se usan desparejo.
 
 **Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.
 
