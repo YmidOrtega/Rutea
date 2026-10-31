@@ -204,7 +204,7 @@ Campos: `meta`, `sites`, `containers`, `routes`, `compliance`, `sectors`, `stree
 
 Campos: `zone`, `simulated`, `network`, `solver`, `seed`, `iterations`, `shiftStart`, `shiftSeconds`, `serviceSeconds`, `unloadSeconds`, `litersPerKm`, `kgCo2PerLiter`, `attribution`, `assumptions`
 
-`attribution` es la atribución de OSM que exige la ODbL: quien muestre el plan debe mostrarla. `assumptions` es lo que el plan supone sin dato publicado, para mostrarlo tal cual.
+`simulated` es `true` si los contenedores del plan son simulados y `false` si son los del operador; las calles siempre son reales y la carga del puerta a puerta siempre sale de la población. `network` lo dice en una frase para mostrarla. `attribution` es la atribución de OSM que exige la ODbL: quien muestre el plan debe mostrarla. `assumptions` es lo que el plan supone sin dato publicado, para mostrarlo tal cual.
 
 ### `DemoPlan.Site`
 

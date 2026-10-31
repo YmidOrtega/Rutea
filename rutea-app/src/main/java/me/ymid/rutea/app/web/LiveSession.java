@@ -116,8 +116,8 @@ final class LiveSession {
     }
 
     private DemoPlan.Meta meta(DemoPlan.Meta drawn, DoorToDoor.Plan doorToDoor) {
-        String containers = SideLoading.of(area).planned().isPresent()
-                ? "contenedores simulados de la cantidad oficial de " + area.name()
+        boolean simulated = SideLoading.of(area).planned().isPresent();
+        String containers = simulated ? "contenedores simulados de la cantidad oficial de " + area.name()
                 : "contenedores reales del operador";
         List<String> assumptions = List.of(
                 String.format(Locale.ROOT, "Puerta a puerta %d veces por semana, %s: sin fuente publicada",
@@ -131,7 +131,7 @@ final class LiveSession {
                 "Velocidades por tipo de vía y parada de " + BogotaFigures.SERVICE_SECONDS_PER_CONTAINER
                         + " s por contenedor",
                 "Consumo de " + BogotaFigures.LITERS_PER_KM + " L/km para el CO₂");
-        return new DemoPlan.Meta(key.locality().name(), true, "Calles reales de OpenStreetMap; " + containers
+        return new DemoPlan.Meta(key.locality().name(), simulated, "Calles reales de OpenStreetMap; " + containers
                 + "; carga del puerta a puerta repartida por población", drawn.solver(), drawn.seed(),
                 drawn.iterations(), drawn.shiftStart(), drawn.shiftSeconds(), drawn.serviceSeconds(),
                 drawn.unloadSeconds(), drawn.litersPerKm(), drawn.kgCo2PerLiter(), drawn.attribution(), assumptions);
