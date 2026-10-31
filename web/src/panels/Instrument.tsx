@@ -3,7 +3,6 @@ import './Instrument.css'
 
 interface Props {
   zone: string
-  /** La hora del reloj, ya formateada; sin plan todavía no hay hora. */
   time: string | null
   shift: string | null
   done: { containers: number; kg: number } | null

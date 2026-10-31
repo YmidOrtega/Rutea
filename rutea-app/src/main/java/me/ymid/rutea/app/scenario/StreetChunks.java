@@ -18,12 +18,6 @@ import me.ymid.rutea.geo.RoadGraph;
  */
 public final class StreetChunks {
 
-    /**
-     * @param arcs arcos del grafo en el orden en que se recorren
-     * @param entry vértice por el que se entra
-     * @param exit vértice por el que se sale
-     * @param meters lo que mide el recorrido
-     */
     public record Chunk(int[] arcs, int entry, int exit, int meters) {
     }
 
@@ -80,7 +74,6 @@ public final class StreetChunks {
         return chunks;
     }
 
-    /** El arco libre que sale del final de {@code arc} con el menor giro; -1 si no hay. */
     private static int straightestOut(RoadGraph graph, IntPredicate area, boolean[] taken, int arc) {
         int vertex = graph.target(arc);
         double heading = heading(graph, arc);
@@ -98,7 +91,6 @@ public final class StreetChunks {
         return best;
     }
 
-    /** El arco libre que llega al comienzo de {@code arc} con el menor giro; -1 si no hay. */
     private static int straightestIn(RoadGraph graph, Incoming incoming, IntPredicate area, boolean[] taken, int arc) {
         int vertex = graph.source(arc);
         double heading = heading(graph, arc);
@@ -117,7 +109,6 @@ public final class StreetChunks {
         return best;
     }
 
-    /** Los arcos que llegan a cada vértice, agrupados por vértice como los que salen en {@link RoadGraph}. */
     private record Incoming(int[] first, int[] arcs) {
 
         static Incoming of(RoadGraph graph) {

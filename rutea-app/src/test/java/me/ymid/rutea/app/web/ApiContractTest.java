@@ -57,7 +57,6 @@ class ApiContractTest {
         return fields;
     }
 
-    /** La primera línea "Campos:" o "Valores:" después del título con el nombre del tipo. */
     private static List<String> documented(String name) throws IOException {
         List<String> lines = Files.readAllLines(CONTRACT);
         int heading = lines.indexOf("### `" + name + "`");

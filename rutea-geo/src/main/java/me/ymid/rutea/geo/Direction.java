@@ -2,7 +2,6 @@ package me.ymid.rutea.geo;
 
 import java.util.Map;
 
-/** Sentidos de circulación de una vía de OSM, respecto al orden de sus nodos. */
 enum Direction {
 
     BOTH, FORWARD, BACKWARD,

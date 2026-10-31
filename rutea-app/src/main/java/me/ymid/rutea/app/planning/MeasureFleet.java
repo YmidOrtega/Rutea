@@ -55,7 +55,6 @@ public final class MeasureFleet {
         Path outDir = Path.of(args[2]);
         Files.createDirectories(outDir);
         Path csv = outDir.resolve("fleet-" + LocalDateTime.now().format(RUN_ID) + ".csv");
-        // Por ASE: "camiones (cota)" de cada llenado y descarga.
         Map<String, List<String>> cells = new LinkedHashMap<>();
         List<String> warnings = new ArrayList<>();
         System.out.printf(Locale.ROOT, "Las 20 localidades: ALNS con semilla %d y %d iteraciones%n%n", seed, iterations);

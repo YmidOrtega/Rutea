@@ -2,7 +2,6 @@ package me.ymid.rutea.geo.osm;
 
 import java.util.Arrays;
 
-/** Lista de {@code long} sin boxing, para los campos repetidos de protobuf. */
 final class LongList {
 
     private long[] values;

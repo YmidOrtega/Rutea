@@ -83,7 +83,6 @@ export function feedTrips(feed: Feed): Trip[] {
   }))
 }
 
-/** Dónde está cada vehículo a esa hora, sobre lo que reportó. */
 export function positionAt(vehicle: VehicleTrack, seconds: number): LonLat {
   const { path, times } = vehicle
   let i = times.length - 1

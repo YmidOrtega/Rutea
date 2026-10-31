@@ -9,7 +9,6 @@ import me.ymid.rutea.solver.Solver;
 import me.ymid.rutea.solver.Solvers;
 import me.ymid.rutea.solver.benchmark.BenchmarkHarness;
 
-/** El arnés de rutea-solver con Timefold disponible: mvn -pl rutea-bench -am compile exec:java@compare. */
 public final class Compare {
 
     private Compare() {

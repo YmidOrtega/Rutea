@@ -46,7 +46,6 @@ public final class SideLoading {
      */
     public static final int MAX_TRIPS_PER_TRUCK = 4;
 
-    /** Contenedores sin ubicación publicada: cuántos hay y entre qué tamaños se sortea cada uno. */
     public record Planned(int count, List<Integer> liters) {
 
         public Planned {
@@ -95,7 +94,6 @@ public final class SideLoading {
                     : List.of(collectionsPerWeek, SENSITIVITY_COLLECTIONS_PER_WEEK);
         }
 
-        /** Parte de las toneladas de la ASE que recogen sus contenedores. */
         public Optional<Double> share(double kgPerDay) {
             return tonnesPerDay.map(tonnes -> kgPerDay / (tonnes * 1000));
         }
@@ -177,7 +175,6 @@ public final class SideLoading {
         return (int) Math.round(liters / 1000.0 * BogotaFigures.LOOSE_WASTE_KG_PER_M3 * fill);
     }
 
-    /** Kilos por día que recogen contenedores con esos litros: la carga de cada recolección repartida en la semana. */
     public static double kgPerDay(List<Integer> liters, int collectionsPerWeek, double fill) {
         long kg = 0;
         for (int l : liters) {

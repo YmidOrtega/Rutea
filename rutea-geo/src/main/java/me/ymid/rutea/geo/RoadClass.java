@@ -99,7 +99,6 @@ public enum RoadClass {
         return false;
     }
 
-    /** Velocidad para la vía: la de su clase o {@code maxspeed} si es menor. */
     public int kmPerHour(Map<String, String> tags) {
         String maxspeed = tags.get("maxspeed");
         if (maxspeed == null) {

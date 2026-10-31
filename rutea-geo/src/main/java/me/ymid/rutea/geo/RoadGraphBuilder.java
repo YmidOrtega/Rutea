@@ -32,7 +32,6 @@ import me.ymid.rutea.geo.osm.PbfReader.Element;
  */
 public final class RoadGraphBuilder {
 
-    /** Cifras de la construcción, para reportar y para revisar que el recorte tiene sentido. */
     public record Report(int candidateWays, int includedWays, int verticesBeforePruning, int edgesBeforePruning,
             int localityVerticesBeforePruning, int vertices, int edges, int shapes, long streetMeters,
             int localityVertices, int localityCenterVertex, Map<String, Integer> siteVertices) {
@@ -118,7 +117,6 @@ public final class RoadGraphBuilder {
         return assemble(pieces, nodes, locality, spec.sites(), candidates.size(), includedWays);
     }
 
-    /** Vías exteriores e interiores de cada límite, por id de relación. */
     private static Map<Long, List<Long>> boundaryWays(Path pbf, AreaSpec spec) throws IOException {
         Map<Long, List<Long>> ways = new HashMap<>();
         PbfReader.read(pbf, EnumSet.of(Element.RELATIONS), block -> {
@@ -410,7 +408,6 @@ public final class RoadGraphBuilder {
         shape.add(shapeId);
     }
 
-    /** Orden estable de los arcos por vértice de origen; llena {@code firstEdge}. */
     private static int[] csrOrder(IntList source, int vertexCount, int[] firstEdge) {
         for (int e = 0; e < source.size(); e++) {
             firstEdge[source.get(e) + 1]++;

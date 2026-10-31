@@ -171,7 +171,6 @@ public final class ClosureBenchmark {
         System.out.println("CSV: " + csv.toAbsolutePath());
     }
 
-    /** Trazos que el camión recorre después de {@code at}, en los tramos que todavía no termina. */
     private static List<Integer> streetsAhead(LivePlan plan, int truck, long at) {
         List<Integer> shapes = new ArrayList<>();
         for (LivePlan.Leg leg : plan.legs(truck)) {

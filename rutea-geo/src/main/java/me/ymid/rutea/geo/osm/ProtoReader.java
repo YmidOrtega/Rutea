@@ -28,7 +28,6 @@ final class ProtoReader {
         this.limit = limit;
     }
 
-    /** Avanza al siguiente campo; devuelve {@code false} al final del mensaje. */
     boolean next() throws PbfFormatException {
         if (position >= limit) {
             return false;

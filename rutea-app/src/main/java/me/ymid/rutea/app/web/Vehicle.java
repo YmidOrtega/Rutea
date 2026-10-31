@@ -7,10 +7,6 @@ import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.sim.Track;
 
-/**
- * Un vehículo en la calle: su recorrido vigente, los contenedores que recoge en orden y, si se averió, desde cuándo
- * está detenido.
- */
 record Vehicle(String id, WasteStream stream, Track track, List<String> stops, double brokenAtSeconds) {
 
     static final double NOT_BROKEN = Double.POSITIVE_INFINITY;

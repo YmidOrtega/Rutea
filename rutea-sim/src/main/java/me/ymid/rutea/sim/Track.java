@@ -42,7 +42,6 @@ public record Track(double[] lon, double[] lat, double[] times) {
         return new double[] {lon[i] + f * (lon[i + 1] - lon[i]), lat[i] + f * (lat[i + 1] - lat[i])};
     }
 
-    /** Quieto: en una parada, antes de salir o después de llegar. */
     public boolean stopped(double seconds) {
         int i = segment(seconds);
         return i < 0 || i == times.length - 1 || lon[i] == lon[i + 1] && lat[i] == lat[i + 1];
@@ -62,7 +61,6 @@ public record Track(double[] lon, double[] lat, double[] times) {
         return points;
     }
 
-    /** El último punto con hora menor o igual a {@code seconds}; -1 si todavía no sale. */
     private int segment(double seconds) {
         int lo = 0;
         int hi = times.length - 1;

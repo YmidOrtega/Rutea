@@ -15,12 +15,6 @@ import me.ymid.rutea.geo.OsmBoundaries;
 import me.ymid.rutea.geo.geometry.Polygon;
 import me.ymid.rutea.geo.geometry.Simplify;
 
-/**
- * Extrae de OSM las UPZ de cada localidad urbana, los sectores en que se publican los horarios de paso (R04), y las
- * guarda en {@code <localidad>-upz.geojson} con los bordes simplificados.
- *
- * <p>Uso: {@code ExtractSectors <extracto.osm.pbf> <dir-salida>}
- */
 public final class ExtractSectors {
 
     /** Un contenedor junto a un borde puede caer del otro lado por esto; nunca más lejos. */
@@ -136,7 +130,6 @@ public final class ExtractSectors {
         return json.append("]}\n").toString();
     }
 
-    /** El código oficial de la UPZ: el de OSM, salvo donde OSM lo tiene mal ({@link #REF_FIXES}). */
     static String ref(OsmBoundaries.Boundary boundary) {
         return REF_FIXES.getOrDefault(boundary.osmId(), boundary.ref());
     }

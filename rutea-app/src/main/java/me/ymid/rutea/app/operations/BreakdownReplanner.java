@@ -41,7 +41,6 @@ public final class BreakdownReplanner {
             reassigned = List.copyOf(reassigned);
         }
 
-        /** Metros que se agregan a la operación: los desvíos de los camiones en servicio más la reserva. */
         public long extraMeters() {
             return reserve.meters() + reassigned.stream().mapToLong(Reassignment::extraMeters).sum();
         }
@@ -57,7 +56,6 @@ public final class BreakdownReplanner {
         }
     }
 
-    /** Un huérfano que absorbió un camión en servicio, con su desvío y la hora en que ahora pasa por él. */
     public record Reassignment(int node, int truck, long extraMeters, long pickupSeconds) {
     }
 

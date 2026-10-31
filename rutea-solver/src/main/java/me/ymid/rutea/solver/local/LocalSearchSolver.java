@@ -9,10 +9,6 @@ import me.ymid.rutea.solver.Solution;
 import me.ymid.rutea.solver.Solver;
 import me.ymid.rutea.solver.SolverSettings;
 
-/**
- * Clarke-Wright con varios λ y búsqueda local granular hasta un óptimo local. Todos los movimientos
- * son exactos con distancias asimétricas.
- */
 public final class LocalSearchSolver implements Solver {
 
     static final int NEIGHBORS = 30;

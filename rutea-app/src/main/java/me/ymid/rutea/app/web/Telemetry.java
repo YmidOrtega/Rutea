@@ -19,7 +19,6 @@ import jakarta.annotation.PreDestroy;
 import me.ymid.rutea.app.persistence.OperationLog;
 import me.ymid.rutea.app.planning.DemoPlan;
 
-/** Transmite por WebSocket la posición de cada vehículo mientras corre el reloj de la simulación (R08). */
 @Service
 public class Telemetry {
 

@@ -223,7 +223,6 @@ class LiveOperationTest {
     private record Crossing(int truck, LivePlan.Leg leg, int shape) {
     }
 
-    /** Un tramo y un trazo de su camino, a partir del arco {@code fromArc}, que se puede cerrar sin aislar nada. */
     private static Crossing firstCrossing(LivePlan plan, int fromArc) {
         for (int t = 0; t < plan.truckCount(); t++) {
             for (LivePlan.Leg leg : plan.legs(t)) {

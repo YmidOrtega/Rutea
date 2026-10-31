@@ -83,7 +83,6 @@ public final class Polygon {
         return Math.sqrt(best) / 1e7 * Math.toRadians(1) * Haversine.EARTH_RADIUS_METERS;
     }
 
-    /** Une las vías de un límite de OSM en anillos cerrados de ids de nodo. */
     public static List<long[]> assembleRings(List<long[]> ways) {
         List<long[]> open = new ArrayList<>();
         List<long[]> rings = new ArrayList<>();

@@ -50,7 +50,6 @@ import me.ymid.rutea.solver.Solution;
 @Service
 public class OperationsService {
 
-    /** Faltan los archivos que salen del extracto de OSM. */
     public static final class DataMissingException extends RuntimeException {
 
         private static final long serialVersionUID = 1L;
@@ -262,7 +261,6 @@ public class OperationsService {
         return plan != null;
     }
 
-    /** Segundos del reloj de la simulación, desde el inicio del turno. */
     public synchronized long now() {
         plan();
         return (long) clock.seconds();
@@ -352,7 +350,6 @@ public class OperationsService {
         return shift;
     }
 
-    /** Lectura de cada sensor a {@code seconds}, en pasos de {@code stepPercent}. */
     synchronized Map<String, Integer> readings(double seconds, int stepPercent) {
         double[][] visits = visits();
         Map<String, Integer> readings = new LinkedHashMap<>();
@@ -371,7 +368,6 @@ public class OperationsService {
         return liters;
     }
 
-    /** Cuándo llega un vehículo a cada contenedor con sensor, en orden, según los recorridos vigentes. */
     private double[][] visits() {
         Map<String, Integer> index = new HashMap<>();
         List<SimulatedContainers.Container> containers = waste.scenario().containers();
@@ -400,7 +396,6 @@ public class OperationsService {
         return List.copyOf(vehicles.values());
     }
 
-    /** Ya hay una recogida en camino por un desborde anterior del mismo contenedor. */
     private boolean pickupPending(String containerId, long atSeconds) {
         for (int i = events.size() - 1; i >= 0; i--) {
             if (events.get(i) instanceof OverflowEvent last && last.container().equals(containerId)) {

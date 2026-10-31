@@ -1,7 +1,6 @@
 import type { LonLat, Route, WasteStream } from '../demo/plan'
 import type { CurrentPlan, OperationEvent } from './live'
 
-/** Un vehículo llega a un contenedor y recoge lo que su ruta planea ahí. */
 export interface Visit {
   container: string
   route: string
@@ -17,9 +16,7 @@ export interface Progress {
   visitSeconds: number[]
   /** kgBefore[i]: kilos de las primeras i visitas; el último es lo que recoge el plan vigente. */
   kgBefore: number[]
-  /** La primera visita a cada contenedor, en orden de hora. */
   firstSeconds: number[]
-  /** Hora de la última llegada, o 0 si no hay ninguna. */
   lastSeconds: number
 }
 
@@ -68,7 +65,6 @@ export function progressOf(current: CurrentPlan, events: OperationEvent[]): Prog
   }
 }
 
-/** Cuántos contenedores llevan al menos una visita a esa hora y cuántos kilos se han recogido. */
 export function collectedBy(progress: Progress, seconds: number): { containers: number; kg: number } {
   return {
     containers: countUpTo(progress.firstSeconds, seconds),

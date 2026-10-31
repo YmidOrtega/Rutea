@@ -57,7 +57,6 @@ public final class OperatorContainers {
     private OperatorContainers() {
     }
 
-    /** Los contenedores de una página de {@code /query?f=json} con {@code outSR=4326}. */
     static List<Container> parse(Layer layer, JsonNode page) {
         if (page.has("error")) {
             throw new IllegalStateException("ASE " + layer.area() + ": ArcGIS respondió " + page.get("error"));

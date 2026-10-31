@@ -12,11 +12,6 @@ import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.geo.geometry.BoundingBox;
 
-/**
- * Extrae de OSM los sitios sensibles (R02, R07) alrededor de las calles de la localidad y los guarda en CSV.
- *
- * <p>Uso: {@code ExtractSensitiveSites <extracto.osm.pbf> <grafo.rgraph> <salida.csv>}
- */
 public final class ExtractSensitiveSites {
 
     private ExtractSensitiveSites() {

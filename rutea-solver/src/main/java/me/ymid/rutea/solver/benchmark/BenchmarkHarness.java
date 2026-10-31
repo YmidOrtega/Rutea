@@ -155,7 +155,6 @@ public final class BenchmarkHarness {
         return matcher.find() ? Integer.parseInt(matcher.group(1)) : Integer.MAX_VALUE;
     }
 
-    /** Nunca pisa una corrida anterior: si el archivo ya existe, falla. */
     static void writeCsv(Path csv, List<BenchmarkResult> results, String machine) throws IOException {
         Files.createDirectories(csv.getParent());
         try (BufferedWriter writer = Files.newBufferedWriter(csv, StandardOpenOption.CREATE_NEW)) {

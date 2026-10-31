@@ -148,7 +148,6 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return buildReal(graph, area, shift, area.localities(), real, fill);
     }
 
-    /** Solo los de las localidades elegidas: cada contenedor es de la localidad donde está. */
     public static AreaScenario buildReal(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
             Collection<Locality> selection, List<OperatorContainers.Container> real, double fill) {
         return buildReal(graph, area, shift, selection, Localities.bogota(), real, fill, area.base().osmNode(),
@@ -171,10 +170,6 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
                 vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
     }
 
-    /**
-     * Los contenedores reales del turno en las localidades elegidas, como los visita {@link #buildReal}, sin calcular
-     * la matriz; vacío si no hay ninguno.
-     */
     public static List<Container> realContainers(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
             Collection<Locality> selection, List<OperatorContainers.Container> real, double fill) {
         return realContainers(graph, area, shift, chosen(area, selection), Localities.bogota(), real, fill);
@@ -200,7 +195,6 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return containers;
     }
 
-    /** Los contenedores reales del turno que caen en las localidades elegidas, sin armar el escenario. */
     public static List<OperatorContainers.Container> selected(ServiceArea area, SideLoading.Shift shift,
             Collection<Locality> selection, List<OperatorContainers.Container> real) {
         return selected(area, shift, chosen(area, selection), Localities.bogota(), real);
@@ -266,10 +260,6 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
                 vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
     }
 
-    /**
-     * Los contenedores simulados de la cantidad oficial en las localidades elegidas, como los ubica
-     * {@link #buildPlanned}, sin calcular la matriz; vacío si no cae ninguno.
-     */
     public static List<Container> plannedContainers(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
             int count, List<Integer> liters, double fill, long seed) {
         return plannedContainers(graph, area, chosen(area, selection), Localities.bogota(), count, liters, fill, seed);

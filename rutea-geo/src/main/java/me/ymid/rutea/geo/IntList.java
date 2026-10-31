@@ -2,7 +2,6 @@ package me.ymid.rutea.geo;
 
 import java.util.Arrays;
 
-/** Lista de {@code int} sin boxing. */
 final class IntList {
 
     private int[] values;

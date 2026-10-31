@@ -98,7 +98,6 @@ public final class RoadGraph {
         return firstEdge[vertex];
     }
 
-    /** Uno más que el último arco que sale de {@code vertex}. */
     public int endEdge(int vertex) {
         return firstEdge[vertex + 1];
     }
@@ -188,7 +187,6 @@ public final class RoadGraph {
         return best;
     }
 
-    /** Metros en línea recta desde un punto hasta el tramo más cercano de un trazo. */
     public double metersToShape(int shape, int latE7, int lonE7) {
         double cosLat = Math.cos(Math.toRadians(latE7 / 1e7));
         return Math.sqrt(squaredE7ToShape(shape, latE7, lonE7, cosLat)) / 1e7 * Math.toRadians(1)
@@ -272,7 +270,6 @@ public final class RoadGraph {
         return result;
     }
 
-    /** Con {@code sources}, cada arco se invierte hacia su origen; con {@code null}, se copia. */
     private RoadGraph withEdges(int[] newFirstEdge, int[] original, int[] sources) {
         boolean flip = sources != null;
         int count = original.length;

@@ -29,7 +29,6 @@ import me.ymid.rutea.solver.Solution;
  */
 final class LivePlan {
 
-    /** Una parada en el plan: el camión, su viaje, la posición en el viaje y la hora de llegada. */
     record Stop(int truck, int trip, int position, int node, long arriveSeconds) {
     }
 
@@ -213,7 +212,6 @@ final class LivePlan {
         return leave;
     }
 
-    /** Fin del turno del camión: cuando vuelve a la base. */
     long endSeconds(int truck) {
         return legs(truck).getLast().arriveSeconds();
     }

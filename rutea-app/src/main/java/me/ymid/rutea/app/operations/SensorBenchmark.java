@@ -110,7 +110,6 @@ public final class SensorBenchmark {
         System.out.println("CSV: " + csv.toAbsolutePath());
     }
 
-    /** Sin despachar: cada contenedor espera su visita del plan. */
     private static String planRow(AreaScenario scenario, ContainerSensors sensors, int[] planned, List<Integer> sizes,
             Config config, BufferedWriter out) throws IOException {
         List<Long> full = new ArrayList<>();
@@ -183,7 +182,6 @@ public final class SensorBenchmark {
                 hours(full, 0.50), hours(full, 0.95), meters / 1000.0);
     }
 
-    /** Las llegadas a cada contenedor, en orden: las de los camiones (del plan y extra) y las de las reservas. */
     private static double[][] visits(LiveOperation operation, List<List<Double>> reserve, int n) {
         List<List<Double>> all = new ArrayList<>();
         for (int i = 0; i < n; i++) {
@@ -209,7 +207,6 @@ public final class SensorBenchmark {
         return sizes.size() == 1 ? sizes.getFirst() + " L" : "mezcla";
     }
 
-    /** "h:mm" del percentil, o "—" si no hay. */
     private static String hours(List<Long> seconds, double p) {
         if (seconds.isEmpty()) {
             return "—";

@@ -45,7 +45,6 @@ public final class SimulatedContainers {
         return place(graph, graph::shapeInLocality, stream, count, meanKg, seed);
     }
 
-    /** Solo sobre los trazos que acepta {@code area}: los de las localidades de una ASE, por ejemplo. */
     public static List<Container> place(RoadGraph graph, IntPredicate area, WasteStream stream, int count,
             double meanKg, long seed) {
         if (meanKg <= 0) {
@@ -88,7 +87,6 @@ public final class SimulatedContainers {
         };
     }
 
-    /** Punto a {@code meters} del inicio del trazo, interpolado sobre su geometría. */
     static int[] pointAlong(RoadGraph graph, int shape, double meters) {
         int first = graph.firstShapePoint(shape);
         int end = graph.endShapePoint(shape);

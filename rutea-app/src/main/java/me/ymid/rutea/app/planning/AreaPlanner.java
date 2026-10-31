@@ -60,7 +60,6 @@ public final class AreaPlanner {
         return plan(scenario, solution, solver.name(), settings.seed(), settings.iterationLimit());
     }
 
-    /** Un camión por viaje. */
     public static DemoPlan plan(AreaScenario scenario, Solution solution, String method, long seed, long iterations) {
         return plan(scenario, solution, oneTripEach(scenario, solution, BogotaFigures.UNLOAD_SECONDS_HIGH), method, seed,
                 iterations);
@@ -252,7 +251,6 @@ public final class AreaPlanner {
                 fleet(recyclables, BogotaFigures.ECA_UNLOAD_SECONDS, seed).plan());
     }
 
-    /** Una flota planificada, con lo que hace falta para replanificarla: su solución y su asignación de turnos. */
     public record Fleet(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, DemoPlan plan) {
     }
 

@@ -16,7 +16,6 @@ export function windows(sector: Sector): Map<WasteStream, Window[]> {
   return merged
 }
 
-/** La ventana publicada que contiene esa llegada planeada. */
 export function windowAt(sector: Sector, stream: WasteStream, seconds: number): Window | undefined {
   return windows(sector)
     .get(stream)

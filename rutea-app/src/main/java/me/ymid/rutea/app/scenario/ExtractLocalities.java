@@ -9,12 +9,6 @@ import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.geo.OsmBoundaries;
 import me.ymid.rutea.geo.geometry.Simplify;
 
-/**
- * Extrae de OSM los límites de las 20 localidades del catálogo y los guarda en GeoJSON con los bordes simplificados,
- * para saber de qué localidad es cada calle del grafo de Bogotá ({@link Localities}).
- *
- * <p>Uso: {@code ExtractLocalities <extracto.osm.pbf> <salida.geojson>}
- */
 public final class ExtractLocalities {
 
     private ExtractLocalities() {

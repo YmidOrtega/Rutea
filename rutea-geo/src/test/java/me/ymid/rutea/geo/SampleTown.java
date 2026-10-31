@@ -69,7 +69,6 @@ public final class SampleTown {
     private SampleTown() {
     }
 
-    /** Coordenadas {lat, lon} en 1e-7 grados de cada nodo, por id de OSM. */
     public static Map<Long, int[]> nodes() {
         return Collections.unmodifiableMap(NODES);
     }

@@ -32,7 +32,6 @@ import me.ymid.rutea.solver.local.LocalSearch;
  */
 public final class LiveOperation {
 
-    /** Quién recoge el contenedor desbordado. */
     public enum Pickup { PLANNED, IN_SERVICE, RESERVE }
 
     /**
@@ -52,7 +51,6 @@ public final class LiveOperation {
             long latencyNanos) {
     }
 
-    /** Se miden en {@link ClosureBenchmark}. */
     public enum ClosurePolicy {
         REROUTE,
         /**
@@ -259,7 +257,6 @@ public final class LiveOperation {
         return live.shiftSeconds();
     }
 
-    /** Los viajes del camión, con las recogidas extra en su lugar. */
     public List<int[]> trips(int truck) {
         List<int[]> trips = new ArrayList<>(live.tripCount(truck));
         for (int i = 0; i < live.tripCount(truck); i++) {
@@ -276,7 +273,6 @@ public final class LiveOperation {
         return live.endSeconds(truck);
     }
 
-    /** Cada llegada del camión a un contenedor, de su plan o extra: cuando lo vacía. */
     public record Visit(int node, long arriveSeconds) {
     }
 
@@ -303,7 +299,6 @@ public final class LiveOperation {
         return arrivals;
     }
 
-    /** La visita del plan que todavía no termina, si su camión sigue en servicio. */
     private Slot plannedVisit(int node, long atSeconds) {
         for (int t = 0; t < live.truckCount(); t++) {
             if (outOfService.contains(t)) {

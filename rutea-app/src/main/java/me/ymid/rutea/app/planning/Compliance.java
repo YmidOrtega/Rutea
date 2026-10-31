@@ -27,7 +27,6 @@ public final class Compliance {
         }
     }
 
-    /** Qué significa una revisión para la operación. */
     public enum Status {
         /** La norma se cumple sin hacer nada distinto. */
         OK,
@@ -36,7 +35,6 @@ public final class Compliance {
         FAIL
     }
 
-    /** Una regla, cuántas paradas toca en el plan y qué significa eso. */
     public record Check(String id, String citation, int count, String summary, Status status) {
     }
 

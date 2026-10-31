@@ -363,7 +363,6 @@ function Closure({ event, clock }: { event: ClosureEvent; clock: Props['clock'] 
   )
 }
 
-/** Una línea de la ficha técnica: la etiqueta a la izquierda y la cifra alineada a la derecha. */
 function Spec({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
     <div className="spec-row">
@@ -376,7 +375,6 @@ function Spec({ value, unit, label }: { value: string; unit?: string; label: str
   )
 }
 
-/** El triángulo de emergencia de los vehículos: averiar este compactador ahora. */
 function HazardIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">

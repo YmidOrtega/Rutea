@@ -41,7 +41,6 @@ final class StrongComponents {
         return vertices;
     }
 
-    /** Número de componente de cada vértice. */
     static int[] label(int vertexCount, int[] firstEdge, int[] targets) {
         int[] index = new int[vertexCount];
         int[] low = new int[vertexCount];

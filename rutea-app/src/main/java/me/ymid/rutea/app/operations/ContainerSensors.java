@@ -68,7 +68,6 @@ public final class ContainerSensors {
         return sensors[container];
     }
 
-    /** @param visits horas del turno en que un camión llega al contenedor, en orden */
     public double fill(int container, double[] visits, double seconds) {
         double emptied = previousEmptied[container];
         for (double visit : visits) {

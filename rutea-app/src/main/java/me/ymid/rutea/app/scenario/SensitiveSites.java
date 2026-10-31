@@ -60,7 +60,6 @@ public final class SensitiveSites {
 
     public record Site(Kind kind, String osmRef, String name, int[] latE7, int[] lonE7) {
 
-        /** Metros del punto al sitio: a su nodo, o al vértice más cercano de su predio. */
         public double metersTo(int lat, int lon) {
             double best = Double.POSITIVE_INFINITY;
             for (int i = 0; i < latE7.length; i++) {

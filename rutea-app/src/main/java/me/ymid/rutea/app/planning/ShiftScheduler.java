@@ -59,7 +59,6 @@ public final class ShiftScheduler {
             this(trucks, unloadSeconds, shiftSeconds, trucks.size());
         }
 
-        /** Se sabe que no hay reparto con menos camiones. */
         public boolean fewestTrucks() {
             return trucks.size() == lowerBound;
         }
@@ -509,7 +508,6 @@ public final class ShiftScheduler {
             return new Truck(sequence, reversed, meters, seconds);
         }
 
-        /** Segundos del viaje desde la portería o desde la base, en su sentido más rápido. */
         long fastestSeconds(int trip, boolean fromGate) {
             long[][] from = legs[trip][fromGate ? 1 : 0];
             return Math.min(from[0][1], from[1][1]);

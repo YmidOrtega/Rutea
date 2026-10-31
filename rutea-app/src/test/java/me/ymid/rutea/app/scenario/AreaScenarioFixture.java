@@ -15,7 +15,6 @@ import me.ymid.rutea.geo.geometry.Polygon;
 /** Escenario del ASE 5 sobre el pueblo de prueba: portería en el nodo 30 y base en el nodo 24. */
 public final class AreaScenarioFixture {
 
-    /** Todo el pueblo es Suba. */
     static final Localities SUBA_TOWN = new Localities(
             Map.of(ServiceAreas.locality(11).orElseThrow(), rectangle(-1, -1, 11, 11)));
 

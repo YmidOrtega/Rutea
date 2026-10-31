@@ -121,7 +121,6 @@ public final class MeasureDoorToDoor {
                 evaluation.cost() / 1000.0, solution.routeCount(), evaluation.feasible() ? "" : " INFACTIBLE");
     }
 
-    /** Los tramos de Suba a menos de {@link #ZONE_RADIUS_METERS} del centro de sus calles locales. */
     private static IntPredicate zone(RoadGraph graph, IntPredicate suba) {
         List<StreetChunks.Chunk> all = StreetChunks.of(graph, suba, 0);
         double lat = 0;

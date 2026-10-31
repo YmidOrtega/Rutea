@@ -1,13 +1,11 @@
 import type { Container, DemoPlan, LonLat, Route, Site } from '../demo/plan'
 
-/** Una localidad del selector: su borde y la ASE que la atiende (docs/api.md, `LocalityOutline`). */
 export interface Locality {
   number: number
   name: string
   area: number
   operator: string
   rural: boolean
-  /** El anillo exterior de cada parte. */
   outline: LonLat[][]
 }
 
@@ -49,7 +47,6 @@ export interface CityRoute extends Route {
   area: number
 }
 
-/** Un contenedor de la ciudad, con lo que el tooltip necesita saber de su plan. */
 export interface CityContainer extends Container {
   code: string
   area: number
@@ -104,7 +101,6 @@ export function mergePlans(selection: SelectionPlan): {
           simulated: shift.plan.meta.simulated,
         })
       }
-      // El relleno es el mismo para todas; cada ASE tiene su base.
       for (const site of shift.plan.sites) sites.set(`${site.position[0]},${site.position[1]}`, site)
     }
   }
@@ -123,7 +119,6 @@ export function hashOf(selection: number[] | null): string {
   return selection === null ? '' : `#ciudad${selection.length > 0 ? `=${selection.join(',')}` : ''}`
 }
 
-/** El rectángulo que encierra los bordes, como lo pide fitBounds. */
 export function boundsOf(rings: LonLat[][]): [[number, number], [number, number]] {
   let west = Infinity
   let south = Infinity

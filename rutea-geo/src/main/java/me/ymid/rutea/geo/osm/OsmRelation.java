@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Relación de OSM. Rutea la usa para el límite administrativo de la localidad. */
 public record OsmRelation(long id, List<Member> members, Map<String, String> tags) {
 
     public enum MemberType { NODE, WAY, RELATION }

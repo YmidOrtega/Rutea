@@ -7,12 +7,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Compila el grafo de un área ({@link AreaSpec#SUBA} si no se dice otra) desde el extracto PBF y lo guarda en
- * {@code .rgraph}. Si el archivo ya existe y salió del mismo extracto y recorte, solo lo carga.
- *
- * <p>Uso: {@code BuildRoadGraph <extracto.osm.pbf> <salida.rgraph> [--area suba|bogota] [--force]}
- */
 public final class BuildRoadGraph {
 
     private static final String USAGE = "uso: BuildRoadGraph <extracto.osm.pbf> <salida.rgraph> [--area suba|bogota]"
@@ -98,7 +92,6 @@ public final class BuildRoadGraph {
         System.out.printf(Locale.ROOT, "Guardado %s (%,d bytes) en %s%n", out, Files.size(out), elapsed(writeStart));
     }
 
-    /** Distancia y tiempo de un viaje por el grafo: la prueba de que el corredor conecta los sitios. */
     private static void printTrip(RoadGraph graph, String name, int from, int to) {
         int meters = new ShortestPaths(graph, ShortestPaths.Weight.METERS).distances(from, new int[] {to})[0];
         int seconds = new ShortestPaths(graph, ShortestPaths.Weight.SECONDS).distances(from, new int[] {to})[0];

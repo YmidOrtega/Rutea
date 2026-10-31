@@ -5,9 +5,7 @@ import { apiError, fetchSensors, fetchTelemetry, type SensorsMessage, type Telem
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
 export interface BreakdownEvent {
   type: 'breakdown'
-  /** Orden del evento en la sesión del servidor. */
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   truck: string
   atSeconds: number
@@ -29,7 +27,6 @@ export interface BreakdownEvent {
 export interface OverflowEvent {
   type: 'overflow'
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   container: string
   atSeconds: number
@@ -49,7 +46,6 @@ export interface OverflowEvent {
 export interface ClosureEvent {
   type: 'closure'
   seq: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   atSeconds: number
   roadClass: string
@@ -80,13 +76,11 @@ export interface EventsPage {
 export interface ShiftMessage {
   type: 'shift'
   shift: number
-  /** La ASE de la operación en vivo, de 1 a 5. */
   area: number
   /** El último evento del turno; 0 si todavía no hay ninguno. */
   seq: number
 }
 
-/** Los eventos con seq mayor a after: lo que le falta a quien ya tiene hasta after. */
 export const fetchEvents = (after = 0) =>
   fetch(`/api/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
 
@@ -94,7 +88,6 @@ export interface LoadedPlan {
   plan: DemoPlan
   /** Con la API detrás se puede simular averías; con el plan estático, solo mirar. */
   live: boolean
-  /** Lo que ya ocurrió en el turno del servidor; sin API, nada. */
   events: EventsPage | null
   /** Los vehículos en la calle y el reloj del servidor; sin API, el mapa reproduce el plan por su cuenta. */
   telemetry: TelemetryMessage | null
@@ -195,14 +188,11 @@ export function listen(listeners: Listeners): () => void {
 export interface CurrentPlan {
   /** El plan con los turnos que cambiaron por un desborde y las horas de visita corridas. */
   plan: DemoPlan
-  /** Rutas de reserva, de averías y de desbordes. */
   reserve: Route[]
   /** Contenedor huérfano → la reserva que lo recoge tras la avería. */
   orphanRoute: Map<string, string>
-  /** Contenedor → su último desborde. */
   overflows: Map<string, OverflowEvent>
   closures: ClosureEvent[]
-  /** Contenedor → el cierre que lo dejó sin acceso. */
   isolated: Map<string, ClosureEvent>
 }
 
@@ -250,7 +240,6 @@ export function currentPlan(plan: DemoPlan, events: OperationEvent[]): CurrentPl
 /** Las rutas de reserva, tras una avería o un desborde, empiezan por R- (R-03-1, R-N0123). */
 export const isReserveId = (id: string) => id.startsWith('R-')
 
-/** Quién recoge un desborde, en una frase: la usan el tooltip, la tarjeta y el panel. */
 export function overflowPickup(event: OverflowEvent, at: (seconds: number) => string): string {
   const minutes = Math.round((event.pickupSeconds - event.atSeconds) / 60)
   switch (event.pickup) {

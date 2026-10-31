@@ -150,7 +150,6 @@ public final class TravelMatrix {
             }
         }
 
-        // Cobertura voraz por filas y columnas.
         IntList rows = new IntList(8);
         IntList columns = new IntList(8);
         boolean[] pending = affected.clone();
@@ -316,7 +315,6 @@ public final class TravelMatrix {
         }
     }
 
-    /** Copia fila por fila, la forma que recibe el solver. */
     public int[][] metersRows() {
         int[][] rows = new int[size][];
         for (int i = 0; i < size; i++) {

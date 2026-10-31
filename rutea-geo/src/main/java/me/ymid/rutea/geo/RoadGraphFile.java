@@ -39,7 +39,6 @@ public final class RoadGraphFile {
     /** Encabezado sin el AreaSpec, que tiene largo variable. */
     private static final int HEADER_BYTES = MAGIC.length + 4 + 32 + 4 * 4;
 
-    /** Grafo leído de disco, con el origen que tenía al guardarse. */
     public record Stored(RoadGraph graph, byte[] sourceSha256, AreaSpec spec) {
     }
 
@@ -141,7 +140,6 @@ public final class RoadGraphFile {
         return new Stored(graph, sha, spec);
     }
 
-    /** El grafo guardado si existe y salió del mismo extracto y el mismo recorte; si no, vacío. */
     public static Optional<RoadGraph> readIfCurrent(Path file, byte[] sourceSha256, AreaSpec spec)
             throws IOException {
         if (!Files.exists(file)) {
