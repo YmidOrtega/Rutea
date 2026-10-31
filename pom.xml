@@ -113,6 +113,15 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
           <version>${exec-maven-plugin.version}</version>
+          <!--
+            Con -am, exec:java@x corre en cada módulo de arriba: solo lo ejecuta el que declara esa ejecución.
+            mainClass y executable están porque el plugin los exige antes de mirar skip.
+          -->
+          <configuration>
+            <skip>true</skip>
+            <mainClass>none</mainClass>
+            <executable>java</executable>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.springframework.boot</groupId>
