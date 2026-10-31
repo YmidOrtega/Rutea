@@ -162,4 +162,4 @@ Si modificas o agregas una regla: actualiza `docs/normativa.md`, el `NormRef` en
 
 ## Fase actual
 
-**F8 — En vivo por localidad, con puerta a puerta.** "En vivo" para la localidad que se elija, con contenedores y puerta a puerta (ADR 0014). Ver `docs/roadmap.md` para el estado y el criterio de cierre.
+**F8 — En vivo por localidad, con puerta a puerta**, cumplida el 2026-10-31. La siguiente fase todavía no está definida; ver "Más adelante" en `docs/roadmap.md`.

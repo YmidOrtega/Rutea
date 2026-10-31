@@ -497,7 +497,10 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
 
   - **Límite conocido:** las UPZ se reparten enteras. En localidades con una o dos UPZ (La Candelaria, Tunjuelito, Los Mártires, Antonio Nariño), una o dos franjas se quedan con casi todo, y las demás solo con unos pocos trozos fuera de toda UPZ. Cada calle sigue pasando 3 veces por semana, pero los camiones se usan desparejo.
 
-**Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.
+**Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`. **Cumplido** el 2026-10-31:
+- **Cualquier localidad urbana:** las 19, cada una en sus cuatro franjas, arman su operación con contenedores y puerta a puerta. Las 76 franjas son factibles según el `Evaluator`, con cada parada dibujada una vez y el último camión dentro del turno (`exec:java@live-localities`). El servidor las sirve en `/api/live/{localidad}/{franja}`, y el mapa las elige con un clic.
+- **Averías:** en Suba, LMV de noche (1.049 paradas, 28 camiones), la replanificación tiene P99 de 46,8 ms con solo reserva y de 36,1 ms reasignando primero, y R05 se cumple en las 500 averías (`exec:java@locality-breakdowns`).
+- **Fuentes:** la población (DANE), las toneladas (Doña Juana), los contenedores reales (operadores, ADR 0013) y el perímetro urbano (SDP, POT) están citados en `docs/datos.md`. La frecuencia, la velocidad de recolección, la capacidad de carga trasera y los turnos fuera del ASE 1 quedan `PENDIENTE_VERIFICAR`.
 
 ## Más adelante (sin fase asignada)
 
