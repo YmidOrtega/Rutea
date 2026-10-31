@@ -329,7 +329,7 @@ public final class AreaPlanner {
     }
 
     /** [lon, lat] con 5 decimales: alrededor de un metro, más fino que lo que se ve en el mapa. */
-    static double[] lonLat(int latE7, int lonE7) {
+    public static double[] lonLat(int latE7, int lonE7) {
         return new double[] {Math.round(lonE7 / 100.0) / 1e5, Math.round(latE7 / 100.0) / 1e5};
     }
 
@@ -403,8 +403,13 @@ public final class AreaPlanner {
             times.add((int) Math.round(clock));
         }
 
+        /** Un punto repetido es una parada: dos puntos de calle a menos de un metro redondean igual y se funden. */
         private void add(int latE7, int lonE7) {
-            path.add(lonLat(latE7, lonE7));
+            double[] point = lonLat(latE7, lonE7);
+            if (!path.isEmpty() && Arrays.equals(path.getLast(), point)) {
+                return;
+            }
+            path.add(point);
             times.add((int) Math.round(clock));
         }
 
