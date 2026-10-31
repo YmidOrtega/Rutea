@@ -160,10 +160,31 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
             double fill, long depotNode, long gateNode) {
         Operation operation = SideLoading.of(area).operation(shift);
         Set<Locality> chosen = chosen(area, selection);
-        List<OperatorContainers.Container> selected = selected(area, shift, chosen, localities, real);
-        if (selected.isEmpty()) {
+        List<Container> containers = realContainers(graph, area, shift, chosen, localities, real, fill);
+        if (containers.isEmpty()) {
             throw new IllegalArgumentException("ningún contenedor de " + label(area, chosen) + " es del turno "
                     + shift.operatorName());
+        }
+        String name = String.format(Locale.ROOT, "%s%s-n%d-f%d", prefix(area, chosen), shift.name(),
+                containers.size() + 1, Math.round(fill * 100));
+        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
+                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+    }
+
+    /**
+     * Los contenedores reales del turno en las localidades elegidas, como los visita {@link #buildReal}, sin calcular
+     * la matriz; vacío si no hay ninguno.
+     */
+    public static List<Container> realContainers(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
+            Collection<Locality> selection, List<OperatorContainers.Container> real, double fill) {
+        return realContainers(graph, area, shift, chosen(area, selection), Localities.bogota(), real, fill);
+    }
+
+    private static List<Container> realContainers(RoadGraph graph, ServiceArea area, SideLoading.Shift shift,
+            Set<Locality> chosen, Localities localities, List<OperatorContainers.Container> real, double fill) {
+        List<OperatorContainers.Container> selected = selected(area, shift, chosen, localities, real);
+        if (selected.isEmpty()) {
+            return List.of();
         }
         int[][] ends = shapeEnds(graph);
         List<Container> containers = new ArrayList<>(selected.size());
@@ -176,10 +197,7 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
             containers.add(new Container(c.code(), WasteStream.NON_RECYCLABLE, c.latE7(), c.lonE7(), vertex, shape,
                     SideLoading.kgAtCollection(c.liters(), fill)));
         }
-        String name = String.format(Locale.ROOT, "%s%s-n%d-f%d", prefix(area, chosen), shift.name(),
-                containers.size() + 1, Math.round(fill * 100));
-        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
-                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+        return containers;
     }
 
     /** Los contenedores reales del turno que caen en las localidades elegidas, sin armar el escenario. */
@@ -238,6 +256,27 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
             Localities localities, long depotNode, long gateNode) {
         Operation operation = SideLoading.of(area).operation(shift);
         Set<Locality> chosen = chosen(area, selection);
+        List<Container> containers = plannedContainers(graph, area, chosen, localities, count, liters, fill, seed);
+        if (containers.isEmpty()) {
+            throw new IllegalArgumentException("ningún contenedor simulado cae en " + label(area, chosen));
+        }
+        String name = String.format(Locale.ROOT, "%s%s-n%d-s%d-f%d", prefix(area, chosen), shift.name(),
+                containers.size() + 1, seed, Math.round(fill * 100));
+        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
+                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+    }
+
+    /**
+     * Los contenedores simulados de la cantidad oficial en las localidades elegidas, como los ubica
+     * {@link #buildPlanned}, sin calcular la matriz; vacío si no cae ninguno.
+     */
+    public static List<Container> plannedContainers(RoadGraph graph, ServiceArea area, Collection<Locality> selection,
+            int count, List<Integer> liters, double fill, long seed) {
+        return plannedContainers(graph, area, chosen(area, selection), Localities.bogota(), count, liters, fill, seed);
+    }
+
+    private static List<Container> plannedContainers(RoadGraph graph, ServiceArea area, Set<Locality> chosen,
+            Localities localities, int count, List<Integer> liters, double fill, long seed) {
         // La carga media no importa: cada carga se reemplaza por la de la capacidad.
         List<Container> placed = SimulatedContainers.place(graph, streets(graph, area, localities),
                 WasteStream.NON_RECYCLABLE, count, 1, seed);
@@ -250,13 +289,7 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
                         SideLoading.kgAtCollection(size, fill)));
             }
         }
-        if (containers.isEmpty()) {
-            throw new IllegalArgumentException("ningún contenedor simulado cae en " + label(area, chosen));
-        }
-        String name = String.format(Locale.ROOT, "%s%s-n%d-s%d-f%d", prefix(area, chosen), shift.name(),
-                containers.size() + 1, seed, Math.round(fill * 100));
-        return assemble(graph, area, operation, containers, vertex(graph, depotNode, "la base"),
-                vertex(graph, gateNode, "la portería del relleno"), operation.compactorKg(), name);
+        return containers;
     }
 
     /** Los extremos de cada trazo en su sentido de dibujo: un trazo de doble sentido aparece en dos arcos. */
