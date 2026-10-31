@@ -47,6 +47,17 @@ public final class AreaScenarioFixture {
                 "Reciclaje");
     }
 
+    /** Puerta a puerta en todo el pueblo, con un contenedor en el nodo 20 y un kilo por metro de calle. */
+    public static AreaScenario doorToDoorTown(Path dir) throws IOException {
+        RoadGraph graph = SampleTown.graph(dir);
+        int vertex = graph.vertexOf(20).orElseThrow();
+        SimulatedContainers.Container container = new SimulatedContainers.Container("oeste",
+                WasteStream.NON_RECYCLABLE, graph.latE7(vertex), graph.lonE7(vertex), vertex, 0, 300);
+        return AreaScenario.buildDoorToDoor(graph, ServiceAreas.ASE_5, ServiceAreas.ASE_5.verified(),
+                List.of(container), StreetChunks.of(graph, shape -> true, DoorToDoor.MAX_CHUNK_METERS),
+                graph.vertexOf(24).orElseThrow(), graph.vertexOf(30).orElseThrow(), 1, "prueba");
+    }
+
     /** Rectángulo en pasos de 0,001° desde (4,70; -74,00), como {@link SampleTown}. */
     static Polygon rectangle(int latFrom, int lonFrom, int latTo, int lonTo) {
         int[] lat = {step(latFrom, 47_000_000), step(latFrom, 47_000_000), step(latTo, 47_000_000),

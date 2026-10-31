@@ -50,6 +50,21 @@ class InsertionTest {
     }
 
     @Test
+    void livePlanAlsoCountsTheStreetsATruckCollects() throws IOException {
+        AreaScenario streets = AreaScenarioFixture.doorToDoorTown(dir);
+        Solution routes = new AlnsSolver().solve(streets.instance(), new SolverSettings(4, Duration.ofMinutes(1), 200));
+        ShiftScheduler.Schedule shifts = ShiftScheduler.schedule(streets, routes, BogotaFigures.UNLOAD_SECONDS_LOW,
+                24 * 3600, 1);
+
+        LivePlan live = LivePlan.of(streets, routes, shifts);
+
+        for (int t = 0; t < live.truckCount(); t++) {
+            assertThat(live.endSeconds(t)).isEqualTo(shifts.trucks().get(t).seconds());
+            assertThat(live.meters(t)).isEqualTo(shifts.trucks().get(t).meters());
+        }
+    }
+
+    @Test
     void insertsOnlyWithinCapacityAndShiftAndNeverIntoTheExcludedTruck() {
         LivePlan live = LivePlan.of(scenario, solution, schedule);
         List<Integer> pending = new ArrayList<>(Arrays.stream(stops(schedule.trucks().getFirst())).boxed().toList());

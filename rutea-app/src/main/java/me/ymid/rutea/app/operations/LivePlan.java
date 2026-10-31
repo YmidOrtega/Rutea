@@ -217,7 +217,7 @@ final class LivePlan {
     long meters(int truck) {
         long meters = 0;
         for (Leg leg : legs(truck)) {
-            meters += leg.meters();
+            meters += leg.meters() + (leg.position() >= 0 ? scenario.collectingMeters(leg.to()) : 0);
         }
         return meters;
     }
