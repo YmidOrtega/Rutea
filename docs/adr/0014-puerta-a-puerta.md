@@ -32,6 +32,7 @@ Un tramo mide 76 m en promedio: más o menos una cuadra. Con un cliente por tram
 2. **Demanda por longitud de calle.** Las toneladas de la localidad (las de la ciudad repartidas por población, menos lo que recogen sus contenedores) se reparten entre los trozos según su longitud, el mismo indicador que ya usan los contenedores simulados. Es un supuesto, y así se marca: con más datos, por ejemplo edificios o viviendas por manzana, se reemplaza.
 3. **Los dos esquemas en la misma instancia.** Los contenedores de la localidad siguen siendo clientes puntuales, y los trozos se suman a ellos. El solver, el `Evaluator` y el arnés no cambian.
 4. **Trozos de hasta 500 m**, decididos midiendo (abajo). Un trozo es una caminata por calles locales en su sentido de circulación (`StreetChunks`): crece por la calle que menos gira, hacia adelante y después hacia atrás desde su entrada, y un tramo entra solo si el trozo no pasa de 500 m. Un tramo que ya mide más queda como trozo propio.
+5. **Una instancia por grupo de días** (2026-10-30). Con 3 pasadas por semana en seis días, las UPZ de la localidad se reparten entre lunes, miércoles y viernes, y martes, jueves y sábado, parejas en metros de calle: de la más larga a la más corta, cada una al grupo que lleva menos (`DoorToDoor`). La UPZ es el sector en que ya se publican los horarios (R04), así que el calendario sale listo para publicar. Los contenedores que se recogen 6 veces por semana van en los dos grupos; los de 3, en el de su UPZ. Resultado en el roadmap, F8.
 
 ## Medición
 

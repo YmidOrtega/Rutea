@@ -414,7 +414,17 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
   - **Resultado:** trozos de hasta **500 m**. En una zona chica (475 tramos), agrupar queda a 0,03 % del costo de los tramos sueltos y resuelve en 2,3 s frente a 5,4 s; todos los tamaños probados quedan a menos de 0,4 %, dentro del ruido de ALNS. En toda Suba salen 3.269 clientes (212 m de media), matriz en 348 ms y ALNS en 59,8 s. Más allá de 500 m los clientes bajan poco, porque las calles se cortan. Tabla completa en el ADR 0014; `exec:java@door-to-door` (i5-14400F, 16 hilos, Java 21.0.13; semilla 7, 2000 iteraciones), CSV en `docs/benchmarks/f8-door-to-door/`.
   - Una recolección de toda Suba en una sola instancia tarda demasiado para el modo en vivo: la instancia por localidad la parte por día y turno.
 - [x] Población y toneladas por localidad en `docs/datos.md` (2026-10-29): población urbana de 2026 del DANE (serie de 2021) y las 5.680 t/día del servicio ordinario repartidas por población. Suba: 1.347.097 habitantes, 940,6 t/día. La actualización de 2025 de las proyecciones no se encontró publicada por localidad.
-- [ ] Instancia de una localidad con contenedores y puerta a puerta juntos, sobre el grafo de Bogotá, con su fila en el arnés.
+- [x] Instancia de una localidad con contenedores y puerta a puerta juntos, sobre el grafo de Bogotá, con su fila en el arnés (2026-10-30; `exec:java@locality-instances`, `DoorToDoor`).
+  - Con 3 pasadas por semana (`PENDIENTE_VERIFICAR`) en seis días, cada calle es de uno de dos grupos: lunes, miércoles y viernes, o martes, jueves y sábado. Las UPZ, el sector en que se publican los horarios (R04), se reparten entre los dos, parejos en metros de calle, y cada grupo es una instancia. Los contenedores de 6 pasadas van en las dos; los de 3, en la de su UPZ.
+  - Demanda: lo que le toca a la localidad por población, menos lo que recogen sus contenedores, por los días entre dos pasadas, repartido por metro de calle local. Suba: 940,6 t/día, 92,2 en sus 320 contenedores simulados, 2,851 kg/m.
+  - **Resultado en Suba** (ALNS, semilla 7, 2.000 iteraciones; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-locality/`): las dos soluciones son factibles según el `Evaluator`.
+
+    | Instancia | Contenedores | Trozos | km de calle | t | Matriz | ALNS | km del plan | Viajes |
+    |---|---:|---:|---:|---:|---:|---:|---:|---:|
+    | `SubaLMV-n2094-s7-f100` | 320 | 1.773 | 355,5 | 1.121,2 | 1,6 s | 49,4 s | 7.029,4 | 142 |
+    | `SubaMJS-n1822-s7-f100` | 320 | 1.501 | 338,8 | 1.073,7 | 1,2 s | 42,7 s | 6.952,1 | 136 |
+
+  - Partir por días no basta para el modo en vivo: con 2.000 iteraciones, ALNS tarda en proporción a los clientes, y un día de Suba sigue tomando más de 40 s. Chapinero (410 nodos) y Santa Fe (322) son chicas; Kennedy queda cerca de Suba (1.637).
 - [ ] "En vivo" para cualquier localidad: el servidor arma su plan y su operación (averías, desbordes, cierres, sensores y telemetría) para la localidad elegida. El mapa la elige con un clic. La UI dice qué es real y qué es simulado.
 - [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
 
