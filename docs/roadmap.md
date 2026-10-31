@@ -425,6 +425,16 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
     | `SubaMJS-n1822-s7-f100` | 320 | 1.501 | 338,8 | 1.073,7 | 1,2 s | 42,7 s | 6.952,1 | 136 |
 
   - Partir por días no basta para el modo en vivo: con 2.000 iteraciones, ALNS tarda en proporción a los clientes, y un día de Suba sigue tomando más de 40 s. Chapinero (410 nodos) y Santa Fe (322) son chicas; Kennedy queda cerca de Suba (1.637).
+  - **Partido también por turno** (2026-10-30): cada grupo de días tiene turno de día (06:00–16:00) y de noche (18:00–04:00), los de las microrrutas domiciliarias del ASE 1 (`PENDIENTE_VERIFICAR` en las demás ASE). Las UPZ se reparten entre las cuatro franjas; cada contenedor va en su turno de cargue lateral, y los 320 de Suba son del de noche. Mismo arnés y misma máquina; las cuatro soluciones son factibles. Las corridas fueron una tras otra.
+
+    | Instancia | Contenedores | Trozos | ALNS | km del plan | Viajes |
+    |---|---:|---:|---:|---:|---:|
+    | `SubaLMVDia-n977-s7-f100` | 0 | 976 | 13,4 s | 2.744,8 | 58 |
+    | `SubaLMVNoche-n1032-s7-f100` | 320 | 711 | 15,4 s | 4.281,7 | 78 |
+    | `SubaMJSDia-n841-s7-f100` | 0 | 840 | 11,2 s | 3.239,5 | 65 |
+    | `SubaMJSNoche-n1068-s7-f100` | 320 | 747 | 13,5 s | 3.768,1 | 77 |
+
+    Un día de Suba pasa de 49,4 s a dos instancias de 13,4 y 15,4 s, que se resuelven en paralelo. Los km casi no cambian: lunes, miércoles y viernes, 7.026,5 frente a 7.029,4; martes, jueves y sábado, 7.007,6 frente a 6.952,1 (+0,8 %).
 - [ ] "En vivo" para cualquier localidad: el servidor arma su plan y su operación (averías, desbordes, cierres, sensores y telemetría) para la localidad elegida. El mapa la elige con un clic. La UI dice qué es real y qué es simulado.
 - [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
 
