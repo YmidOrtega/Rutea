@@ -1,6 +1,6 @@
 # ♻️ Rutea
 
-> **A waste-collection microroute planner for Bogotá (pilot: Suba), built on a custom CVRP solver in Java 21, with live replanning and Colombian sanitation regulations as traceable constraints**
+> **A waste-collection microroute planner for Bogotá, built on a custom CVRP solver in Java 21: any locality, live, with containers and door-to-door collection, live replanning and Colombian sanitation regulations as traceable constraints**
 
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
@@ -16,7 +16,7 @@
 
 ## 📖 Overview
 
-**Rutea** decides which vehicle collects which containers, and in what order, on Suba's real streets (OpenStreetMap), respecting capacity, shifts, waste stream and the regulations of Colombia's public sanitation service. When something changes during operation (a breakdown, a closed road, an overflowing container), it replans on the fly and broadcasts the new plan to every client over WebSocket.
+**Rutea** decides which vehicle collects which containers and street stretches, and in what order, on Bogotá's real streets (OpenStreetMap), respecting capacity, shifts, waste stream and the regulations of Colombia's public sanitation service. You pick any of the 19 urban localities and one of its four collection slots, and its live operation starts. When something changes (a breakdown, a closed road, an overflowing container), it replans on the fly and broadcasts the new plan to every client over WebSocket.
 
 At its core is a **custom CVRP solver** (ALNS) with no dependencies, benchmarked against the public CVRPLIB instances. Everything else (road graph, domain, simulation, API and map) exists so that solver works on a real city and can be seen working.
 
@@ -26,7 +26,7 @@ At its core is a **custom CVRP solver** (ALNS) with no dependencies, benchmarked
 - 🚨 Testing how a plan responds to a breakdown, a road closure or an overflow, live
 - 💼 Portfolio showcase bridging environmental engineering and backend development
 
-> ⚠️ **The streets are real; containers and their loads are simulated**, and the interface says so. Rutea is not connected to any operator's service.
+> ⚠️ **The streets are real, and so are the 2026 containers of service areas 1, 2 and 4, taken from the operators' public maps. The rest, and every load, are simulated**, and the interface says which is which. Rutea is not connected to any operator's service.
 
 ---
 
@@ -35,12 +35,14 @@ At its core is a **custom CVRP solver** (ALNS) with no dependencies, benchmarked
 - 🧠 **Custom CVRP solver** — ALNS (Shaw removal, regret-2, simulated annealing) over a local search that evaluates each move in O(1); pure Java, no optimization libraries
 - ⚡ **Parallel and reproducible** — `alns-x4` runs four searches with fixed seeds; every run has an explicit seed
 - 📏 **Benchmarked on CVRPLIB** — 0.18% average gap on 43 X instances of up to 301 nodes, versus 2.01% for Timefold with its default configuration
-- 🛣️ **Real road graph** — 18,134 vertices and 2,227 km of OSM streets with one-way rules; a 1,701 × 1,701 matrix in 377 ms on 16 threads
+- 🛣️ **Real road graph** — all of Bogotá: 70,728 vertices and 7,407 km of OSM streets with one-way rules, built by a custom PBF reader
+- 🏙️ **Bogotá by service area** — any selection of localities (one, five or all twenty) is planned as one CVRP per service area, solved in parallel
+- 🏠 **Door-to-door collection** — local streets grouped into drivable chunks that become CVRP customers, clipped to the urban land of the city's land-use plan (POT)
 - ⚖️ **Traceable regulations** — every constraint cites its decree and article (`NormRef`) and has a test; anything not verified against the official text is marked `PENDIENTE_VERIFICAR`
-- 🔧 **Live replanning** — breakdowns (R05), road closures and overflowing containers, with a P99 of 124.6 ms to replan a breakdown
+- 🔧 **Live replanning** — breakdowns (R05), road closures and overflowing containers; a breakdown in Suba's busiest slot (1,049 stops, 28 trucks) replans in 46.8 ms at P99
 - 📡 **Simulated fill sensors** — a container that reaches 100% is dispatched automatically
 - 🗄️ **PostgreSQL + PostGIS** — the shift's orders are replayed after a restart and every reported position is stored as a point (R08)
-- 🌙 **Night dispatch dashboard** — React, MapLibre and deck.gl: the map lights up as the shift goes on
+- 🌙 **The city cleans itself** — React, MapLibre and deck.gl: each street glows sodium when its truck goes by and cools to clean white; a fleet strip shows every compactor's load
 
 ---
 
@@ -57,34 +59,33 @@ cd Rutea
 docker compose up
 ```
 
-The first run downloads Suba's OpenStreetMap data (2 MB, verified by SHA-256) and builds the image; the plan is ready about 25 s after startup.
+The first run downloads Bogotá's road graph, sensitive sites and the operators' containers (verified by SHA-256) and builds the image. Suba's Mon/Wed/Fri night slot is built at startup (22 s on an i5-14400F); any other locality and slot is built the first time you open it.
 
 | Interface | URL |
 |---|---|
 | **Map** | http://localhost:8080 |
 | **REST API** | http://localhost:8080/api |
-| **Event WebSocket** | ws://localhost:8080/ws/events |
+| **Live WebSocket** | ws://localhost:8080/ws/live/{locality}/{slot} |
 
-On the map: ▶ starts the shift, the triangle next to each compactor breaks it down, clicking a black container reports it as overflowing, and "Cerrar una vía" closes the street you click next.
+On the map: **En vivo** shows one locality (click another to switch) and its slot (Mon/Wed/Fri or Tue/Thu/Sat, day or night); **Ciudad** plans any selection of localities. In live mode, ▶ starts the shift, the button next to each compactor in the plan sheet breaks it down, clicking a black container reports it as overflowing, and "Cerrar una vía" closes the street you click next.
 
 ---
 
 ## 🌐 REST API
 
 ```bash
-# The shift's plan: routes, containers, sites and sectors
-curl http://localhost:8080/api/plan
+# Side loading for Suba (11) and Engativá (10): one plan per service area
+curl 'http://localhost:8080/api/areas?localities=11,10'
+
+# Suba's live plan, Mon/Wed/Fri night: routes, containers, street chunks, sites and sectors
+curl http://localhost:8080/api/live/11/LMVNoche/plan
 
 # Break down a compactor at the current clock time
-curl -X POST http://localhost:8080/api/breakdowns \
+curl -X POST http://localhost:8080/api/live/11/LMVNoche/breakdowns \
   -H 'Content-Type: application/json' -d '{"truck":"C-03"}'
 
-# Report an overflowing container
-curl -X POST http://localhost:8080/api/overflows \
-  -H 'Content-Type: application/json' -d '{"container":"N0033"}'
-
-# Play the shared clock at 240×
-curl -X PUT http://localhost:8080/api/clock \
+# Play that operation's clock at 240×
+curl -X PUT http://localhost:8080/api/live/11/LMVNoche/clock \
   -H 'Content-Type: application/json' -d '{"running":true,"speed":240}'
 ```
 
@@ -133,6 +134,18 @@ The 3-hour service-restoration rule (R05) holds in all 500 breakdowns: in the wo
 
 On the 2026 instance, 60 s, seeds 1–3: `alns-x4` 790.5 km cold and 791.5 km warm; Timefold 2.7.1 832.7 km (5% above).
 
+**All of Bogotá, live** — the 19 urban localities, each in its four slots, with containers and door-to-door collection (ALNS seed 7, 2,000 iterations):
+
+| Metric | Result |
+|---|---:|
+| Feasible slots (per the `Evaluator`) | 76 / 76 |
+| Truck-shifts | 520 |
+| Tonnes | 13,253 |
+| km | 73,829 |
+| Build time per slot, P50 / P95 / max | 4.9 s / 17.5 s / 23.6 s |
+
+In Suba, door-to-door collects the whole 940.6 t/day at 8.2–8.4 km per tonne; the 2022 container-only plan collected 11.8% of it at 10.2 km/t.
+
 ---
 
 ## 🏗️ Architecture
@@ -153,7 +166,8 @@ A modular monolith: Maven modules with one-way dependencies, deployed as a singl
                          ▼                                   │
               ┌─────────────────────────────────────────────┴──┐
               │                   rutea-app                    │
-              │   planning · REST API · WebSocket (port 8080)  │
+              │  web → application → operations → planning →   │
+              │  scenario · REST API · WebSocket (port 8080)   │
               └──────────┬──────────────────────────┬──────────┘
                          │                          │ REST + WebSocket
                          ▼                          ▼
@@ -164,7 +178,7 @@ A modular monolith: Maven modules with one-way dependencies, deployed as a singl
                └──────────────────┘      └──────────────────────┘
 ```
 
-The solver only receives numbers (distance matrix, demands, capacities). The translation from "waste problem" to "CVRP instance" lives in `rutea-app`, never inside the solver. Timefold and JMH live separately, in `rutea-bench`.
+The solver only receives numbers (distance matrix, demands, capacities). The translation from "waste problem" to "CVRP instance" lives in `rutea-app`, never inside the solver. Inside `rutea-app`, each layer only imports the ones below it, the model does not know Spring, and a test checks both ([ADR 0015](docs/adr/0015-capas-y-herramientas-aparte.md)). Timefold and JMH live separately, in `rutea-bench`; the data extractors and benchmarks, in `rutea-tools`.
 
 ---
 
@@ -174,7 +188,7 @@ The solver only receives numbers (distance matrix, demands, capacities). The tra
 
 | Service | Image | What it does |
 |---|---|---|
-| `data` | `alpine:3.22` | Downloads Suba's road graph and sensitive sites from the release and verifies their SHA-256 |
+| `data` | `alpine:3.22` | Downloads the road graphs, sensitive sites and operators' containers from the releases and verifies their SHA-256 |
 | `db` | `postgis/postgis:17-3.5` | Stores each shift's orders and the reported positions; its port is not published |
 | `app` | built from the `Dockerfile` | API, WebSocket and the map on port 8080 |
 
@@ -182,8 +196,9 @@ The solver only receives numbers (distance matrix, demands, capacities). The tra
 
 | Variable | In Compose | Description |
 |---|---|---|
-| `RUTEA_GRAPH` | `/data/suba.rgraph` | Suba's compact road graph |
-| `RUTEA_SITES` | `/data/suba-sitios-sensibles.csv` | Schools, hospitals and hotels from OSM (R02, R07) |
+| `RUTEA_BOGOTAGRAPH` | `/data/bogota.rgraph` | Bogotá's compact road graph |
+| `RUTEA_BOGOTASITES` | `/data/bogota-sitios-sensibles.csv` | Schools, hospitals and hotels from OSM (R02, R07) |
+| `RUTEA_OPERATORCONTAINERS` | `/data` | The 2026 containers of service areas 1, 2 and 4 |
 | `SPRING_PROFILES_ACTIVE` | `postgres` | Persistence in PostgreSQL |
 | `RUTEA_DB_URL` | `jdbc:postgresql://db:5432/rutea` | Database connection |
 
@@ -195,7 +210,7 @@ Requirements: JDK 21, Maven 3.9+ (or the `./mvnw` wrapper), Node.js 22+ and pnpm
 
 ```bash
 ./mvnw verify                          # build and run every test
-./mvnw -pl rutea-app spring-boot:run   # API on http://localhost:8080 (needs the data in data/osm)
+./mvnw -pl rutea-app spring-boot:run   # API on http://localhost:8080 (needs the data in data/osm and data/ase)
 
 cd web && pnpm install
 pnpm dev                               # http://localhost:5173 (proxies /api and /ws → :8080)
@@ -221,8 +236,10 @@ Rutea/
 ├── web/               # React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/
 │   ├── cvrplib/       # X instances by Uchoa et al. with their BKS
-│   ├── osm/           # Fixed OpenStreetMap extract (downloaded)
-│   └── suba/          # Real CVRP instances of Suba (generated)
+│   ├── osm/           # Fixed OpenStreetMap extract and road graphs (downloaded)
+│   ├── ase/           # Operators' 2026 containers (downloaded)
+│   ├── suba/          # Real CVRP instances of Suba (generated)
+│   └── bogota/        # One CVRP instance per service area, shift and slot (generated)
 ├── docs/              # Regulations, architecture, API, roadmap, design, ADRs and benchmarks
 ├── docker/
 ├── Dockerfile
@@ -245,7 +262,7 @@ Rutea/
   -Dexec.args="data/cvrplib/X --solver alns-x4 --seed 1 --time-limit 60"
 ```
 
-More than 250 test methods. Every new solver passes `SolverContractTest`: feasible solutions on every instance in `data/cvrplib`. The `Evaluator` is the single source of truth for cost, and its tests reproduce the published cost of every BKS. Every regulatory rule has a test that cites it by name.
+More than 300 test methods. Every new solver passes `SolverContractTest`: feasible solutions on every instance in `data/cvrplib`. The `Evaluator` is the single source of truth for cost, and its tests reproduce the published cost of every BKS. Every regulatory rule has a test that cites it by name.
 
 ---
 
@@ -287,7 +304,9 @@ The details, with articles and links, are in [`docs/normativa.md`](docs/normativ
 - [x] F3 — Real map: all of Suba on OSM streets
 - [x] F4 — Domain constraints: 20.5% fewer km than the best sweep
 - [x] F5 — Real-time operation: breakdowns, closures, overflows and sensors
-- [ ] F6 — Product and release (in progress)
+- [x] F6 — Product and release: one `docker compose up`, a stable API and a contract test
+- [x] F7 — Bogotá by service area: any selection of localities, with the operators' real containers
+- [x] F8 — Live per locality, with door-to-door: 76 of 76 slots feasible
 
 Each phase and its closing criterion are described in [`docs/roadmap.md`](docs/roadmap.md) (in Spanish).
 
@@ -320,7 +339,8 @@ MIT License — see [LICENSE](LICENSE) for details. The CVRPLIB instances keep t
 ## 🙏 Acknowledgments
 
 - **Uchoa et al. (2017)** and **CVRPLIB** for the X instance set; copy taken from [PyVRP/Instances](https://github.com/PyVRP/Instances) (MIT)
-- **OpenStreetMap contributors** for Suba's streets
+- **OpenStreetMap contributors** for Bogotá's streets
+- **Secretaría Distrital de Planeación** for the POT urban perimeter (CC BY 4.0)
 - **CARTO** for the Dark Matter basemap
 
 ---
