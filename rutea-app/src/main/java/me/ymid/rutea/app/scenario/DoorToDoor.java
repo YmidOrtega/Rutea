@@ -6,15 +6,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntPredicate;
 
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.geo.RoadGraph;
-import me.ymid.rutea.geo.ShortestPaths;
-import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
 
 public final class DoorToDoor {
@@ -29,6 +25,9 @@ public final class DoorToDoor {
      * {@code PENDIENTE_VERIFICAR}: kilos que carga un compactador de carga trasera. Ningún operador los publica; se
      * toman los del cargue lateral, y la flota de la instancia es una sola.
      */
+    /** {@code PENDIENTE_VERIFICAR}: velocidad del compactador mientras recoge casa por casa. */
+    public static final int COLLECTING_KMH = 6;
+
     public static final int COMPACTOR_KG = SideLoading.SIDE_LOADER_KG;
 
     /**
@@ -226,66 +225,15 @@ public final class DoorToDoor {
         return calendar;
     }
 
+    public static int collectingSeconds(int meters) {
+        return (int) Math.round(meters * 3.6 / COLLECTING_KMH);
+    }
+
     public static Instance instance(RoadGraph graph, List<Container> containers, List<StreetChunks.Chunk> chunks,
             int depot, int gate, int capacity, double kgPerMeter, String name) {
-        int n = containers.size() + chunks.size() + 1;
-        int[] demands = new int[n];
-        int[] entries = new int[n];
-        int[] exits = new int[n];
-        int[] collecting = new int[n];
-        entries[0] = gate;
-        exits[0] = depot;
-        for (int i = 1; i <= containers.size(); i++) {
-            Container container = containers.get(i - 1);
-            demands[i] = container.kg();
-            entries[i] = container.vertex();
-            exits[i] = container.vertex();
-        }
-        for (int i = containers.size() + 1; i < n; i++) {
-            StreetChunks.Chunk chunk = chunks.get(i - containers.size() - 1);
-            demands[i] = Math.max(1, (int) Math.round(chunk.meters() * kgPerMeter));
-            entries[i] = chunk.entry();
-            exits[i] = chunk.exit();
-            collecting[i] = chunk.meters();
-        }
-        for (int i = 1; i < n; i++) {
-            if (demands[i] > capacity) {
-                throw new IllegalStateException("el nodo " + i + " carga " + demands[i] + " kg y no cabe en un camión");
-            }
-        }
-        int[][] distances = new int[n][n];
-        AtomicInteger nextRow = new AtomicInteger();
-        AtomicReference<RuntimeException> failure = new AtomicReference<>();
-        Runnable rows = () -> {
-            ShortestPaths paths = new ShortestPaths(graph, ShortestPaths.Weight.METERS);
-            for (int i = nextRow.getAndIncrement(); i < n && failure.get() == null; i = nextRow.getAndIncrement()) {
-                paths.distances(exits[i], entries, distances[i]);
-                for (int j = 0; j < n; j++) {
-                    if (distances[i][j] == ShortestPaths.UNREACHABLE) {
-                        failure.compareAndSet(null, new IllegalStateException(
-                                "no hay camino de " + exits[i] + " a " + entries[j]));
-                        return;
-                    }
-                    distances[i][j] = i == j ? 0 : distances[i][j] + collecting[j];
-                }
-            }
-        };
-        Thread[] threads = new Thread[Runtime.getRuntime().availableProcessors()];
-        for (int t = 0; t < threads.length; t++) {
-            threads[t] = Thread.ofPlatform().start(rows);
-        }
-        for (Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
-            }
-        }
-        if (failure.get() != null) {
-            throw failure.get();
-        }
-        return new Instance(Objects.requireNonNull(name, "name"), capacity, demands, DistanceMatrix.of(distances));
+        return AreaScenario.instance(AreaScenario.travel(graph, containers, chunks, depot, gate),
+                AreaScenario.demands(containers, chunks, kgPerMeter, capacity),
+                AreaScenario.collecting(containers, chunks), capacity, Objects.requireNonNull(name, "name"));
     }
 
     private static int vertex(RoadGraph graph, long osmNode, String what) {

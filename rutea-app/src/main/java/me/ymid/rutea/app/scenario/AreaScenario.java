@@ -1,7 +1,6 @@
 package me.ymid.rutea.app.scenario;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -39,35 +38,33 @@ import me.ymid.rutea.solver.Instance;
  * @param sites sitios sensibles para R02 y R07; vacío si no se cargaron
  */
 public record AreaScenario(ServiceArea area, Operation operation, RoadGraph graph, int gateVertex, int depotVertex,
-        List<Container> containers, int[] points, Instance instance, TravelMatrix travel, List<SensitiveSites.Site> sites) {
+        List<Container> containers, List<StreetChunks.Chunk> chunks, int[] points, Instance instance,
+        TravelMatrix travel, List<SensitiveSites.Site> sites) {
 
     public AreaScenario {
         Objects.requireNonNull(operation, "operation");
         containers = List.copyOf(containers);
+        chunks = List.copyOf(chunks);
         sites = List.copyOf(sites);
     }
 
     public AreaScenario withSites(List<SensitiveSites.Site> sensitive) {
-        return new AreaScenario(area, operation, graph, gateVertex, depotVertex, containers, points, instance, travel,
-                sensitive);
+        return new AreaScenario(area, operation, graph, gateVertex, depotVertex, containers, chunks, points, instance,
+                travel, sensitive);
     }
 
     /** Un contenedor aislado por un cierre queda a {@link TravelMatrix#UNREACHABLE}. */
     public AreaScenario withTravel(TravelMatrix matrix) {
         int n = instance.size();
-        int[][] distances = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? gate() : j);
-            }
-        }
         int[] demands = new int[n];
+        int[] collecting = new int[n];
         for (int i = 1; i < n; i++) {
             demands[i] = instance.demand(i);
+            collecting[i] = collectingMeters(i);
         }
-        Instance closed = new Instance(instance.name(), instance.capacity(), demands, DistanceMatrix.of(distances));
-        return new AreaScenario(area, operation, matrix.graph(), gateVertex, depotVertex, containers, points, closed,
-                matrix, sites);
+        Instance closed = instance(matrix, demands, collecting, instance.capacity(), instance.name());
+        return new AreaScenario(area, operation, matrix.graph(), gateVertex, depotVertex, containers, chunks, points,
+                closed, matrix, sites);
     }
 
     /** Con la base y las cifras del operador de la ASE, que tiene que tener la operación verificada. */
@@ -296,28 +293,99 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return ends;
     }
 
+    /**
+     * El puerta a puerta de una franja: los contenedores primero y después los trozos de calle (ADR 0014), que se
+     * entran por un extremo, se recogen enteros y se dejan por el otro.
+     */
+    public static AreaScenario buildDoorToDoor(RoadGraph graph, ServiceArea area, Operation operation,
+            List<Container> containers, List<StreetChunks.Chunk> chunks, double kgPerMeter, String name) {
+        return buildDoorToDoor(graph, area, operation, containers, chunks, vertex(graph, area.base().osmNode(),
+                "la base"), vertex(graph, ServiceAreas.DISPOSAL_OSM_NODE, "la portería del relleno"), kgPerMeter, name);
+    }
+
+    static AreaScenario buildDoorToDoor(RoadGraph graph, ServiceArea area, Operation operation,
+            List<Container> containers, List<StreetChunks.Chunk> chunks, int depot, int gate, double kgPerMeter,
+            String name) {
+        return assemble(graph, area, operation, containers, chunks, depot, gate, kgPerMeter, operation.compactorKg(),
+                name);
+    }
+
     private static AreaScenario assemble(RoadGraph graph, ServiceArea area, Operation operation,
             List<Container> containers, int depot, int gate, int capacityKg, String name) {
-        int count = containers.size();
-        int[] points = new int[count + 1];
-        int[] demands = new int[count + 1];
-        points[0] = depot;
-        for (int i = 0; i < count; i++) {
-            points[i + 1] = containers.get(i).vertex();
-            demands[i + 1] = containers.get(i).kg();
+        return assemble(graph, area, operation, containers, List.of(), depot, gate, 0, capacityKg, name);
+    }
+
+    private static AreaScenario assemble(RoadGraph graph, ServiceArea area, Operation operation,
+            List<Container> containers, List<StreetChunks.Chunk> chunks, int depot, int gate, double kgPerMeter,
+            int capacityKg, String name) {
+        int[] demands = demands(containers, chunks, kgPerMeter, capacityKg);
+        TravelMatrix matrix = travel(graph, containers, chunks, depot, gate);
+        Instance instance = instance(matrix, demands, collecting(containers, chunks), capacityKg, name);
+        int[] points = new int[demands.length];
+        for (int i = 0; i < points.length; i++) {
+            points[i] = matrix.target(i);
         }
-        // La matriz se calcula con la portería al final: [base, contenedores..., portería].
-        int[] withGate = Arrays.copyOf(points, count + 2);
-        withGate[count + 1] = gate;
-        TravelMatrix matrix = TravelMatrix.compute(graph, withGate, Runtime.getRuntime().availableProcessors());
-        int[][] distances = new int[count + 1][count + 1];
-        for (int i = 0; i <= count; i++) {
-            for (int j = 0; j <= count; j++) {
-                distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? count + 1 : j);
+        return new AreaScenario(area, operation, graph, gate, depot, containers, chunks, points, instance, matrix,
+                List.of());
+    }
+
+    /** [base, nodos..., portería]: la fila de un trozo sale de su salida y la columna llega a su entrada. */
+    static TravelMatrix travel(RoadGraph graph, List<Container> containers, List<StreetChunks.Chunk> chunks,
+            int depot, int gate) {
+        int n = containers.size() + chunks.size() + 1;
+        int[] exits = new int[n + 1];
+        int[] entries = new int[n + 1];
+        exits[0] = depot;
+        entries[0] = depot;
+        for (int i = 1; i <= containers.size(); i++) {
+            exits[i] = containers.get(i - 1).vertex();
+            entries[i] = exits[i];
+        }
+        for (int i = containers.size() + 1; i < n; i++) {
+            StreetChunks.Chunk chunk = chunks.get(i - containers.size() - 1);
+            exits[i] = chunk.exit();
+            entries[i] = chunk.entry();
+        }
+        exits[n] = gate;
+        entries[n] = gate;
+        return TravelMatrix.compute(graph, exits, entries, Runtime.getRuntime().availableProcessors());
+    }
+
+    static int[] demands(List<Container> containers, List<StreetChunks.Chunk> chunks, double kgPerMeter,
+            int capacityKg) {
+        int[] demands = new int[containers.size() + chunks.size() + 1];
+        for (int i = 1; i < demands.length; i++) {
+            demands[i] = i <= containers.size() ? containers.get(i - 1).kg()
+                    : Math.max(1, (int) Math.round(chunks.get(i - containers.size() - 1).meters() * kgPerMeter));
+            if (demands[i] > capacityKg) {
+                throw new IllegalStateException("el nodo " + i + " carga " + demands[i] + " kg y no cabe en un camión");
             }
         }
-        Instance instance = new Instance(name, capacityKg, demands, DistanceMatrix.of(distances));
-        return new AreaScenario(area, operation, graph, gate, depot, containers, points, instance, matrix, List.of());
+        return demands;
+    }
+
+    static int[] collecting(List<Container> containers, List<StreetChunks.Chunk> chunks) {
+        int[] collecting = new int[containers.size() + chunks.size() + 1];
+        for (int i = 0; i < chunks.size(); i++) {
+            collecting[containers.size() + 1 + i] = chunks.get(i).meters();
+        }
+        return collecting;
+    }
+
+    /**
+     * La matriz trae la portería en la última fila y columna: el nodo 0 de la instancia sale de la base y llega a la
+     * portería. Entrar a un trozo cuesta además recorrerlo recogiendo.
+     */
+    static Instance instance(TravelMatrix matrix, int[] demands, int[] collecting, int capacityKg, String name) {
+        int n = demands.length;
+        int gate = matrix.size() - 1;
+        int[][] distances = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                distances[i][j] = i == j ? 0 : matrix.meters(i, j == 0 ? gate : j) + collecting[j];
+            }
+        }
+        return new Instance(name, capacityKg, demands, DistanceMatrix.of(distances));
     }
 
     /**
@@ -365,9 +433,9 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return containers.getFirst().stream();
     }
 
-    /** Índice de la portería en {@link #travel}; la base es 0 y el contenedor del nodo {@code i}, {@code i}. */
+    /** Índice de la portería en {@link #travel}; la base es 0 y el nodo {@code i}, {@code i}. */
     public int gate() {
-        return containers.size() + 1;
+        return containers.size() + chunks.size() + 1;
     }
 
     /** Metros de la portería a la base: el regreso de cada camión al final del turno. */
@@ -380,11 +448,20 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
     }
 
     public int serviceSeconds(int node) {
-        return BogotaFigures.SERVICE_SECONDS_PER_CONTAINER;
+        return isChunk(node) ? DoorToDoor.collectingSeconds(chunk(node).meters())
+                : BogotaFigures.SERVICE_SECONDS_PER_CONTAINER;
     }
 
     public int collectingMeters(int node) {
-        return 0;
+        return isChunk(node) ? chunk(node).meters() : 0;
+    }
+
+    public boolean isChunk(int node) {
+        return node > containers.size() && node < gate();
+    }
+
+    public StreetChunks.Chunk chunk(int node) {
+        return chunks.get(node - containers.size() - 1);
     }
 
     private static int vertex(RoadGraph graph, long osmNode, String what) {

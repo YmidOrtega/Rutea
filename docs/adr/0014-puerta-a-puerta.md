@@ -28,7 +28,7 @@ Un tramo mide 76 m en promedio: más o menos una cuadra. Con un cliente por tram
 ## Decisión
 
 
-1. **Un cliente por grupo de tramos, no por tramo.** Los tramos de calle local se agrupan en trozos contiguos, cada uno de longitud acotada. Cada trozo es un cliente del CVRP: el camión entra por un extremo, lo recorre recogiendo y sale por el otro. La matriz va de la salida de un trozo a la entrada del siguiente. El recorrido interno del trozo entra como tiempo de servicio, a velocidad de recolección, y no como distancia de la matriz.
+1. **Un cliente por grupo de tramos, no por tramo.** Los tramos de calle local se agrupan en trozos contiguos, cada uno de longitud acotada. Cada trozo es un cliente del CVRP: el camión entra por un extremo, lo recorre recogiendo y sale por el otro. La matriz va de la salida de un trozo a la entrada del siguiente. Entrar a un trozo cuesta el camino hasta su entrada más los metros del trozo, porque el camión también los recorre; en el tiempo, esos metros van a velocidad de recolección (6 km/h, `PENDIENTE_VERIFICAR`) y no a la de la vía.
 2. **Demanda por longitud de calle.** Las toneladas de la localidad (las de la ciudad repartidas por población, menos lo que recogen sus contenedores) se reparten entre los trozos según su longitud, el mismo indicador que ya usan los contenedores simulados. Es un supuesto, y así se marca: con más datos, por ejemplo edificios o viviendas por manzana, se reemplaza.
 3. **Los dos esquemas en la misma instancia.** Los contenedores de la localidad siguen siendo clientes puntuales, y los trozos se suman a ellos. El solver, el `Evaluator` y el arnés no cambian.
 4. **Trozos de hasta 500 m**, decididos midiendo (abajo). Un trozo es una caminata por calles locales en su sentido de circulación (`StreetChunks`): crece por la calle que menos gira, hacia adelante y después hacia atrás desde su entrada, y un tramo entra solo si el trozo no pasa de 500 m. Un tramo que ya mide más queda como trozo propio.
@@ -64,5 +64,5 @@ Lo que dice:
 - Se reutilizan el solver, el `Evaluator`, el arnés y la operación en vivo, porque un trozo es un cliente más.
 - Agrupar pierde optimalidad, porque el orden dentro de un trozo queda fijo, pero lo medido está dentro del ruido de ALNS.
 - La demanda por longitud no distingue estratos ni densidad. La UAESP midió producción por estrato y localidad en 2017, pero la tabla no está publicada (`docs/datos.md`, "Patrón por zona").
-- Quedan `PENDIENTE_VERIFICAR`: la frecuencia del puerta a puerta (cuántas veces por semana pasa por cada calle), la velocidad de recolección y la capacidad de los compactadores de carga trasera. Ninguna está publicada por los operadores en lo que se ha encontrado.
+- Quedan `PENDIENTE_VERIFICAR`: la frecuencia del puerta a puerta (cuántas veces por semana pasa por cada calle), la velocidad de recolección (se usan 6 km/h) y la capacidad de los compactadores de carga trasera. Ninguna está publicada por los operadores en lo que se ha encontrado.
 - Las avenidas quedan fuera de la primera versión: el puerta a puerta sobre arterias tiene otra logística (cruces, carriles exclusivos) y su demanda no se puede separar con lo que hay.

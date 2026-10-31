@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.planning.ShiftScheduler;
 import me.ymid.rutea.app.scenario.DoorToDoor.Days;
 import me.ymid.rutea.app.scenario.DoorToDoor.Slot;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
@@ -24,6 +25,7 @@ import me.ymid.rutea.geo.RoadGraph;
 import me.ymid.rutea.geo.SampleTown;
 import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.solver.Instance;
+import me.ymid.rutea.solver.Solution;
 
 class DoorToDoorTest {
 
@@ -161,6 +163,55 @@ class DoorToDoorTest {
     }
 
     @Test
+    @DisplayName("PENDIENTE_VERIFICAR: un trozo es una parada que se recorre recogiendo a 6 km/h")
+    void aChunkIsAStopThatCollectsItsStreetAtWalkingPace() {
+        StreetChunks.Chunk first = chunks().getFirst();
+        AreaScenario scenario = scenario(List.of(container("oeste", 20, 300)));
+
+        assertThat(scenario.gate()).isEqualTo(chunks().size() + 2);
+        assertThat(scenario.isChunk(1)).isFalse();
+        assertThat(scenario.isChunk(2)).isTrue();
+        assertThat(scenario.isChunk(scenario.gate())).isFalse();
+        assertThat(scenario.serviceSeconds(1)).isEqualTo(BogotaFigures.SERVICE_SECONDS_PER_CONTAINER);
+        assertThat(scenario.collectingMeters(1)).isZero();
+        assertThat(scenario.serviceSeconds(2)).isEqualTo((int) Math.round(first.meters() * 0.6));
+        assertThat(scenario.collectingMeters(2)).isEqualTo(first.meters());
+        assertThat(scenario.travel().target(2)).isEqualTo(first.entry());
+        assertThat(scenario.travel().source(2)).isEqualTo(first.exit());
+        assertThat(scenario.points()[2]).isEqualTo(first.entry());
+    }
+
+    @Test
+    void theScenarioPlansTheSameInstanceThatIsExported() {
+        List<Container> containers = List.of(container("oeste", 20, 300));
+        AreaScenario scenario = scenario(containers);
+
+        Instance exported = DoorToDoor.instance(graph, containers, chunks(), depot, gate,
+                scenario.instance().capacity(), 1, "prueba");
+        assertSameDistances(scenario.instance(), exported);
+        assertSameDistances(scenario.withTravel(scenario.travel()).instance(), exported);
+    }
+
+    @Test
+    void aTruckDrivesAndCollectsTheWholeChunk() {
+        AreaScenario scenario = scenario(List.of());
+        int[][] routes = new int[scenario.instance().size() - 1][];
+        for (int node = 1; node < scenario.instance().size(); node++) {
+            routes[node - 1] = new int[] {node};
+        }
+        Solution solution = Solution.of(routes);
+
+        ShiftScheduler.Schedule schedule = ShiftScheduler.schedule(scenario, solution, 0, 24 * 3600, 1);
+
+        Instance instance = scenario.instance();
+        for (ShiftScheduler.Truck truck : schedule.trucks()) {
+            int node = solution.customer(truck.trips()[0], 0);
+            assertThat(truck.meters()).isEqualTo((long) instance.distance(0, node) + instance.distance(node, 0)
+                    + scenario.returnMeters());
+        }
+    }
+
+    @Test
     void aChunkThatDoesNotFitInATruckIsRejected() {
         List<StreetChunks.Chunk> chunks = StreetChunks.of(graph, shape -> true, DoorToDoor.MAX_CHUNK_METERS);
 
@@ -204,6 +255,25 @@ class DoorToDoorTest {
     private static DoorToDoor.Plan plan(Map<SideLoading.Shift, List<Container>> containers, int perWeek) {
         return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, containers, perWeek, depot, gate,
                 KG_PER_DAY, "");
+    }
+
+    private static List<StreetChunks.Chunk> chunks() {
+        return StreetChunks.of(graph, shape -> true, DoorToDoor.MAX_CHUNK_METERS);
+    }
+
+    private static AreaScenario scenario(List<Container> containers) {
+        return AreaScenario.buildDoorToDoor(graph, ServiceAreas.ASE_5, ServiceAreas.ASE_5.verified(), containers,
+                chunks(), depot, gate, 1, "prueba");
+    }
+
+    private static void assertSameDistances(Instance actual, Instance expected) {
+        assertThat(actual.size()).isEqualTo(expected.size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertThat(actual.demand(i)).isEqualTo(expected.demand(i));
+            for (int j = 0; j < expected.size(); j++) {
+                assertThat(actual.distance(i, j)).as("%d → %d", i, j).isEqualTo(expected.distance(i, j));
+            }
+        }
     }
 
     private static Container container(String id, long osmNode, int kg) {
