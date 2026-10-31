@@ -45,20 +45,8 @@ button {
   color: var(--fg-muted);
 }
 
-/* Un instrumento, no una tarjeta: opaco, de canto recto, con marcas de registro en las cuatro esquinas */
 .panel {
-  --mark: var(--line-strong);
-  background:
-    linear-gradient(var(--mark), var(--mark)) top left / 7px 1px,
-    linear-gradient(var(--mark), var(--mark)) top left / 1px 7px,
-    linear-gradient(var(--mark), var(--mark)) top right / 7px 1px,
-    linear-gradient(var(--mark), var(--mark)) top right / 1px 7px,
-    linear-gradient(var(--mark), var(--mark)) bottom left / 7px 1px,
-    linear-gradient(var(--mark), var(--mark)) bottom left / 1px 7px,
-    linear-gradient(var(--mark), var(--mark)) bottom right / 7px 1px,
-    linear-gradient(var(--mark), var(--mark)) bottom right / 1px 7px,
-    var(--panel);
-  background-repeat: no-repeat;
+  background: var(--panel);
   border: 1px solid var(--line);
 }
 
