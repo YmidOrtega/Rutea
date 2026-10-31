@@ -196,7 +196,7 @@ Campos: `type`, `seconds`, `readings`, `liters`
 
 ### `DemoPlan`
 
-Campos: `meta`, `sites`, `containers`, `routes`, `compliance`, `sectors`
+Campos: `meta`, `sites`, `containers`, `routes`, `compliance`, `sectors`, `streets`
 
 `sectors` son los horarios de paso por UPZ que se publican (R04). Salen del plan y no cambian con los eventos del turno: un cambio de horario se avisa con tres días (R05).
 
@@ -230,9 +230,15 @@ Un vehículo pasando por el sector: de su primera a su última llegada planeada,
 
 ### `DemoPlan.Route`
 
-Campos: `id`, `stream`, `capacityKg`, `loadKg`, `distanceMeters`, `durationSeconds`, `tripLoadsKg`, `stops`, `path`, `times`
+Campos: `id`, `stream`, `capacityKg`, `loadKg`, `distanceMeters`, `durationSeconds`, `tripLoadsKg`, `stops`, `arrivals`, `path`, `times`
 
-`times[i]` son los segundos desde la salida hasta `path[i]`. `tripLoadsKg[i]` es la carga del viaje `i` al relleno.
+`times[i]` son los segundos desde la salida hasta `path[i]`. `arrivals[k]` es la hora a la que llega a `stops[k]`: en un contenedor el camión se detiene; un trozo de calle lo recorre recogiendo. `tripLoadsKg[i]` es la carga del viaje `i` al relleno.
+
+### `DemoPlan.Street`
+
+Campos: `id`, `route`, `kg`, `meters`, `path`
+
+Un trozo de calle del puerta a puerta ([ADR 0014](adr/0014-puerta-a-puerta.md)), en el sentido en que se recoge: `id` es el de su parada en `stops` (`T-1`, `T-2`…) y `route`, el vehículo del plan que lo recoge. `kg` sale de la población de la localidad, no de una medición. Solo los planes de la operación en vivo traen trozos; los demás, la lista vacía.
 
 ### `WasteStream`
 

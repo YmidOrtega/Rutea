@@ -92,7 +92,7 @@ final class LiveSession {
         operation = new LiveOperation(waste.scenario(), waste.solution(), waste.schedule());
         DemoPlan drawn = waste.plan();
         plan = new DemoPlan(meta(drawn.meta(), doorToDoor), drawn.sites(), drawn.containers(), drawn.routes(),
-                drawn.compliance(), drawn.sectors());
+                drawn.compliance(), drawn.sectors(), drawn.streets());
         unloadSites = plan.sites().stream().filter(site -> site.id().equals("relleno"))
                 .map(DemoPlan.Site::position).toList();
         feed = new TelemetryFeed(unloadSites);
@@ -436,12 +436,10 @@ final class LiveSession {
         List<List<Double>> arrivals = new ArrayList<>();
         containers.forEach(container -> arrivals.add(new ArrayList<>()));
         for (Vehicle vehicle : vehicles.values()) {
-            List<Double> times = vehicle.arrivals(unloadSites);
-            List<String> stops = vehicle.containers();
-            for (int k = 0; k < times.size(); k++) {
-                Integer i = index.get(stops.get(k));
+            for (Map.Entry<String, Double> reached : vehicle.reached()) {
+                Integer i = index.get(reached.getKey());
                 if (i != null) {
-                    arrivals.get(i).add(times.get(k));
+                    arrivals.get(i).add(reached.getValue());
                 }
             }
         }
@@ -622,11 +620,16 @@ final class LiveSession {
     }
 
     private static DemoPlan.Route shifted(DemoPlan.Route route, String id, long seconds) {
-        int[] times = route.times().clone();
-        for (int i = 0; i < times.length; i++) {
-            times[i] += (int) seconds;
-        }
         return new DemoPlan.Route(id, route.stream(), route.capacityKg(), route.loadKg(), route.distanceMeters(),
-                route.durationSeconds(), route.tripLoadsKg(), route.stops(), route.path(), times);
+                route.durationSeconds(), route.tripLoadsKg(), route.stops(), plus(route.arrivals(), seconds),
+                route.path(), plus(route.times(), seconds));
+    }
+
+    private static int[] plus(int[] times, long seconds) {
+        int[] shifted = times.clone();
+        for (int i = 0; i < shifted.length; i++) {
+            shifted[i] += (int) seconds;
+        }
+        return shifted;
     }
 }

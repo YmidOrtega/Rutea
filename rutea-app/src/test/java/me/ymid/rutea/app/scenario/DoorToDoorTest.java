@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -240,19 +239,13 @@ class DoorToDoorTest {
         assertThat(plan.routes().stream().flatMap(route -> route.stops().stream()).toList())
                 .hasSize(scenario.instance().size() - 1).doesNotHaveDuplicates().contains("oeste", "T-1");
         assertThat(plan.containers()).extracting(DemoPlan.Container::id).containsExactly("oeste");
-        double[] dump = AreaPlanner.lonLat(graph.latE7(gate), graph.lonE7(gate));
         for (DemoPlan.Route route : plan.routes()) {
-            int stopped = 0;
-            for (int i = 0; i + 1 < route.path().size(); i++) {
-                if (Arrays.equals(route.path().get(i), route.path().get(i + 1))
-                        && !Arrays.equals(route.path().get(i), dump)) {
-                    stopped++;
-                }
-            }
-            // Telemetry reconoce cada contenedor por el punto repetido donde el camión se detiene.
-            assertThat(stopped).as(route.id()).isEqualTo(route.stops().stream()
-                    .filter(stop -> !AreaScenario.isChunkStop(stop)).count());
+            assertThat(route.arrivals()).as(route.id()).hasSameSizeAs(route.stops().toArray()).isSorted();
         }
+        assertThat(plan.streets()).hasSize(scenario.chunks().size()).allSatisfy(street -> {
+            assertThat(street.path()).hasSizeGreaterThan(1);
+            assertThat(street.route()).startsWith("C-");
+        });
     }
 
     @Test

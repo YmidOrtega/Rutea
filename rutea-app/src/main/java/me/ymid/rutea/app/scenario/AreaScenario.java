@@ -458,14 +458,8 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
     }
 
     public String stopId(int node) {
-        return isChunk(node) ? CHUNK_PREFIX + (node - containers.size()) : containers.get(node - 1).id();
-    }
-
-    /** Ningún código de contenedor, de operador o simulado, empieza así. */
-    private static final String CHUNK_PREFIX = "T-";
-
-    public static boolean isChunkStop(String id) {
-        return id.startsWith(CHUNK_PREFIX);
+        // Ningún código de contenedor, de operador o simulado, empieza así.
+        return isChunk(node) ? "T-" + (node - containers.size()) : containers.get(node - 1).id();
     }
 
     public boolean isChunk(int node) {

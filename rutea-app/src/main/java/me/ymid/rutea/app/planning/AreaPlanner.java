@@ -149,7 +149,13 @@ public final class AreaPlanner {
                 BogotaFigures.SERVICE_SECONDS_PER_CONTAINER, schedule.unloadSeconds(),
                 BogotaFigures.LITERS_PER_KM, Math.round(DieselEmissions.kgCo2PerLiter() * 10_000) / 10_000.0,
                 "© colaboradores de OpenStreetMap (ODbL 1.0)", assumptions(area));
-        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks(), List.of());
+        List<DemoPlan.Street> streets = new ArrayList<>(scenario.chunks().size());
+        for (int node = containers.size() + 1; node < scenario.gate(); node++) {
+            StreetChunks.Chunk chunk = scenario.chunk(node);
+            streets.add(new DemoPlan.Street(scenario.stopId(node), routeOf[node - 1],
+                    scenario.instance().demand(node), chunk.meters(), streetPath(chunk)));
+        }
+        return new DemoPlan(meta, sites, planContainers, routes, compliance.checks(), List.of(), streets);
     }
 
     /** Tras un cierre, un turno pasa por grafos distintos y cada índice de arco es de su grafo. */
@@ -176,6 +182,7 @@ public final class AreaPlanner {
         }
         Instance instance = scenario.instance();
         List<String> stops = new ArrayList<>();
+        List<Integer> arrivals = new ArrayList<>();
         int[] tripLoads = new int[trips.size()];
         Geometry geometry = new Geometry(scenario.graph());
         geometry.start(scenario.depotVertex());
@@ -184,6 +191,7 @@ public final class AreaPlanner {
         for (int i = 0; i < trips.size(); i++) {
             for (int customer : trips.get(i)) {
                 meters += geometry.follow(legs.get(leg++));
+                arrivals.add(geometry.seconds());
                 meters += serve(geometry, scenario, customer);
                 stops.add(scenario.stopId(customer));
                 tripLoads[i] += instance.demand(customer);
@@ -193,14 +201,15 @@ public final class AreaPlanner {
         }
         meters += geometry.follow(legs.get(leg));
         return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
-                geometry.seconds(), tripLoads, stops, geometry.path,
-                geometry.times.stream().mapToInt(Integer::intValue).toArray());
+                geometry.seconds(), tripLoads, stops, arrivals.stream().mapToInt(Integer::intValue).toArray(),
+                geometry.path, geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     private static DemoPlan.Route drawTruck(AreaScenario scenario, ShortestPaths paths, Solution solution,
             ShiftScheduler.Truck truck, int unloadSeconds, String id, String[] routeOf, int[] visitSeconds) {
         Instance instance = scenario.instance();
         List<String> stops = new ArrayList<>();
+        List<Integer> arrivals = new ArrayList<>();
         int[] tripLoads = new int[truck.trips().length];
         Geometry geometry = new Geometry(scenario.graph());
         geometry.start(scenario.depotVertex());
@@ -212,6 +221,7 @@ public final class AreaPlanner {
                 int customer = solution.customer(k, truck.reversed()[i] ? solution.routeLength(k) - 1 - p : p);
                 meters += leg(paths, geometry, scenario, previous, customer, id);
                 visitSeconds[customer - 1] = geometry.seconds();
+                arrivals.add(geometry.seconds());
                 meters += serve(geometry, scenario, customer);
                 routeOf[customer - 1] = id;
                 stops.add(scenario.stopId(customer));
@@ -227,8 +237,8 @@ public final class AreaPlanner {
                     + " s; la asignación dice " + truck.meters() + " m y " + truck.seconds() + " s");
         }
         return new DemoPlan.Route(id, scenario.stream(), instance.capacity(), Arrays.stream(tripLoads).sum(), meters,
-                geometry.seconds(), tripLoads, stops, geometry.path,
-                geometry.times.stream().mapToInt(Integer::intValue).toArray());
+                geometry.seconds(), tripLoads, stops, arrivals.stream().mapToInt(Integer::intValue).toArray(),
+                geometry.path, geometry.times.stream().mapToInt(Integer::intValue).toArray());
     }
 
     /** Lo que el plan supone sin dato publicado: el panel lo muestra tal cual. Fuentes en docs/datos.md. */
@@ -289,7 +299,7 @@ public final class AreaPlanner {
         List<DemoPlan.Sector> sectors = Sectors.of(area).schedule(containers);
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
-        return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors);
+        return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors, waste.streets());
     }
 
     /**
@@ -303,6 +313,28 @@ public final class AreaPlanner {
                     + scenario.travel().meters(from, to));
         }
         return meters;
+    }
+
+    /** El trozo en su sentido de recolección, con los puntos de forma de cada arco. */
+    private static List<double[]> streetPath(StreetChunks.Chunk chunk) {
+        RoadGraph graph = chunk.graph();
+        List<double[]> path = new ArrayList<>();
+        path.add(lonLat(graph.latE7(chunk.entry()), graph.lonE7(chunk.entry())));
+        for (int edge : chunk.arcs()) {
+            int shape = graph.shape(edge);
+            boolean reversed = shape < 0;
+            int base = reversed ? ~shape : shape;
+            int first = graph.firstShapePoint(base);
+            int count = graph.endShapePoint(base) - first;
+            for (int i = 1; i < count; i++) {
+                int point = first + (reversed ? count - 1 - i : i);
+                double[] here = lonLat(graph.shapeLatE7(point), graph.shapeLonE7(point));
+                if (!Arrays.equals(path.getLast(), here)) {
+                    path.add(here);
+                }
+            }
+        }
+        return path;
     }
 
     /** Un contenedor detiene el camión; un trozo de calle lo lleva por sus arcos a paso de recolección. */
@@ -329,7 +361,7 @@ public final class AreaPlanner {
     }
 
     /** [lon, lat] con 5 decimales: alrededor de un metro, más fino que lo que se ve en el mapa. */
-    public static double[] lonLat(int latE7, int lonE7) {
+    static double[] lonLat(int latE7, int lonE7) {
         return new double[] {Math.round(lonE7 / 100.0) / 1e5, Math.round(latE7 / 100.0) / 1e5};
     }
 

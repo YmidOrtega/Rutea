@@ -192,7 +192,7 @@ public final class CityPlanner {
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
         return new DemoPlan(meta(drawn.meta(), SideLoading.of(scenario.area())), drawn.sites(), drawn.containers(),
-                drawn.routes(), checks, sectors);
+                drawn.routes(), checks, sectors, drawn.streets());
     }
 
     private static DemoPlan.Meta meta(DemoPlan.Meta drawn, SideLoading.Area area) {
