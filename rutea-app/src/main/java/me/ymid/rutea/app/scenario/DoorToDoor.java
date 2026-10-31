@@ -1,10 +1,12 @@
 package me.ymid.rutea.app.scenario;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalDouble;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 
@@ -87,8 +89,7 @@ public final class DoorToDoor {
         String at(int latE7, int lonE7);
     }
 
-    public record Turn(Slot slot, List<Container> containers, List<StreetChunks.Chunk> chunks, Instance instance,
-            long matrixNanos) {
+    public record Turn(Slot slot, List<Container> containers, List<StreetChunks.Chunk> chunks, String name) {
 
         public Turn {
             containers = List.copyOf(containers);
@@ -108,20 +109,55 @@ public final class DoorToDoor {
     private DoorToDoor() {
     }
 
+    /**
+     * Los contenedores negros de la localidad por turno de cargue lateral: los reales del operador o, si no publica
+     * su ubicación, los simulados de su cantidad oficial (ADR 0013).
+     */
+    public static Map<SideLoading.Shift, List<Container>> containers(RoadGraph graph, ServiceAreas.ServiceArea area,
+            Locality locality, Map<Integer, List<OperatorContainers.Container>> real, double fill, long seed) {
+        SideLoading.Area sideLoading = SideLoading.of(area);
+        Map<SideLoading.Shift, List<Container>> containers = new LinkedHashMap<>();
+        if (sideLoading.planned().isPresent()) {
+            SideLoading.Planned planned = sideLoading.planned().get();
+            containers.put(sideLoading.shifts().getFirst(), AreaScenario.plannedContainers(graph, area,
+                    List.of(locality), planned.count(), planned.liters(), fill, seed));
+            return containers;
+        }
+        List<OperatorContainers.Container> layer = real.get(area.number());
+        if (layer == null) {
+            throw new IllegalArgumentException("faltan los contenedores del operador de " + area.name());
+        }
+        for (SideLoading.Shift shift : sideLoading.shifts()) {
+            containers.put(shift, AreaScenario.realContainers(graph, area, shift, List.of(locality), layer, fill));
+        }
+        return containers;
+    }
+
+    /**
+     * Compactadores de carga trasera en el turno de la franja, encadenando viajes como los de cargue lateral
+     * ({@link SideLoading#MAX_TRIPS_PER_TRUCK}).
+     */
+    public static ServiceAreas.Operation operation(Slot slot) {
+        return new ServiceAreas.Operation(OptionalDouble.empty(), COLLECTIONS_PER_WEEK, slot.shift().start(),
+                slot.shift().seconds(), COMPACTOR_KG, List.of(), SideLoading.MAX_TRIPS_PER_TRUCK);
+    }
+
+    public static AreaScenario scenario(RoadGraph graph, ServiceAreas.ServiceArea area, Plan plan, Turn turn) {
+        return AreaScenario.buildDoorToDoor(graph, area, operation(turn.slot()), turn.containers(), turn.chunks(),
+                plan.kgPerMeter(), turn.name());
+    }
+
     public static Plan plan(RoadGraph graph, ServiceAreas.ServiceArea area, Locality locality, SectorOf sectors,
             Map<SideLoading.Shift, List<Container>> containers, String suffix) {
         if (!area.localities().contains(locality)) {
             throw new IllegalArgumentException(locality.name() + " no es de " + area.name());
         }
         return plan(graph, locality, Localities.bogota(), sectors, containers,
-                SideLoading.of(area).collectionsPerWeek(), vertex(graph, area.base().osmNode(), "la base"),
-                vertex(graph, ServiceAreas.DISPOSAL_OSM_NODE, "la portería del relleno"),
-                BogotaFigures.kgPerDay(locality), suffix);
+                SideLoading.of(area).collectionsPerWeek(), BogotaFigures.kgPerDay(locality), suffix);
     }
 
     static Plan plan(RoadGraph graph, Locality locality, Localities localities, SectorOf sectors,
-            Map<SideLoading.Shift, List<Container>> containers, int containersPerWeek, int depot, int gate,
-            double kgPerDay, String suffix) {
+            Map<SideLoading.Shift, List<Container>> containers, int containersPerWeek, double kgPerDay, String suffix) {
         if (locality.rural()) {
             throw new IllegalArgumentException(locality.name() + " es rural: no tiene puerta a puerta");
         }
@@ -198,10 +234,7 @@ public final class DoorToDoor {
             // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
             String name = locality.name().replace(" ", "") + slot.code() + "-n"
                     + (slotContainers.size() + slotChunks.size() + 1) + suffix;
-            long started = System.nanoTime();
-            Instance instance = instance(graph, slotContainers, slotChunks, depot, gate, COMPACTOR_KG, kgPerMeter,
-                    name);
-            turns.add(new Turn(slot, slotContainers, slotChunks, instance, System.nanoTime() - started));
+            turns.add(new Turn(slot, slotContainers, slotChunks, name));
         }
         return new Plan(locality, kgPerDay, containerKgPerDay, kgPerMeter, calendar, turns);
     }
@@ -234,10 +267,5 @@ public final class DoorToDoor {
         return AreaScenario.instance(AreaScenario.travel(graph, containers, chunks, depot, gate),
                 AreaScenario.demands(containers, chunks, kgPerMeter, capacity),
                 AreaScenario.collecting(containers, chunks), capacity, Objects.requireNonNull(name, "name"));
-    }
-
-    private static int vertex(RoadGraph graph, long osmNode, String what) {
-        return graph.vertexOf(osmNode).orElseThrow(() -> new IllegalStateException(
-                "el grafo no tiene " + what + " (nodo " + osmNode + "); reconstrúyelo"));
     }
 }

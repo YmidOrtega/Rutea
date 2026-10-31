@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.Sectors;
@@ -50,30 +51,22 @@ public final class ExportLocalityInstances {
         Files.createDirectories(outDir);
         long seed = AreaPlanner.DEFAULT_SEED;
         double fill = SideLoading.MEAN_FILL;
+        Map<Integer, List<OperatorContainers.Container>> real = new LinkedHashMap<>();
+        for (OperatorContainers.Layer layer : OperatorContainers.LAYERS) {
+            real.put(layer.area(), OperatorContainers.read(containersDir.resolve(layer.file())));
+        }
         for (Locality locality : localities) {
             ServiceArea area = ServiceAreas.split(List.of(locality)).keySet().iterator().next();
-            SideLoading.Area sideLoading = SideLoading.of(area);
-            Map<SideLoading.Shift, List<Container>> containers = new LinkedHashMap<>();
-            String suffix;
-            String origin;
-            if (sideLoading.planned().isPresent()) {
-                SideLoading.Planned planned = sideLoading.planned().get();
-                containers.put(sideLoading.shifts().getFirst(), AreaScenario.plannedContainers(stored.graph(), area,
-                        List.of(locality), planned.count(), planned.liters(), fill, seed));
-                suffix = String.format(Locale.ROOT, "-s%d-f%d", seed, Math.round(fill * 100));
-                origin = String.format(Locale.ROOT, "simulados de la cantidad oficial de %s (semilla %d)",
-                        area.name(), seed);
-            } else {
-                OperatorContainers.Layer layer = OperatorContainers.LAYERS.stream()
-                        .filter(candidate -> candidate.area() == area.number()).findFirst().orElseThrow();
-                List<OperatorContainers.Container> real = OperatorContainers.read(containersDir.resolve(layer.file()));
-                for (SideLoading.Shift shift : sideLoading.shifts()) {
-                    containers.put(shift, AreaScenario.realContainers(stored.graph(), area, shift, List.of(locality),
-                            real, fill));
-                }
-                suffix = String.format(Locale.ROOT, "-f%d", Math.round(fill * 100));
-                origin = "\"en campo\" de la capa pública del operador (" + layer.file() + ")";
-            }
+            Optional<SideLoading.Planned> planned = SideLoading.of(area).planned();
+            String suffix = planned.isPresent() ? String.format(Locale.ROOT, "-s%d-f%d", seed, Math.round(fill * 100))
+                    : String.format(Locale.ROOT, "-f%d", Math.round(fill * 100));
+            String origin = planned.isPresent()
+                    ? String.format(Locale.ROOT, "simulados de la cantidad oficial de %s (semilla %d)", area.name(),
+                            seed)
+                    : "\"en campo\" de la capa pública del operador (" + OperatorContainers.LAYERS.stream()
+                            .filter(layer -> layer.area() == area.number()).findFirst().orElseThrow().file() + ")";
+            Map<SideLoading.Shift, List<Container>> containers = DoorToDoor.containers(stored.graph(), area, locality,
+                    real, fill, seed);
             DoorToDoor.Plan plan = DoorToDoor.plan(stored.graph(), area, locality, Sectors.of(area)::locate,
                     containers, suffix);
             System.out.printf(Locale.ROOT, "%s: %.1f t/día, %.1f de ellas en %d contenedores; %.3f kg por metro de"
@@ -87,7 +80,9 @@ public final class ExportLocalityInstances {
 
     private static void write(RoadGraphFile.Stored stored, ServiceArea area, DoorToDoor.Plan plan, DoorToDoor.Turn turn,
             String origin, double fill, Path outDir) throws IOException {
-        Instance instance = turn.instance();
+        long started = System.nanoTime();
+        Instance instance = DoorToDoor.scenario(stored.graph(), area, plan, turn).instance();
+        long matrixNanos = System.nanoTime() - started;
         long chunkMeters = turn.chunks().stream().mapToLong(StreetChunks.Chunk::meters).sum();
         List<String> sectors = new ArrayList<>();
         for (Map.Entry<String, DoorToDoor.Slot> entry : plan.calendar().entrySet()) {
@@ -118,6 +113,6 @@ public final class ExportLocalityInstances {
         }
         System.out.printf(Locale.ROOT, "  %s: %d contenedores, %d trozos (%.1f km), %.1f t, matriz en %d ms, %,d"
                 + " bytes%n", file, turn.containers().size(), turn.chunks().size(), chunkMeters / 1000.0, total / 1000.0,
-                turn.matrixNanos() / 1_000_000, Files.size(file));
+                matrixNanos / 1_000_000, Files.size(file));
     }
 }

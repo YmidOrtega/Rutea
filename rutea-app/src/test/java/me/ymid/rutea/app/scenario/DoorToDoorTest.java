@@ -63,6 +63,16 @@ class DoorToDoorTest {
     }
 
     @Test
+    void aSlotIsCollectedByRearLoadersInItsShift() {
+        ServiceAreas.Operation operation = DoorToDoor.operation(new Slot(Days.TUE_THU_SAT, NIGHT));
+
+        assertThat(operation.shiftStart()).isEqualTo(NIGHT.start());
+        assertThat(operation.shiftSeconds()).isEqualTo(NIGHT.seconds());
+        assertThat(operation.compactorKg()).isEqualTo(DoorToDoor.COMPACTOR_KG);
+        assertThat(operation.collectionsPerWeek()).isEqualTo(DoorToDoor.COLLECTIONS_PER_WEEK);
+    }
+
+    @Test
     void sectorsGoLongestFirstToTheLighterSlot() {
         Map<String, Slot> calendar = DoorToDoor.calendar(
                 Map.of("a", 500L, "b", 400L, "c", 300L, "d", 200L, "e", 150L, "f", 100L));
@@ -140,7 +150,8 @@ class DoorToDoorTest {
         double expected = (KG_PER_DAY - plan.containerKgPerDay()) * 7 / DoorToDoor.COLLECTIONS_PER_WEEK;
         double streets = 0;
         for (DoorToDoor.Turn turn : plan.turns()) {
-            Instance instance = turn.instance();
+            Instance instance = DoorToDoor.instance(graph, turn.containers(), turn.chunks(), depot, gate,
+                    DoorToDoor.COMPACTOR_KG, plan.kgPerMeter(), turn.name());
             for (int node = turn.containers().size() + 1; node < instance.size(); node++) {
                 streets += instance.demand(node);
             }
@@ -242,7 +253,7 @@ class DoorToDoorTest {
     void rejectsARuralLocalityAndAFrequencyOutsideTheDayGroups() {
         Locality sumapaz = ServiceAreas.locality(20).orElseThrow();
         assertThatThrownBy(() -> DoorToDoor.plan(graph, sumapaz, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, Map.of(),
-                DoorToDoor.COLLECTIONS_PER_WEEK, depot, gate, KG_PER_DAY, "")).isInstanceOf(
+                DoorToDoor.COLLECTIONS_PER_WEEK, KG_PER_DAY, "")).isInstanceOf(
                         IllegalArgumentException.class);
         assertThatThrownBy(() -> plan(Map.of(), 2)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -272,7 +283,7 @@ class DoorToDoorTest {
     }
 
     private static DoorToDoor.Plan plan(Map<SideLoading.Shift, List<Container>> containers, int perWeek) {
-        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, containers, perWeek, depot, gate,
+        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, containers, perWeek,
                 KG_PER_DAY, "");
     }
 
