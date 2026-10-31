@@ -18,6 +18,8 @@ public final class AreaScenarioFixture {
     static final Localities SUBA_TOWN = new Localities(
             Map.of(ServiceAreas.locality(11).orElseThrow(), rectangle(-1, -1, 11, 11)));
 
+    static final UrbanPerimeter URBAN_TOWN = new UrbanPerimeter(List.of(rectangle(-1, -1, 11, 11)));
+
     /**
      * Una ASE de prueba con la operación de Torca: el pueblo partido en dos por la longitud del paso 6, y una
      * localidad rural fuera de él.

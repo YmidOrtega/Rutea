@@ -223,6 +223,16 @@ La demanda del puerta a puerta (ADR 0014) sale de las toneladas del servicio ord
 
 Sumapaz no tiene población urbana en la proyección.
 
+## Perímetro urbano (F8)
+
+El puerta a puerta solo recorre calles dentro del suelo urbano del POT (Decreto 555 de 2021). Los límites de localidad de OSM incluyen suelo rural y de expansión, y sin el recorte los caminos rurales de Usme o Bosa recibían la misma carga por metro que una calle con casas.
+
+- **Fuente:** Secretaría Distrital de Planeación, capa "Clasificación del Suelo" del POT, [`POT555/NORMA_URBANÍSTICA_Y_OT/MapServer/28`](https://sinu.sdp.gov.co/serverp/rest/services/POT555/NORMA_URBAN%C3%8DSTICA_Y_OT/MapServer/28), con `CLASE_SUELO = 1` (urbano). Es la misma geometría que el conjunto [Perímetro urbano. POT Bogotá D.C.](https://datosabiertos.bogota.gov.co/dataset/12a704ee-e5bb-4c5d-bad6-a5069d12f90a) de Datos Abiertos Bogotá, licencia CC BY 4.0, modificado el 2026-08-11.
+- **Contenido:** seis polígonos. Uno es el perímetro del Decreto 555 (29 de diciembre de 2021). Los otros cinco son legalizaciones posteriores: Resolución 1183 de 2022, Resolución 1542 de 2022, dos de la Resolución 2814 de 2023 y Resolución 0946 de 2026.
+- **Copia en el repo:** `rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson`, descargado el 2026-10-30 con `mvn -pl rutea-app exec:java@urban-perimeter`. Los bordes están simplificados a 5 m, igual que las UPZ. Cada polígono guarda su acto administrativo y su fecha.
+- **Criterio:** una calle es urbana si el punto medio de su trazo cae dentro de algún polígono, el mismo criterio con que se asigna la localidad.
+- **Calles sin manzanas:** también se excluyen los tramos de más de 1 km sin ningún cruce (`DoorToDoor.MAX_STREET_METERS`). Es una decisión de modelado, no un dato de la fuente. En las 19 localidades solo hay cinco tramos así (10,7 km de 5.219 km de calles urbanas). El caso extremo es la vía OSM 91266728 de Bosa: 4,8 km sin pavimentar y sin nombre, que por sí sola cargaba 14,6 t, más que un compactador.
+
 ## Cifras con fuente
 
 | Dato | Valor | Fuente | Uso en Rutea |

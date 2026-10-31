@@ -1,0 +1,5 @@
+instance,customers,solver,seed,time_limit_ms,iteration_limit,cost,bks,gap_pct,feasible,wall_ms,vehicles,warm,machine
+SubaMJSDia-n772-s7-f100,771,alns,7,1200000,2000,3058669,,,true,11596.602,64,false,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaLMVDia-n934-s7-f100,933,alns,7,1200000,2000,2809113,,,true,14186.507,62,false,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaMJSNoche-n998-s7-f100,997,alns,7,1200000,2000,3739466,,,true,16111.019,76,false,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13
+SubaLMVNoche-n1050-s7-f100,1049,alns,7,1200000,2000,3949435,,,true,17519.891,76,false,Intel(R) Core(TM) i5-14400F; 16 hilos; Linux amd64; Java 21.0.13

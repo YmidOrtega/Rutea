@@ -213,6 +213,15 @@
             </configuration>
           </execution>
           <execution>
+            <id>urban-perimeter</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.scenario.ExtractUrbanPerimeter</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>localities</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.scenario.ExtractLocalities</mainClass>

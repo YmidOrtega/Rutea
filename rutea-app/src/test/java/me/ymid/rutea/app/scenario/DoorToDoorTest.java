@@ -259,10 +259,39 @@ class DoorToDoorTest {
     @Test
     void rejectsARuralLocalityAndAFrequencyOutsideTheDayGroups() {
         Locality sumapaz = ServiceAreas.locality(20).orElseThrow();
-        assertThatThrownBy(() -> DoorToDoor.plan(graph, sumapaz, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, Map.of(),
+        assertThatThrownBy(() -> DoorToDoor.plan(graph, sumapaz, AreaScenarioFixture.SUBA_TOWN,
+                AreaScenarioFixture.URBAN_TOWN, QUADRANTS, Map.of(),
                 DoorToDoor.COLLECTIONS_PER_WEEK, KG_PER_DAY, "")).isInstanceOf(
                         IllegalArgumentException.class);
         assertThatThrownBy(() -> plan(Map.of(), 2)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Solo se recoge casa por casa dentro del perímetro urbano del POT (Decreto 555 de 2021), y ahí va toda la carga")
+    void onlyStreetsInsideTheUrbanPerimeterAreCollectedDoorToDoor() {
+        UrbanPerimeter half = new UrbanPerimeter(List.of(AreaScenarioFixture.rectangle(-1, -1, 11, 6)));
+
+        DoorToDoor.Plan whole = plan(Map.of(), DoorToDoor.COLLECTIONS_PER_WEEK);
+        DoorToDoor.Plan clipped = DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, half, QUADRANTS,
+                Map.of(), DoorToDoor.COLLECTIONS_PER_WEEK, KG_PER_DAY, "");
+
+        long wholeMeters = meters(whole);
+        long clippedMeters = meters(clipped);
+        assertThat(clippedMeters).isPositive().isLessThan(wholeMeters);
+        for (DoorToDoor.Turn turn : clipped.turns()) {
+            for (StreetChunks.Chunk chunk : turn.chunks()) {
+                for (int arc : chunk.arcs()) {
+                    int shape = graph.shape(arc);
+                    assertThat(half.containsShape(graph, shape >= 0 ? shape : ~shape)).isTrue();
+                }
+            }
+        }
+        assertThat(clipped.kgPerMeter() * clippedMeters).isCloseTo(whole.kgPerMeter() * wholeMeters, within(1e-6));
+    }
+
+    private static long meters(DoorToDoor.Plan plan) {
+        return plan.turns().stream().flatMap(turn -> turn.chunks().stream()).mapToLong(StreetChunks.Chunk::meters)
+                .sum();
     }
 
     @Test
@@ -290,8 +319,8 @@ class DoorToDoorTest {
     }
 
     private static DoorToDoor.Plan plan(Map<SideLoading.Shift, List<Container>> containers, int perWeek) {
-        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, containers, perWeek,
-                KG_PER_DAY, "");
+        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, AreaScenarioFixture.URBAN_TOWN, QUADRANTS,
+                containers, perWeek, KG_PER_DAY, "");
     }
 
     private static List<StreetChunks.Chunk> chunks() {

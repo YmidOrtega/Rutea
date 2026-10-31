@@ -267,7 +267,7 @@ Se escoge cualquier conjunto de localidades (una, cinco, las veinte) y se planif
     | 5 | 806 | Suba 806 |
 
   - **Escala:** la matriz del ASE 2 (1.666 contenedores, más la base y la portería) sale en 941 ms en frío y 902 ms en caliente (`exec:java@graphs`; i5-14400F, 16 hilos). Como el ASE 2 aún no tiene base verificada, la matriz sale de la base de Suba, que solo cambia una fila.
-  - **Límite conocido:** Sumapaz no lleva contenedores porque es rural, pero el suelo rural de Usme, Ciudad Bolívar, Usaquén, Chapinero, Santa Fe y San Cristóbal sí los recibe. Los límites de OSM son los de la localidad, no el perímetro urbano, así que esas localidades quedan con más contenedores de los que les tocan. `PENDIENTE_VERIFICAR`: recortar con el perímetro urbano del POT.
+  - **Límite conocido:** Sumapaz no lleva contenedores porque es rural, pero el suelo rural de Usme, Ciudad Bolívar, Usaquén, Chapinero, Santa Fe y San Cristóbal sí los recibe. Los límites de OSM son los de la localidad, no el perímetro urbano, así que esas localidades quedan con más contenedores de los que les tocan. El puerta a puerta ya se recorta con el perímetro urbano del POT (F8); los contenedores simulados, todavía no.
 - [x] Inventario de fuentes por ASE en `docs/datos.md` (2026-10-29): bases, flotas, toneladas, rutas y contenedores de los cinco operadores, de los informes de supervisión de la UAESP (agosto de 2026), las inspecciones de la Superservicios (marzo de 2026) y las capas públicas de ArcGIS de los operadores. Con la prórroga de 2026, todas las ASE bajaron su capacidad nominal de contenedores negros, y lo que sale de la calle pasa a puerta a puerta. Decisión en el ADR 0013: el cargue lateral y el puerta a puerta son instancias distintas, y F7 planifica el cargue lateral.
 - [x] Extracto de los operadores (ADR 0013, 2026-10-29): `mvn -pl rutea-app exec:java@operator-containers` descarga a `data/ase/` los contenedores negros "en campo" de las ASE 1, 2 y 4, con un manifiesto de URL, filtro, fecha de edición de la capa y SHA-256. No se versiona mientras la licencia de las capas siga `PENDIENTE_VERIFICAR`.
   - **Resultado:** 168 contenedores en el ASE 1 (153 de 1.100 L y 15 de 2.200 L), 990 de 2.200 L en el ASE 2 y 763 de 2.400 L en el ASE 4. No hay códigos repetidos, ningún contenedor cae fuera de su ASE y dos descargas seguidas dan los mismos bytes. Tabla y SHA-256 en `data/ase/README.md`.
@@ -416,8 +416,8 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
 - [x] Población y toneladas por localidad en `docs/datos.md` (2026-10-29): población urbana de 2026 del DANE (serie de 2021) y las 5.680 t/día del servicio ordinario repartidas por población. Suba: 1.347.097 habitantes, 940,6 t/día. La actualización de 2025 de las proyecciones no se encontró publicada por localidad.
 - [x] Instancia de una localidad con contenedores y puerta a puerta juntos, sobre el grafo de Bogotá, con su fila en el arnés (2026-10-30; `exec:java@locality-instances`, `DoorToDoor`).
   - Con 3 pasadas por semana (`PENDIENTE_VERIFICAR`) en seis días, cada calle es de uno de dos grupos: lunes, miércoles y viernes, o martes, jueves y sábado. Las UPZ, el sector en que se publican los horarios (R04), se reparten entre los dos, parejos en metros de calle, y cada grupo es una instancia. Los contenedores de 6 pasadas van en las dos; los de 3, en la de su UPZ.
-  - Demanda: lo que le toca a la localidad por población, menos lo que recogen sus contenedores, por los días entre dos pasadas, repartido por metro de calle local. Suba: 940,6 t/día, 92,2 en sus 320 contenedores simulados, 2,851 kg/m.
-  - **Resultado en Suba** (ALNS, semilla 7, 2.000 iteraciones; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-locality/`): las dos soluciones son factibles según el `Evaluator`.
+  - Demanda: lo que le toca a la localidad por población, menos lo que recogen sus contenedores, por los días entre dos pasadas, repartido por metro de calle local. Suba: 940,6 t/día, 92,2 en sus 320 contenedores simulados, 2,851 kg/m; con el recorte del perímetro urbano, 3,164 kg/m.
+  - **Resultado en Suba** (ALNS, semilla 7, 2.000 iteraciones; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-locality/`): las dos soluciones son factibles según el `Evaluator`. Medido antes del recorte del perímetro urbano.
 
     | Instancia | Contenedores | Trozos | km de calle | t | Matriz | ALNS | km del plan | Viajes |
     |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -425,51 +425,49 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
     | `SubaMJS-n1822-s7-f100` | 320 | 1.501 | 338,8 | 1.073,7 | 1,2 s | 42,7 s | 6.952,1 | 136 |
 
   - Partir por días no basta para el modo en vivo: con 2.000 iteraciones, ALNS tarda en proporción a los clientes, y un día de Suba sigue tomando más de 40 s. Chapinero (410 nodos) y Santa Fe (322) son chicas; Kennedy queda cerca de Suba (1.637).
-  - **Partido también por turno** (2026-10-30): cada grupo de días tiene turno de día (06:00–16:00) y de noche (18:00–04:00), los de las microrrutas domiciliarias del ASE 1 (`PENDIENTE_VERIFICAR` en las demás ASE). Las UPZ se reparten entre las cuatro franjas; cada contenedor va en su turno de cargue lateral, y los 320 de Suba son del de noche. Mismo arnés y misma máquina; las cuatro soluciones son factibles. Las corridas fueron una tras otra.
+  - **Partido también por turno** (2026-10-30): cada grupo de días tiene turno de día (06:00–16:00) y de noche (18:00–04:00), los de las microrrutas domiciliarias del ASE 1 (`PENDIENTE_VERIFICAR` en las demás ASE). Las UPZ se reparten entre las cuatro franjas; cada contenedor va en su turno de cargue lateral, y los 320 de Suba son del de noche. Mismo arnés y misma máquina; las cuatro soluciones son factibles. Las corridas fueron una tras otra. Antes del recorte, un día de Suba pasó de 49,4 s a dos instancias de 13,4 y 15,4 s, que se resuelven en paralelo, y los km casi no cambiaron (+0,8 % el peor día). Con el recorte del perímetro urbano (2026-10-31; CSV `run-20261031-000100-107.csv`):
 
     | Instancia | Contenedores | Trozos | ALNS | km del plan | Viajes |
     |---|---:|---:|---:|---:|---:|
-    | `SubaLMVDia-n977-s7-f100` | 0 | 976 | 13,4 s | 2.744,8 | 58 |
-    | `SubaLMVNoche-n1032-s7-f100` | 320 | 711 | 15,4 s | 4.281,7 | 78 |
-    | `SubaMJSDia-n841-s7-f100` | 0 | 840 | 11,2 s | 3.239,5 | 65 |
-    | `SubaMJSNoche-n1068-s7-f100` | 320 | 747 | 13,5 s | 3.768,1 | 77 |
-
-    Un día de Suba pasa de 49,4 s a dos instancias de 13,4 y 15,4 s, que se resuelven en paralelo. Los km casi no cambian: lunes, miércoles y viernes, 7.026,5 frente a 7.029,4; martes, jueves y sábado, 7.007,6 frente a 6.952,1 (+0,8 %).
+    | `SubaLMVDia-n934-s7-f100` | 0 | 933 | 14,2 s | 2.809,1 | 62 |
+    | `SubaLMVNoche-n1050-s7-f100` | 320 | 729 | 17,5 s | 3.949,4 | 76 |
+    | `SubaMJSDia-n772-s7-f100` | 0 | 771 | 11,6 s | 3.058,7 | 64 |
+    | `SubaMJSNoche-n998-s7-f100` | 320 | 677 | 16,1 s | 3.739,5 | 76 |
 - [x] El servidor arma la operación en vivo de cualquier localidad urbana en cualquier franja (2026-10-30): plan, averías, desbordes, cierres, sensores, telemetría y reloj, en `/api/live/{localidad}/{franja}` y `/ws/live/{localidad}/{franja}` (contrato en `docs/api.md`).
   - Cada localidad y franja es una operación aparte, con su reloj, sus eventos y su turno guardado: dos clientes en localidades distintas no se pisan. El servidor guarda las últimas 4.
   - Los trozos de calle son paradas: el camión entra por un extremo, los recorre a 6 km/h (`PENDIENTE_VERIFICAR`) y sale por el otro, y así se dibujan. Solo los contenedores se desbordan y tienen sensor; una avería o un cierre afectan los dos.
-  - Armar una operación (matriz, ALNS con semilla 7 y 2.000 iteraciones, dibujo), medido en la app: Suba de noche, 23,0 s; cada franja de Chapinero, de 2,8 a 3,4 s.
-  - **Averías en Suba, LMV de noche** (1.031 paradas: 320 contenedores y 711 trozos; 28 camiones), 500 averías y 20 de calentamiento, semilla 7, 300 iteraciones por replanificación (`exec:java@locality-breakdowns`; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-breakdowns/`):
+  - Armar una operación (matriz, ALNS con semilla 7 y 2.000 iteraciones, dibujo), medido en la app antes del recorte: Suba de noche, 23,0 s; cada franja de Chapinero, de 2,8 a 3,4 s. Con el recorte, las 76 franjas en el barrido de abajo.
+  - **Averías en Suba, LMV de noche** (1.049 paradas: 320 contenedores y 729 trozos; 28 camiones), 500 averías y 20 de calentamiento, semilla 7, 300 iteraciones por replanificación (`exec:java@locality-breakdowns`; i5-14400F, 16 hilos, Java 21.0.13; CSV `breakdowns-20261030-235911-642.csv` en `docs/benchmarks/f8-breakdowns/`, con el recorte del perímetro urbano):
 
     | Medida | P50 | P95 | P99 | Máx. |
     |---|---:|---:|---:|---:|
-    | Latencia de replanificar, solo reserva (ms) | 3,9 | 34,0 | 41,7 | 50,9 |
-    | Latencia, reasignar + reserva (ms) | 2,6 | 22,7 | 29,4 | 38,7 |
-    | Paradas huérfanas (contenedores y trozos) | 13 | 39 | 48 | 55 |
-    | Avería → reserva en la primera huérfana (min) | 44,3 | 64,5 | 69,8 | 76,7 |
+    | Latencia de replanificar, solo reserva (ms) | 7,6 | 36,6 | 46,8 | 62,5 |
+    | Latencia, reasignar + reserva (ms) | 4,9 | 28,3 | 36,1 | 48,3 |
+    | Paradas huérfanas (contenedores y trozos) | 16 | 40 | 50 | 53 |
+    | Avería → reserva en la primera huérfana (min) | 42,9 | 53,3 | 62,4 | 69,2 |
 
     R05 (servicio restablecido en ≤ 3 h) se cumple en las 500. La fila de huérfanas del arnés todavía se llama «contenedores».
   - Pendiente: un cierre de vía que cae dentro de un trozo no lo parte; el trozo se sigue recogiendo entero.
 - [x] Mapa (2026-10-30): en vivo, un clic sobre otra localidad urbana la elige, y un selector de cuatro posiciones elige la franja (LMV o MJS, día o noche). La elección queda en la dirección (`#vivo=11-LMVNoche`). Cada pedido y el WebSocket van a la operación elegida. Mientras el servidor la arma, el instrumento cuenta los segundos. Los trozos de calle se dibujan y se encienden con su primera visita, y el instrumento suma sus toneladas y sus km. El sello toma de `meta.network` qué es real y qué es simulado, y el tooltip dice si un contenedor es del operador o simulado (`meta.simulated`, ahora también en vivo). Revisado en Chrome en escritorio con Suba (LMV noche y MJS día), Fontibón, Usaquén y Sumapaz (rechazada por rural), sin errores en la consola. Sin la API sigue el plan estático de Suba.
-- [x] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (2026-10-30; `mvn -pl rutea-app exec:java@suba-live`; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-suba-live/`). Solo no aprovechables, los únicos que van casa por casa. Cada plan se arma como lo sirve la app: ALNS con semilla 7 y 2.000 iteraciones, determinista, y 40 min de descarga. La fila base reproduce las rutas de no aprovechables de `plan-suba.json`: 9 camiones, 17 viajes, 1.310,6 km y R07 en 79 paradas. Las cinco soluciones son factibles según el `Evaluator`.
+- [x] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (2026-10-30; `mvn -pl rutea-app exec:java@suba-live`; i5-14400F, 16 hilos, Java 21.0.13; CSV `suba-live-20261030-235846-296.csv` en `docs/benchmarks/f8-suba-live/`, con el recorte del perímetro urbano). Solo no aprovechables, los únicos que van casa por casa. Cada plan se arma como lo sirve la app: ALNS con semilla 7 y 2.000 iteraciones, determinista, y 40 min de descarga. La fila base reproduce las rutas de no aprovechables de `plan-suba.json`: 9 camiones, 17 viajes, 1.310,6 km y R07 en 79 paradas. Las cinco soluciones son factibles según el `Evaluator`.
 
   | Plan | Grafo | Contenedores | Trozos | t por recolección | t/día de la semana | Camiones | Viajes | km | Horas de vehículo | t CO₂ | R02 | R07 | Armado |
   |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-  | `SubaBase-n807-s1` (2022) | Suba | 806 | 0 | 129,1 | 110,7 | 9 | 17 | 1.310,6 | 64,1 | 2,8 | 335 | 79 | 27,5 s |
-  | LMV día | Bogotá | 0 | 976 | 459,3 | 196,8 | 20 | 58 | 3.751,0 | 165,9 | 8,0 | 0 | 0 | 38,5 s |
-  | LMV noche | Bogotá | 320 | 711 | 618,2 | 264,9 | 28 | 78 | 5.647,8 | 241,0 | 12,1 | 230 | 26 | 44,8 s |
-  | MJS día | Bogotá | 0 | 840 | 507,7 | 217,6 | 24 | 65 | 4.314,6 | 186,5 | 9,2 | 0 | 0 | 29,4 s |
-  | MJS noche | Bogotá | 320 | 747 | 609,7 | 261,3 | 28 | 77 | 5.002,6 | 222,3 | 10,7 | 66 | 26 | 40,0 s |
+  | `SubaBase-n807-s1` (2022) | Suba | 806 | 0 | 129,1 | 110,7 | 9 | 17 | 1.310,6 | 64,1 | 2,8 | 335 | 79 | 11,9 s |
+  | LMV día | Bogotá | 0 | 933 | 487,7 | 209,0 | 21 | 62 | 3.889,8 | 170,4 | 8,3 | 0 | 0 | 15,9 s |
+  | LMV noche | Bogotá | 320 | 729 | 603,2 | 258,5 | 28 | 76 | 5.271,3 | 224,6 | 11,3 | 185 | 26 | 19,9 s |
+  | MJS día | Bogotá | 0 | 771 | 502,8 | 215,5 | 23 | 64 | 4.099,1 | 178,3 | 8,8 | 0 | 0 | 12,7 s |
+  | MJS noche | Bogotá | 320 | 677 | 601,1 | 257,6 | 28 | 76 | 4.968,6 | 218,9 | 10,6 | 70 | 26 | 18,5 s |
 
-  - **Lo que cubre:** la base recogía 110,7 t/día, el 11,8 % de las 940,6 t/día que le tocan a Suba por población; solo eran contenedores. En vivo se recogen las 940,7 t/día. Cada franja recoge tres días por semana, y cada calle carga lo de los días entre dos pasadas.
-  - **Un día de recolección:** la base usa 9 camiones, 1.310,6 km y 64,1 horas de vehículo para 129,1 t. Un día LMV usa 48 camiones entre día y noche (20 + 28), 136 viajes, 9.398,8 km y 406,9 horas para 1.077,5 t. Un día MJS usa 52 camiones (24 + 28), 142 viajes, 9.317,2 km y 408,9 horas para 1.117,4 t. Si cada camión trabaja los dos turnos, bastan 28 por día. La flota real de Suba no está publicada, así que no se compara con nada.
-  - **Por tonelada, el puerta a puerta rinde más:** 8,7 km/t (LMV) y 8,3 (MJS), frente a 10,2 de la base, y 18,7 y 17,9 kg de CO₂/t frente a 21,7. Las horas de vehículo también rinden más: 2,6 y 2,7 t por hora, frente a 2,0. Es esperable, porque una calle densa carga mucho más que un contenedor y los viajes salen más llenos. Con todo, el CO₂ se mueve con los km, porque el consumo de 0,8 L/km es supuesto (`PENDIENTE_VERIFICAR`).
+  - **Lo que cubre:** la base recogía 110,7 t/día, el 11,8 % de las 940,6 t/día que le tocan a Suba por población; solo eran contenedores. En vivo se recogen las 940,6 t/día. Cada franja recoge tres días por semana, y cada calle carga lo de los días entre dos pasadas.
+  - **Un día de recolección:** la base usa 9 camiones, 1.310,6 km y 64,1 horas de vehículo para 129,1 t. Un día LMV usa 49 camiones entre día y noche (21 + 28), 138 viajes, 9.161,1 km y 395,0 horas para 1.090,9 t. Un día MJS usa 51 camiones (23 + 28), 140 viajes, 9.067,7 km y 397,1 horas para 1.103,9 t. Si cada camión trabaja los dos turnos, bastan 28 por día. La flota real de Suba no está publicada, así que no se compara con nada.
+  - **Por tonelada, el puerta a puerta rinde más:** 8,4 km/t (LMV) y 8,2 (MJS), frente a 10,2 de la base, y 18,0 y 17,6 kg de CO₂/t frente a 21,7. Las horas de vehículo también rinden más: 2,8 t por hora los dos días, frente a 2,0. Es esperable, porque una calle densa carga mucho más que un contenedor y los viajes salen más llenos. Con todo, el CO₂ se mueve con los km, porque el consumo de 0,8 L/km es supuesto (`PENDIENTE_VERIFICAR`).
   - **Lo que no es comparable del todo:**
     - El grafo cambia. En F7 se midió que el de Bogotá deja el plan de Suba un 1,13 % más corto, poco frente a esta diferencia.
     - Los contenedores cambian: 806 simulados de 2022 frente a los 320 de 2026, también simulados.
     - Las cargas del puerta a puerta salen de la población, no de pesajes.
     - R02 y R07 se cuentan solo en los contenedores: los trozos de calle de noche todavía no se revisan contra R02.
-  - **Armado:** de 29,4 a 44,8 s por franja en este proceso, una tras otra. En la app, Suba de noche se armó en 23,0 s y MJS día en 27,8 s. El tiempo depende de lo que corra al lado; las cifras de la app son las que valen para el modo en vivo.
+  - **Armado:** de 12,7 a 19,9 s por franja en este proceso, una tras otra. La corrida anterior dio de 29,4 a 44,8 s, pero con otra carga en la máquina: la base, que no cambió, tardó 27,5 s frente a 11,9 s. El tiempo depende de lo que corra al lado; las cifras de la app son las que valen para el modo en vivo.
 
 **Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.
 

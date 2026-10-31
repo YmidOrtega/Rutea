@@ -26,12 +26,18 @@ public final class DoorToDoor {
     public static final int MAX_CHUNK_METERS = 500;
 
     /**
-     * {@code PENDIENTE_VERIFICAR}: kilos que carga un compactador de carga trasera. Ningún operador los publica; se
-     * toman los del cargue lateral, y la flota de la instancia es una sola.
+     * Un arco sin cruces más largo que esto no da a manzanas: el único que pasa de 2,5 km en las 19 localidades es la
+     * vía OSM 91266728 de Bosa, 4,8 km sin pavimentar (ADR 0014).
      */
+    public static final int MAX_STREET_METERS = 1_000;
+
     /** {@code PENDIENTE_VERIFICAR}: velocidad del compactador mientras recoge casa por casa. */
     public static final int COLLECTING_KMH = 6;
 
+    /**
+     * {@code PENDIENTE_VERIFICAR}: kilos que carga un compactador de carga trasera. Ningún operador los publica; se
+     * toman los del cargue lateral, y la flota de la instancia es una sola.
+     */
     public static final int COMPACTOR_KG = SideLoading.SIDE_LOADER_KG;
 
     /**
@@ -173,11 +179,11 @@ public final class DoorToDoor {
         if (!area.localities().contains(locality)) {
             throw new IllegalArgumentException(locality.name() + " no es de " + area.name());
         }
-        return plan(graph, locality, Localities.bogota(), sectors, containers,
+        return plan(graph, locality, Localities.bogota(), UrbanPerimeter.bogota(), sectors, containers,
                 SideLoading.of(area).collectionsPerWeek(), BogotaFigures.kgPerDay(locality), suffix);
     }
 
-    static Plan plan(RoadGraph graph, Locality locality, Localities localities, SectorOf sectors,
+    static Plan plan(RoadGraph graph, Locality locality, Localities localities, UrbanPerimeter urban, SectorOf sectors,
             Map<SideLoading.Shift, List<Container>> containers, int containersPerWeek, double kgPerDay, String suffix) {
         if (locality.rural()) {
             throw new IllegalArgumentException(locality.name() + " es rural: no tiene puerta a puerta");
@@ -197,9 +203,10 @@ public final class DoorToDoor {
                 containerShift.add(turn);
             }
         });
-        IntPredicate streets = shape -> graph.shapeInLocality(shape)
+        IntPredicate streets = shape -> graph.shapeInLocality(shape) && urban.containsShape(graph, shape)
                 && localities.ofShape(graph, shape).equals(locality);
-        List<StreetChunks.Chunk> chunks = StreetChunks.of(graph, streets, MAX_CHUNK_METERS);
+        List<StreetChunks.Chunk> chunks = StreetChunks.of(graph, streets, MAX_CHUNK_METERS).stream()
+                .filter(chunk -> chunk.meters() <= MAX_STREET_METERS).toList();
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException(locality.name() + " no tiene calles locales en el grafo");
         }

@@ -77,6 +77,7 @@ mvn -pl rutea-app exec:java@sensitive-sites  # colegios, hospitales y hoteles de
 mvn -pl rutea-app exec:java@bogota-sensitive-sites  # los mismos sitios en todo el Distrito → data/osm/bogota-sitios-sensibles.csv (F7)
 mvn -pl rutea-app exec:java@sectors          # las UPZ de las 19 localidades urbanas de OSM (R04) → rutea-app/src/main/resources/sectors/<localidad>-upz.geojson (se versiona)
 mvn -pl rutea-app exec:java@localities       # límites de las 20 localidades de OSM → rutea-app/src/main/resources/localities/bogota-localidades.geojson (se versiona)
+mvn -pl rutea-app exec:java@urban-perimeter   # suelo urbano del POT (Decreto 555 de 2021, SDP) para recortar el puerta a puerta → rutea-app/src/main/resources/localities/bogota-perimetro-urbano.geojson (se versiona)
 mvn -pl rutea-app exec:java@operator-containers  # contenedores negros "en campo" de las ASE 1, 2 y 4 (ArcGIS de los operadores) → data/ase/*.csv (ADR 0013; se descarga)
 mvn -pl rutea-app exec:java@bogota-instances  # una instancia de cargue lateral por ASE y turno sobre el grafo de Bogotá → data/bogota/*.vrp (ver data/bogota/README.md)
 mvn -pl rutea-app exec:java@suba-2026        # Suba con los 806 contenedores simulados frente a los 320 de 2026 → docs/benchmarks/f7-suba-2026/*.csv
