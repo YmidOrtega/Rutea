@@ -18,6 +18,7 @@ import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.AreaScenarioFixture;
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.OperatorContainers;
+import me.ymid.rutea.app.scenario.Sectors;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.SideLoading;

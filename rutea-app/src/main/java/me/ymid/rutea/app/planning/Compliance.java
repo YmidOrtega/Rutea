@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
+import me.ymid.rutea.app.scenario.Sectors;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.domain.CollectionRules;

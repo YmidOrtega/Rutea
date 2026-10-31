@@ -18,6 +18,7 @@ COPY rutea-geo rutea-geo
 COPY rutea-sim rutea-sim
 COPY rutea-app rutea-app
 COPY rutea-bench/pom.xml rutea-bench/pom.xml
+COPY rutea-tools/pom.xml rutea-tools/pom.xml
 COPY --from=web /web/dist rutea-app/src/main/resources/static
 RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw --batch-mode --no-transfer-progress -pl rutea-app -am package -DskipTests
@@ -25,7 +26,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21.0.12.1_1-jre-noble
 RUN useradd --system --uid 10001 rutea
 WORKDIR /app
-COPY --from=app /src/rutea-app/target/rutea-app.jar rutea-app.jar
+COPY --from=app /src/rutea-app/target/rutea-app-exec.jar rutea-app.jar
 USER rutea
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "rutea-app.jar"]

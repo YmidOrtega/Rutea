@@ -29,7 +29,7 @@ public final class OperatorContainers {
             return "ase" + area + "-contenedores-negros.csv";
         }
 
-        List<String> fields() {
+        public List<String> fields() {
             return shiftField.isEmpty() ? List.of(codeField, litersField, localityField, routeField)
                     : List.of(codeField, litersField, localityField, routeField, shiftField);
         }
@@ -57,7 +57,7 @@ public final class OperatorContainers {
     private OperatorContainers() {
     }
 
-    static List<Container> parse(Layer layer, JsonNode page) {
+    public static List<Container> parse(Layer layer, JsonNode page) {
         if (page.has("error")) {
             throw new IllegalStateException("ASE " + layer.area() + ": ArcGIS respondió " + page.get("error"));
         }

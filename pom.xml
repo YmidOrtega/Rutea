@@ -19,6 +19,7 @@
     <module>rutea-sim</module>
     <module>rutea-app</module>
     <module>rutea-bench</module>
+    <module>rutea-tools</module>
   </modules>
 
   <properties>

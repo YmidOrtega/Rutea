@@ -9,6 +9,7 @@ import java.util.function.ToDoubleFunction;
 
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
+import me.ymid.rutea.app.scenario.Sectors;
 import me.ymid.rutea.app.scenario.ServiceAreas.Operation;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
@@ -47,7 +48,7 @@ public final class AreaPlanner {
     /**
      * El plan de demo: los viajes de ALNS repartidos en el menor número de camiones, con la descarga más corta
      * del rango publicado (40 min), para que se vean los viajes encadenados. Con 90 min hacen falta casi un
-     * camión por viaje; {@link CompareBaseline} muestra los dos extremos.
+     * camión por viaje; {@code CompareBaseline}, en rutea-tools, muestra los dos extremos.
      */
     public static DemoPlan plan(AreaScenario scenario, long seed) {
         // El límite de tiempo es solo un seguro: con 2.000 iteraciones el plan termina mucho antes.
@@ -296,7 +297,7 @@ public final class AreaPlanner {
         }
         checks.add(Compliance.nightNoiseCheck(nightNoise));
         checks.addAll(Compliance.fleetChecks(waste.routes().size(), recyclables.routes().size()));
-        List<DemoPlan.Sector> sectors = Sectors.of(area).schedule(containers);
+        List<DemoPlan.Sector> sectors = SectorSchedule.of(Sectors.of(area), containers);
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));
         return new DemoPlan(waste.meta(), sites, containers, routes, checks, sectors, waste.streets());

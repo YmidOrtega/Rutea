@@ -20,6 +20,7 @@ import java.util.stream.IntStream;
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.OperatorContainers;
+import me.ymid.rutea.app.scenario.Sectors;
 import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
@@ -153,7 +154,7 @@ public final class CityPlanner {
                 List<OperatorContainers.Container> containers = real.get(area.number());
                 if (containers == null) {
                     throw new IllegalArgumentException("falta el extracto de contenedores de " + area.name()
-                            + " (mvn -pl rutea-app exec:java@operator-containers)");
+                            + " (mvn -pl rutea-tools -am compile exec:java@operator-containers)");
                 }
                 if (AreaScenario.selected(area, shift, chosen, containers).isEmpty()) {
                     skipped.add(new Skipped(area, shift));
@@ -187,7 +188,7 @@ public final class CityPlanner {
     static DemoPlan checked(AreaScenario scenario, Solution solution, ShiftScheduler.Schedule schedule, long seed,
             long iterations) {
         DemoPlan drawn = AreaPlanner.plan(scenario, solution, schedule, "alns", seed, iterations);
-        List<DemoPlan.Sector> sectors = Sectors.of(scenario.area()).schedule(drawn.containers());
+        List<DemoPlan.Sector> sectors = SectorSchedule.of(Sectors.of(scenario.area()), drawn.containers());
         List<Compliance.Check> checks = new ArrayList<>(drawn.compliance());
         checks.add(Compliance.scheduleCheck(sectors));
         checks.sort(Comparator.comparing(Compliance.Check::id));

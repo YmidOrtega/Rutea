@@ -18,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * De qué localidad es cada calle del grafo (ADR 0012). El grafo de Bogotá solo sabe si una calle está en el Distrito;
  * la localidad sale de los límites de OSM en {@code localities/bogota-localidades.geojson}, que se generan con
- * {@code mvn -pl rutea-app exec:java@localities}.
+ * {@code mvn -pl rutea-tools -am compile exec:java@localities}.
  */
 public final class Localities {
 
@@ -46,7 +46,7 @@ public final class Localities {
             try (InputStream in = Localities.class.getResourceAsStream(RESOURCE)) {
                 if (in == null) {
                     throw new IllegalStateException(
-                            "falta " + RESOURCE + "; se genera con mvn -pl rutea-app exec:java@localities");
+                            "falta " + RESOURCE + "; se genera con mvn -pl rutea-tools -am compile exec:java@localities");
                 }
                 bogota = read(JsonMapper.builder().build().readTree(in));
             } catch (IOException e) {

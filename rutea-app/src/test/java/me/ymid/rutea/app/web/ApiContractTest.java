@@ -16,6 +16,16 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import me.ymid.rutea.app.application.BreakdownEvent;
+import me.ymid.rutea.app.application.ClosureEvent;
+import me.ymid.rutea.app.application.EventsPage;
+import me.ymid.rutea.app.application.LocalityOutline;
+import me.ymid.rutea.app.application.OperationEvent;
+import me.ymid.rutea.app.application.OverflowEvent;
+import me.ymid.rutea.app.application.SelectionPlan;
+import me.ymid.rutea.app.application.SensorsMessage;
+import me.ymid.rutea.app.application.ShiftMessage;
+import me.ymid.rutea.app.application.TelemetryMessage;
 import me.ymid.rutea.app.operations.LiveOperation;
 import me.ymid.rutea.app.planning.Compliance;
 import me.ymid.rutea.app.planning.DemoPlan;
