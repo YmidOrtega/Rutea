@@ -35,8 +35,8 @@ class ApiErrors extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
-    @ExceptionHandler(OperationsService.DataMissingException.class)
-    ProblemDetail missing(OperationsService.DataMissingException e) {
+    @ExceptionHandler(BogotaData.DataMissingException.class)
+    ProblemDetail missing(BogotaData.DataMissingException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 

@@ -43,12 +43,20 @@ public final class ContainerSensors {
     public static ContainerSensors of(List<Container> containers, int[] plannedVisitSeconds, List<Integer> sizes,
             int collectionsPerWeek, Config config) {
         SplittableRandom random = new SplittableRandom(config.seed());
+        int[] liters = new int[containers.size()];
+        for (int i = 0; i < liters.length; i++) {
+            liters[i] = sizes.get(random.nextInt(sizes.size()));
+        }
+        return of(containers, plannedVisitSeconds, liters, collectionsPerWeek, config);
+    }
+
+    /** Con el tamaño de cada contenedor ya conocido, como el de los reales del operador. */
+    public static ContainerSensors of(List<Container> containers, int[] plannedVisitSeconds, int[] liters,
+            int collectionsPerWeek, Config config) {
         int n = containers.size();
         FillSensor[] sensors = new FillSensor[n];
-        int[] liters = new int[n];
         double[] previous = new double[n];
         for (int i = 0; i < n; i++) {
-            liters[i] = sizes.get(random.nextInt(sizes.size()));
             double kgPerDay = containers.get(i).kg() * (double) collectionsPerWeek / 7;
             sensors[i] = FillSensor.of(liters[i], config.densityKgPerM3(), kgPerDay);
             previous[i] = plannedVisitSeconds[i] - config.daysSinceLastCollection() * 86_400.0;

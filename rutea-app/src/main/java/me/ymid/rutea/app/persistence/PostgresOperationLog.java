@@ -22,13 +22,15 @@ public final class PostgresOperationLog implements OperationLog {
     }
 
     @Override
-    public long newShift() {
-        return jdbc.sql("INSERT INTO shift DEFAULT VALUES RETURNING id").query(Long.class).single();
+    public long newShift(String operation) {
+        return jdbc.sql("INSERT INTO shift (operation) VALUES (?) RETURNING id").param(operation).query(Long.class)
+                .single();
     }
 
     @Override
-    public Optional<Shift> lastShift() {
-        Optional<Long> id = jdbc.sql("SELECT max(id) FROM shift").query(Long.class).optional();
+    public Optional<Shift> lastShift(String operation) {
+        Optional<Long> id = jdbc.sql("SELECT max(id) FROM shift WHERE operation = ?").param(operation)
+                .query(Long.class).optional();
         if (id.isEmpty()) {
             return Optional.empty();
         }

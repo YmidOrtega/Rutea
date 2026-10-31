@@ -30,6 +30,17 @@ class VehicleTest {
     }
 
     @Test
+    void aStreetChunkIsDrivenNotStoppedAt() {
+        // Entre N1 y N2 recorre el trozo T-1 sin detenerse: (1, 1) → (1.5, 1.5) → (2, 2).
+        Vehicle streets = new Vehicle("C-03", WasteStream.NON_RECYCLABLE, new Track(
+                new double[] {0, 1, 1, 1.5, 2, 2}, new double[] {0, 1, 1, 1.5, 2, 2},
+                new double[] {0, 100, 160, 400, 700, 760}), List.of("N1", "T-1", "N2"), Vehicle.NOT_BROKEN);
+
+        assertThat(streets.containers()).containsExactly("N1", "N2");
+        assertThat(streets.arrivals(List.of(DUMP))).containsExactly(100.0, 700.0);
+    }
+
+    @Test
     void refusesATrackThatDoesNotMatchItsStops() {
         Vehicle wrong = new Vehicle("C-02", WasteStream.NON_RECYCLABLE, TRUCK.track(), List.of("N1"),
                 Vehicle.NOT_BROKEN);

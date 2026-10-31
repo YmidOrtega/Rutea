@@ -175,6 +175,11 @@ public final class SideLoading {
         return (int) Math.round(liters / 1000.0 * BogotaFigures.LOOSE_WASTE_KG_PER_M3 * fill);
     }
 
+    /** El tamaño de un contenedor que carga {@code kg} con ese llenado: lo inverso de {@link #kgAtCollection}. */
+    public static int litersAtCollection(int kg, double fill) {
+        return (int) Math.round(kg * 1000.0 / (BogotaFigures.LOOSE_WASTE_KG_PER_M3 * fill));
+    }
+
     public static double kgPerDay(List<Integer> liters, int collectionsPerWeek, double fill) {
         long kg = 0;
         for (int l : liters) {

@@ -17,9 +17,10 @@ public interface OperationLog {
     record Position(String vehicle, double atSeconds, Optional<String> state, double lon, double lat) {
     }
 
-    long newShift();
+    /** @param operation la operación en vivo, como {@code 11-LMVNoche} */
+    long newShift(String operation);
 
-    Optional<Shift> lastShift();
+    Optional<Shift> lastShift(String operation);
 
     void command(long shift, int seq, Command command);
 

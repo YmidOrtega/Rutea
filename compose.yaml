@@ -39,8 +39,6 @@ services:
       db:
         condition: service_healthy
     environment:
-      RUTEA_GRAPH: /data/suba.rgraph
-      RUTEA_SITES: /data/suba-sitios-sensibles.csv
       RUTEA_BOGOTAGRAPH: /data/bogota.rgraph
       RUTEA_BOGOTASITES: /data/bogota-sitios-sensibles.csv
       RUTEA_OPERATORCONTAINERS: /data

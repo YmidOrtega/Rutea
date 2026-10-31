@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.ymid.rutea.app.planning.DemoPlan;
+import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.domain.WasteStream;
 import me.ymid.rutea.sim.Track;
 
@@ -30,14 +31,16 @@ record Vehicle(String id, WasteStream stream, Track track, List<String> stops, d
     }
 
     /**
-     * La hora en que llega a cada contenedor que alcanza a recoger, en el orden de {@link #stops}. Cada parada es un
-     * punto repetido del recorrido; las que caen en un sitio de descarga no son contenedores.
+     * La hora en que llega a cada contenedor que alcanza a recoger, en el orden de {@link #containers}. Cada uno es
+     * un punto repetido del recorrido; los que caen en un sitio de descarga no son contenedores. Un trozo de calle no
+     * detiene al camión: lo recorre.
      */
     List<Double> arrivals(List<double[]> unloadSites) {
         double[] lon = track.lon();
         double[] lat = track.lat();
         double[] times = track.times();
-        List<Double> arrivals = new ArrayList<>(stops.size());
+        List<String> containers = containers();
+        List<Double> arrivals = new ArrayList<>(containers.size());
         for (int i = 0; i + 1 < times.length; i++) {
             if (lon[i] != lon[i + 1] || lat[i] != lat[i + 1] || times[i + 1] <= times[i] || unloads(lon[i], lat[i],
                     unloadSites)) {
@@ -45,11 +48,15 @@ record Vehicle(String id, WasteStream stream, Track track, List<String> stops, d
             }
             arrivals.add(times[i]);
         }
-        if (arrivals.size() != stops.size()) {
+        if (arrivals.size() != containers.size()) {
             throw new IllegalStateException(id + ": " + arrivals.size() + " paradas en el recorrido para "
-                    + stops.size() + " contenedores");
+                    + containers.size() + " contenedores");
         }
         return arrivals.stream().filter(seconds -> seconds < brokenAtSeconds).toList();
+    }
+
+    List<String> containers() {
+        return stops.stream().filter(stop -> !AreaScenario.isChunkStop(stop)).toList();
     }
 
     private static boolean unloads(double lon, double lat, List<double[]> sites) {

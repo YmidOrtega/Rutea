@@ -11,12 +11,12 @@ public final class InMemoryOperationLog implements OperationLog {
     private final AtomicLong shifts = new AtomicLong(System.currentTimeMillis());
 
     @Override
-    public long newShift() {
+    public long newShift(String operation) {
         return shifts.incrementAndGet();
     }
 
     @Override
-    public Optional<Shift> lastShift() {
+    public Optional<Shift> lastShift(String operation) {
         return Optional.empty();
     }
 

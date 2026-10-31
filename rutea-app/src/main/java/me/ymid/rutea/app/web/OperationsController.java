@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.OptionalLong;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,11 +45,6 @@ public class OperationsController {
         this.telemetry = telemetry;
     }
 
-    @GetMapping("/plan")
-    public DemoPlan plan() {
-        return operations.plan();
-    }
-
     /** Las 20 localidades con su borde y su ASE: lo que dibuja el selector. No necesita los datos de OSM. */
     @GetMapping("/localities")
     public List<LocalityOutline> localities() {
@@ -61,56 +57,77 @@ public class OperationsController {
         return cityPlans.plan(localities);
     }
 
-    @GetMapping("/events")
-    public EventsPage events(@RequestParam(name = "after", defaultValue = "0") int after) {
-        return operations.events(after);
+    /** La primera vez que se pide una localidad y franja, tarda lo que tarda planificarla. */
+    @GetMapping("/live/{locality}/{slot}/plan")
+    public DemoPlan plan(@PathVariable("locality") int locality, @PathVariable("slot") String slot) {
+        return live(locality, slot).plan();
+    }
+
+    @GetMapping("/live/{locality}/{slot}/events")
+    public EventsPage events(@PathVariable("locality") int locality, @PathVariable("slot") String slot,
+            @RequestParam(name = "after", defaultValue = "0") int after) {
+        if (after < 0) {
+            throw new IllegalArgumentException("after es el último seq que ya tiene el cliente: 0 o más, llegó " + after);
+        }
+        return live(locality, slot).events(after);
     }
 
     /**
-     * Replanifica y difunde a todos los clientes la avería y los desbordes que hubo que volver a despachar; quien
-     * la pidió también los recibe en la respuesta.
+     * Replanifica y difunde a quienes miran la operación la avería y los desbordes que hubo que volver a despachar;
+     * quien la pidió también los recibe en la respuesta.
      */
-    @PostMapping("/breakdowns")
-    public List<OperationEvent> breakdown(@RequestBody BreakdownRequest request) {
-        List<OperationEvent> events = operations.breakdown(request.truck(),
-                request.atSeconds().orElseGet(operations::now));
-        events.forEach(hub::broadcast);
+    @PostMapping("/live/{locality}/{slot}/breakdowns")
+    public List<OperationEvent> breakdown(@PathVariable("locality") int locality, @PathVariable("slot") String slot,
+            @RequestBody BreakdownRequest request) {
+        LiveSession live = live(locality, slot);
+        List<OperationEvent> events = live.breakdown(request.truck(), request.atSeconds().orElseGet(live::now));
+        events.forEach(event -> hub.broadcast(live.key(), event));
         return events;
     }
 
-    @PostMapping("/overflows")
-    public OverflowEvent overflow(@RequestBody OverflowRequest request) {
-        OverflowEvent event = operations.overflow(request.container(),
-                request.atSeconds().orElseGet(operations::now));
-        hub.broadcast(event);
+    @PostMapping("/live/{locality}/{slot}/overflows")
+    public OverflowEvent overflow(@PathVariable("locality") int locality, @PathVariable("slot") String slot,
+            @RequestBody OverflowRequest request) {
+        LiveSession live = live(locality, slot);
+        OverflowEvent event = live.overflow(request.container(), request.atSeconds().orElseGet(live::now));
+        hub.broadcast(live.key(), event);
         return event;
     }
 
-    @PostMapping("/closures")
-    public ClosureEvent closure(@RequestBody ClosureRequest request) {
-        ClosureEvent event = operations.closure(request.lon(), request.lat(),
-                request.atSeconds().orElseGet(operations::now));
-        hub.broadcast(event);
+    @PostMapping("/live/{locality}/{slot}/closures")
+    public ClosureEvent closure(@PathVariable("locality") int locality, @PathVariable("slot") String slot,
+            @RequestBody ClosureRequest request) {
+        LiveSession live = live(locality, slot);
+        ClosureEvent event = live.closure(request.lon(), request.lat(), request.atSeconds().orElseGet(live::now));
+        hub.broadcast(live.key(), event);
         return event;
     }
 
-    @GetMapping("/sensors")
-    public SensorsMessage sensors() {
-        return telemetry.sensors();
+    @GetMapping("/live/{locality}/{slot}/sensors")
+    public SensorsMessage sensors(@PathVariable("locality") int locality, @PathVariable("slot") String slot) {
+        return live(locality, slot).sensors();
     }
 
-    @GetMapping("/telemetry")
-    public TelemetryMessage telemetry() {
-        return telemetry.snapshot();
+    @GetMapping("/live/{locality}/{slot}/telemetry")
+    public TelemetryMessage telemetry(@PathVariable("locality") int locality, @PathVariable("slot") String slot) {
+        return live(locality, slot).snapshot();
     }
 
     /** Reproducir con el turno terminado empieza uno nuevo: los clientes reciben el turno y borran los eventos. */
-    @PutMapping("/clock")
-    public TelemetryMessage clock(@RequestBody ClockRequest request) {
-        if (operations.clock(request.running(), request.speed())) {
-            hub.broadcast(operations.shiftMessage());
+    @PutMapping("/live/{locality}/{slot}/clock")
+    public TelemetryMessage clock(@PathVariable("locality") int locality, @PathVariable("slot") String slot,
+            @RequestBody ClockRequest request) {
+        LiveSession.checkSpeed(request.speed());
+        LiveSession live = live(locality, slot);
+        if (live.clock(request.running(), request.speed())) {
+            hub.broadcast(live.key(), live.shiftMessage());
         }
-        telemetry.publishNow();
-        return telemetry.snapshot();
+        telemetry.publishNow(live);
+        return live.snapshot();
+    }
+
+    /** La localidad y la franja se validan antes de leer los datos. */
+    private LiveSession live(int locality, String slot) {
+        return operations.session(LiveKey.of(locality, slot));
     }
 }

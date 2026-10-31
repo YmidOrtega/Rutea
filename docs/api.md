@@ -1,16 +1,16 @@
 # API de Rutea
 
-El contrato entre `rutea-app` y quien la use: el mapa de `web/` o cualquier otro cliente. JSON en `/api`, y un WebSocket en `/ws/events` para lo que pasa en vivo. [ADR 0011](adr/0011-api-estable.md) explica por qué es así.
+El contrato entre `rutea-app` y quien la use: el mapa de `web/` o cualquier otro cliente. JSON en `/api`, y un WebSocket por operación en vivo, en `/ws/live/{localidad}/{franja}`, para lo que pasa en ella. [ADR 0011](adr/0011-api-estable.md) explica por qué es así.
 
 `ApiContractTest` compara los campos y valores de este documento con los del código. Si cambia un campo y este archivo no, el test falla.
 
 Convenciones:
 
-- **Horas:** segundos desde el inicio del turno; el turno empieza a la hora de `meta.shiftStart` de su plan (18:00 en la operación en vivo).
+- **Horas:** segundos desde el inicio del turno; el turno empieza a la hora de `meta.shiftStart` de su plan (06:00 o 18:00 en la operación en vivo).
 - **Posiciones:** `[lon, lat]`, en el orden que esperan MapLibre y deck.gl.
 - **Distancias:** metros enteros.
 - **Eventos:** cada uno lleva un `seq` que empieza en 1 en cada turno y sube de uno en uno. Un cliente nunca cuenta dos veces el mismo.
-- **Datos simulados:** las calles son reales (OSM). En la operación en vivo, los contenedores, sus cargas y los sensores son simulados. En `GET /api/areas`, los contenedores de las ASE 1, 2 y 4 son los del operador y los de las ASE 3 y 5, simulados; las cargas salen de la capacidad. `meta.simulated` y `meta.assumptions` lo dicen en cada plan.
+- **Datos simulados:** las calles son reales (OSM). Los contenedores de las ASE 1, 2 y 4 son los del operador y los de las ASE 3 y 5, simulados; las cargas salen de la capacidad. En la operación en vivo, la carga del puerta a puerta sale de la población de la localidad y los sensores son simulados. `meta.simulated`, `meta.network` y `meta.assumptions` lo dicen en cada plan.
 - **ASE:** cada ASE se identifica por su número oficial, de 1 a 5, y cada localidad por el suyo, de 1 a 20.
 
 ## Errores
@@ -19,12 +19,12 @@ Todo error sale en [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`applicat
 
 ```json
 {"detail": "el punto (-74.20000, 4.75000) queda a 6807 m de la calle más cercana; un cierre se marca sobre una calle, a menos de 150 m",
- "instance": "/api/closures", "status": 400, "title": "Bad Request"}
+ "instance": "/api/live/11/LMVNoche/closures", "status": 400, "title": "Bad Request"}
 ```
 
 | Estado | Cuándo |
 |---|---|
-| 400 | JSON mal formado, un campo o parámetro que falta o con otro tipo, una localidad que no existe, o una orden que la operación no admite (camión o contenedor que no existe, hora fuera del turno, punto lejos de una calle, velocidad fuera de 0–3.600×) |
+| 400 | JSON mal formado, un campo o parámetro que falta o con otro tipo, una localidad que no existe o rural en la operación en vivo, una franja que no existe, o una orden que la operación no admite (camión o contenedor que no existe, hora fuera del turno, punto lejos de una calle, velocidad fuera de 0–3.600×) |
 | 404 | Ruta que no existe |
 | 405 | Método que la ruta no admite; `detail` dice cuáles admite |
 | 415 | Cuerpo que no viene como `application/json` |
@@ -34,20 +34,20 @@ Todo error sale en [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`applicat
 
 | Método y ruta | Cuerpo | Responde |
 |---|---|---|
-| `GET /api/plan` | | `DemoPlan` de la operación en vivo |
 | `GET /api/localities` | | Lista de `LocalityOutline`: las 20 localidades, por número, para elegirlas en el mapa |
 | `GET /api/areas?localities=11,10` | | `SelectionPlan`: el cargue lateral de las localidades elegidas, un plan por ASE |
-| `GET /api/events?after=N` | | `EventsPage`: los eventos con `seq` mayor a `N` (por defecto 0, todos) |
-| `POST /api/breakdowns` | `BreakdownRequest` | Lista de eventos: la avería y los desbordes que hubo que volver a despachar |
-| `POST /api/overflows` | `OverflowRequest` | `OverflowEvent` |
-| `POST /api/closures` | `ClosureRequest` | `ClosureEvent` |
-| `GET /api/telemetry` | | `TelemetryMessage` con todos los vehículos en la calle |
-| `GET /api/sensors` | | `SensorsMessage` con todas las lecturas y los litros de cada contenedor |
-| `PUT /api/clock` | `ClockRequest` | `TelemetryMessage` con todos los vehículos y el reloj nuevo |
+| `GET /api/live/{localidad}/{franja}/plan` | | `DemoPlan` de la operación en vivo |
+| `GET /api/live/{localidad}/{franja}/events?after=N` | | `EventsPage`: los eventos con `seq` mayor a `N` (por defecto 0, todos) |
+| `POST /api/live/{localidad}/{franja}/breakdowns` | `BreakdownRequest` | Lista de eventos: la avería y los desbordes que hubo que volver a despachar |
+| `POST /api/live/{localidad}/{franja}/overflows` | `OverflowRequest` | `OverflowEvent` |
+| `POST /api/live/{localidad}/{franja}/closures` | `ClosureRequest` | `ClosureEvent` |
+| `GET /api/live/{localidad}/{franja}/telemetry` | | `TelemetryMessage` con todos los vehículos en la calle |
+| `GET /api/live/{localidad}/{franja}/sensors` | | `SensorsMessage` con todas las lecturas y los litros de cada contenedor |
+| `PUT /api/live/{localidad}/{franja}/clock` | `ClockRequest` | `TelemetryMessage` con todos los vehículos y el reloj nuevo |
 
-Lo que cambia la operación (averías, desbordes, cierres, el reloj) también llega a todos los clientes por el WebSocket. Quien hizo la petición lo recibe dos veces, en la respuesta y por el WebSocket, y lo cuenta una sola vez por su `seq`.
+Lo que cambia una operación en vivo (averías, desbordes, cierres, el reloj) también llega por el WebSocket a todos los clientes que la miran. Quien hizo la petición lo recibe dos veces, en la respuesta y por el WebSocket, y lo cuenta una sola vez por su `seq`.
 
-Sin `atSeconds`, una orden ocurre a la hora del reloj compartido.
+Sin `atSeconds`, una orden ocurre a la hora del reloj de su operación.
 
 ### La selección
 
@@ -67,9 +67,15 @@ Medido en la app (2026-10-29; i5-14400F, 16 hilos, Java 21.0.12, primera petici�
 
 Las 20 tardan más que los 13,3 s en frío de `exec:java@city-plan`; no se midió por qué. Comprimir las 20 cuesta 154 ms por respuesta y ahorra 3,3 MB, así que sale a cuenta en redes de menos de unos 170 Mbit/s.
 
-La operación en vivo (averías, desbordes, cierres, telemetría, sensores y reloj) es por ahora la de Suba, el ASE 5. Sus eventos y su `shift` llevan `area` para que un cliente no lo suponga.
+### La operación en vivo
 
-## WebSocket `/ws/events`
+Cada localidad urbana tiene cuatro franjas de puerta a puerta: `LMVDia`, `LMVNoche`, `MJSDia` y `MJSNoche` (lunes, miércoles y viernes, o martes, jueves y sábado; turno desde las 06:00 o desde las 18:00). Cada franja es una operación aparte, con su plan, su reloj, sus eventos y su turno: dos clientes en localidades distintas no se pisan, y dos en la misma ven lo mismo. `{localidad}` es su número oficial (Suba es 11) y las rurales no tienen. Una franja en la que la localidad no recoge nada responde 400.
+
+En el plan, las paradas (`DemoPlan.Route.stops`) son contenedores, con su código, o trozos de calle del puerta a puerta ([ADR 0014](adr/0014-puerta-a-puerta.md)), que van como `T-1`, `T-2`… Solo los contenedores se desbordan y tienen sensor; una avería o un cierre afectan los dos.
+
+La primera vez, una operación tarda lo que tarda planificarla, y dos clientes que piden la misma a la vez esperan un solo cálculo. El servidor guarda las últimas 4; una que sale y se vuelve a pedir retoma su turno. Al arrancar, la app arma Suba en `LMVNoche`.
+
+## WebSocket `/ws/live/{localidad}/{franja}`
 
 Solo del servidor al cliente. Cada mensaje es un objeto JSON con `type`:
 
@@ -84,9 +90,9 @@ Solo del servidor al cliente. Cada mensaje es un objeto JSON con `type`:
 
 La telemetría y los sensores mandan solo lo que cambió, así que un cliente que pierde mensajes queda desfasado. Con `shift` se pone al día:
 
-1. Si `shift` no es el turno que conocía, empezó otro: olvida los eventos y pide `GET /api/events`.
-2. Si es el mismo y `seq` es mayor que el último que tiene, pide `GET /api/events?after=<su último seq>`.
-3. Si se reconectó, o si cambió el turno, pide `GET /api/telemetry` y `GET /api/sensors` y reemplaza lo que tenía.
+1. Si `shift` no es el turno que conocía, empezó otro: olvida los eventos y pide `GET …/events`.
+2. Si es el mismo y `seq` es mayor que el último que tiene, pide `GET …/events?after=<su último seq>`.
+3. Si se reconectó, o si cambió el turno, pide `GET …/telemetry` y `GET …/sensors` y reemplaza lo que tenía.
 
 `EventsPage` trae su `shift`: si no coincide con el último `shift` recibido, la respuesta es de otro turno y se descarta.
 
@@ -128,9 +134,9 @@ Campos: `shift`, `events`
 
 ### `ShiftMessage`
 
-Campos: `type`, `shift`, `area`, `seq`
+Campos: `type`, `shift`, `area`, `locality`, `slot`, `seq`
 
-`area` es la ASE de la operación en vivo. `seq` es el último evento del turno; 0 si todavía no hay ninguno.
+`area` es la ASE de la localidad, `locality` su número y `slot` la franja. `seq` es el último evento del turno; 0 si todavía no hay ninguno.
 
 ### `BreakdownEvent`
 
@@ -164,7 +170,7 @@ Campos: `truck`, `extraMeters`, `extraSeconds`, `rerouted`, `late`
 
 Campos: `type`, `clock`, `vehicles`
 
-En el WebSocket, `vehicles` trae solo los que cambiaron desde el reporte anterior; en `GET /api/telemetry` y `PUT /api/clock`, todos los que están en la calle.
+En el WebSocket, `vehicles` trae solo los que cambiaron desde el reporte anterior; en `GET …/telemetry` y `PUT …/clock`, todos los que están en la calle.
 
 ### `TelemetryMessage.Clock`
 
@@ -184,7 +190,7 @@ Valores: `DRIVING`, `COLLECTING`, `UNLOADING`, `BROKEN`, `DONE`
 
 Campos: `type`, `seconds`, `readings`, `liters`
 
-`readings` va de contenedor a porcentaje de llenado, en pasos de 5 %. `liters` solo viene en `GET /api/sensors`; en el WebSocket va vacío.
+`readings` va de contenedor a porcentaje de llenado, en pasos de 5 %. `liters` solo viene en `GET …/sensors`; en el WebSocket va vacío.
 
 ## El plan
 

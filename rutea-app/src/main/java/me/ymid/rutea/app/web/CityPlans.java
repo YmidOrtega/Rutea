@@ -1,8 +1,5 @@
 package me.ymid.rutea.app.web;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -15,18 +12,13 @@ import java.util.concurrent.FutureTask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.CityPlanner;
-import me.ymid.rutea.app.scenario.OperatorContainers;
-import me.ymid.rutea.app.scenario.SensitiveSites;
 import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.SideLoading;
-import me.ymid.rutea.geo.RoadGraph;
-import me.ymid.rutea.geo.RoadGraphFile;
 
 /**
  * El plan de cualquier selección de localidades sobre el grafo de Bogotá. Con semilla e iteraciones fijas el plan de
@@ -40,14 +32,7 @@ public class CityPlans {
 
     static final int CACHED = 8;
 
-    private record Data(RoadGraph graph, Map<Integer, List<OperatorContainers.Container>> real,
-            List<SensitiveSites.Site> sites) {
-    }
-
-    private final Path graph;
-    private final Path sites;
-    private final Path containers;
-    private Data data;
+    private final BogotaData data;
     private final Map<List<Integer>, FutureTask<SelectionPlan>> plans = new LinkedHashMap<>(16, 0.75f, true) {
 
         private static final long serialVersionUID = 1L;
@@ -58,16 +43,13 @@ public class CityPlans {
         }
     };
 
-    public CityPlans(@Value("${rutea.bogota-graph}") String graph, @Value("${rutea.bogota-sites}") String sites,
-            @Value("${rutea.operator-containers}") String containers) {
-        this.graph = Path.of(graph);
-        this.sites = Path.of(sites);
-        this.containers = Path.of(containers);
+    public CityPlans(BogotaData data) {
+        this.data = data;
     }
 
     /**
      * @throws IllegalArgumentException si no hay localidades o un número no es de una localidad
-     * @throws OperationsService.DataMissingException si falta el grafo, los sitios o el extracto de un operador
+     * @throws BogotaData.DataMissingException si falta el grafo, los sitios o el extracto de un operador
      */
     public SelectionPlan plan(Collection<Integer> numbers) {
         List<Locality> selection = selection(numbers);
@@ -75,7 +57,7 @@ public class CityPlans {
         FutureTask<SelectionPlan> task;
         boolean mine = false;
         synchronized (this) {
-            Data loaded = data();
+            BogotaData.Loaded loaded = data.get();
             task = plans.get(key);
             if (task == null) {
                 task = new FutureTask<>(() -> {
@@ -118,32 +100,5 @@ public class CityPlans {
                     "no hay localidad " + number + "; van de 1 (Usaquén) a 20 (Sumapaz)")));
         }
         return selection;
-    }
-
-    private Data data() {
-        if (data != null) {
-            return data;
-        }
-        List<Path> files = new ArrayList<>(List.of(graph, sites));
-        OperatorContainers.LAYERS.forEach(layer -> files.add(containers.resolve(layer.file())));
-        for (Path file : files) {
-            if (!Files.exists(file)) {
-                throw new OperationsService.DataMissingException("Falta " + file.toAbsolutePath().normalize()
-                        + ". Se genera con: mvn -pl rutea-geo compile exec:java@bogota,"
-                        + " mvn -pl rutea-app exec:java@bogota-sensitive-sites y"
-                        + " mvn -pl rutea-app exec:java@operator-containers (ver data/osm/README.md y data/ase/README.md)");
-            }
-        }
-        try {
-            Map<Integer, List<OperatorContainers.Container>> real = new LinkedHashMap<>();
-            for (OperatorContainers.Layer layer : OperatorContainers.LAYERS) {
-                real.put(layer.area(), OperatorContainers.read(containers.resolve(layer.file())));
-            }
-            data = new Data(RoadGraphFile.read(graph).graph(), real, SensitiveSites.read(sites));
-            return data;
-        } catch (IOException e) {
-            throw new OperationsService.DataMissingException("No se pudieron leer los datos de Bogotá: "
-                    + e.getMessage());
-        }
     }
 }

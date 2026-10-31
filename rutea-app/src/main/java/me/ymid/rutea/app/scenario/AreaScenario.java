@@ -429,8 +429,9 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return String.join("-", localities.stream().map(Locality::name).toList());
     }
 
+    /** Un turno de puerta a puerta puede no tener contenedores: recoge no aprovechables. */
     public WasteStream stream() {
-        return containers.getFirst().stream();
+        return containers.isEmpty() ? WasteStream.NON_RECYCLABLE : containers.getFirst().stream();
     }
 
     /** Índice de la portería en {@link #travel}; la base es 0 y el nodo {@code i}, {@code i}. */
@@ -457,7 +458,14 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
     }
 
     public String stopId(int node) {
-        return isChunk(node) ? "T-" + (node - containers.size()) : containers.get(node - 1).id();
+        return isChunk(node) ? CHUNK_PREFIX + (node - containers.size()) : containers.get(node - 1).id();
+    }
+
+    /** Ningún código de contenedor, de operador o simulado, empieza así. */
+    private static final String CHUNK_PREFIX = "T-";
+
+    public static boolean isChunkStop(String id) {
+        return id.startsWith(CHUNK_PREFIX);
     }
 
     public boolean isChunk(int node) {
