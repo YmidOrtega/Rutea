@@ -97,13 +97,8 @@ export interface LoadedPlan {
   sensors: SensorsMessage | null
 }
 
-/** La primera vez que se pide, Suba de noche, la franja más grande, tarda unos 23 s en armarse. */
 const API_TIMEOUT_MS = 60_000
 
-/**
- * La operación de `key`. Sin API queda el plan estático, que es solo de Suba; si la API responde que la franja no
- * existe o le faltan datos, se dice eso y no se cambia por otro plan.
- */
 export async function loadPlan(key: LiveKey): Promise<LoadedPlan> {
   const abort = new AbortController()
   const timer = setTimeout(() => abort.abort(), API_TIMEOUT_MS)

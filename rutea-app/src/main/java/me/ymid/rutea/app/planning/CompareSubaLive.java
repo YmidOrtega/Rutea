@@ -22,14 +22,6 @@ import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.solver.Evaluation;
 import me.ymid.rutea.solver.Evaluator;
 
-/**
- * Suba en vivo, con contenedores y puerta a puerta en sus cuatro franjas, frente al plan de F3 a F6: los 806
- * contenedores simulados de 2022 sobre el grafo de Suba ({@code SubaBase-n807-s1}, congelado). Solo no aprovechables,
- * los únicos que van casa por casa. Cada plan se arma como lo sirve la app: la base como {@link DemoPlanExporter} y
- * cada franja como la operación en vivo, con la misma semilla, las mismas iteraciones y 40 min de descarga.
- *
- * <p>Uso: {@code CompareSubaLive <suba.rgraph> <suba-sitios.csv> <bogota.rgraph> <bogota-sitios.csv> <dir-salida>}
- */
 public final class CompareSubaLive {
 
     private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
@@ -62,7 +54,6 @@ public final class CompareSubaLive {
         RoadGraph bogota = RoadGraphFile.read(Path.of(args[2])).graph();
         List<SensitiveSites.Site> sites = SensitiveSites.read(Path.of(args[3]));
         ServiceAreas.ServiceArea area = ServiceAreas.split(List.of(suba)).keySet().iterator().next();
-        // Suba no tiene la capa del operador: sus contenedores son los 320 simulados de la cantidad oficial (ADR 0013).
         DoorToDoor.Plan plan = DoorToDoor.plan(bogota, area, suba, Sectors.of(area)::locate,
                 DoorToDoor.containers(bogota, area, suba, Map.of(), SideLoading.MEAN_FILL, seed), "");
         List<Row> slots = plan.turns().stream()

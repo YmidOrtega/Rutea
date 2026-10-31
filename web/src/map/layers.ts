@@ -14,7 +14,7 @@ import suba from './suba.json'
  */
 const FLAT = { depthCompare: 'always', depthWriteEnabled: false } as const
 
-/** Fuente y licencia en suba.json. Sin la API es el único borde que se conoce. */
+/** Fuente y licencia en suba.json. */
 export const SUBA = [suba.geometry.coordinates[0] as LonLat[]]
 
 const SURROUNDINGS: LonLat[] = [
@@ -203,10 +203,6 @@ export function containersLayer(
   })
 }
 
-/**
- * El puerta a puerta: cada trozo de calle, más ancho que las rutas porque es lo que se recoge y no solo por donde se
- * pasa, y más todavía ya recogido. Se enciende con su primera visita, como los contenedores. Solo los no aprovechables van casa por casa.
- */
 export function streetsLayer(streets: Street[], firstVisit: Map<string, number>, seconds: number, palette: Palette) {
   const minute = Math.floor(seconds / 60)
   const edge = strokeColor(palette, 'NON_RECYCLABLE')

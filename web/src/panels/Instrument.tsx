@@ -5,25 +5,21 @@ import './Instrument.css'
 
 interface Props {
   zone: string
-  /** Qué es real y qué simulado, de meta.network. */
   provenance: string | null
   time: string | null
   shift: string | null
   done: Collected | null
   totalContainers: number
   totalKg: number
-  /** Metros de calle del puerta a puerta; 0 si el plan no lo tiene. */
   totalMeters: number
   /** Vehículos que transmiten y no han terminado; sin API no se sabe. */
   onStreet?: number
-  /** performance.now() al pedir una operación que el servidor todavía arma. */
   planningSince: number | null
 }
 
 /**
  * El instrumento central: la hora del turno y cuánto va recogido. Es lo primero que se lee, como el tacómetro de un
- * tablero; el resto del plan queda en la ficha de abajo. La escala va por toneladas: con puerta a puerta, los
- * contenedores son la menor parte de lo que se recoge.
+ * tablero; el resto del plan queda en la ficha de abajo.
  */
 export function Instrument(props: Props) {
   const { zone, provenance, time, shift, done, totalContainers, totalKg, totalMeters, onStreet, planningSince } = props

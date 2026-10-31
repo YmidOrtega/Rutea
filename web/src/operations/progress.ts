@@ -1,7 +1,6 @@
 import type { WasteStream } from '../demo/plan'
 import type { CurrentPlan, OperationEvent } from './live'
 
-/** La llegada a un contenedor o a un trozo de calle. */
 export interface Visit {
   stop: string
   route: string
@@ -17,9 +16,7 @@ export interface Progress {
   visitSeconds: number[]
   /** kgBefore[i]: kilos de las primeras i visitas; el último es lo que recoge el plan vigente. */
   kgBefore: number[]
-  /** La primera visita de cada contenedor, en orden. */
   firstSeconds: number[]
-  /** La primera visita de cada trozo de calle, en orden, y metersBefore[i] los metros de los primeros i. */
   streetSeconds: number[]
   metersBefore: number[]
   lastSeconds: number

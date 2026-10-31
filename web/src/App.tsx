@@ -164,7 +164,6 @@ export default function App() {
     return () => window.removeEventListener('hashchange', follow)
   }, [])
 
-  // Sin la API el plan estático no es de ninguna franja: la dirección no dice una.
   useEffect(() => {
     const hash =
       mode === 'city' ? hashOf([...chosen].sort((a, b) => a - b)) : localities ? hashOfKey(liveKey) : ''
@@ -231,7 +230,6 @@ export default function App() {
     })
   }, [mode, localities, cityPlan, cityDrawn, mapReady, reducedMotion])
 
-  // La vista inicial ya es Suba; otra localidad, o volver de la ciudad, se encuadra con su borde.
   const framed = useRef<number | null>(FIRST_KEY.locality)
   const enterLive = () => {
     setMode('live')
