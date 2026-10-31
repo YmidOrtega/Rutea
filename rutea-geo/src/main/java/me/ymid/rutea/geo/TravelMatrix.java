@@ -10,9 +10,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Distancias y tiempos de viaje por la red vial entre un conjunto de vértices, en arreglos planos fila
- * por fila: {@code meters[i * size + j]} va de {@code i} a {@code j}. No es simétrica: con calles de un
- * solo sentido, ir y volver cuestan distinto.
+ * Distancias y tiempos de viaje por la red vial entre un conjunto de puntos, en arreglos planos fila por fila:
+ * {@code meters[i * size + j]} va de {@code i} a {@code j}. No es simétrica: con calles de un solo sentido, ir y volver
+ * cuestan distinto. Un punto puede salir de un vértice y llegar a otro, como un tramo de calle que se recorre
+ * recogiendo: su fila sale de {@code sources[i]} y su columna llega a {@code targets[i]}.
  *
  * <p>Los segundos son los de recorrer el camino más corto en metros, no los del camino más rápido: es el
  * camino que el solver optimiza y el que se dibuja, así distancia y tiempo hablan del mismo recorrido.
@@ -30,15 +31,17 @@ public final class TravelMatrix {
     }
 
     private final RoadGraph graph;
-    private final int[] vertices;
+    private final int[] sources;
+    private final int[] targets;
     private final int size;
     private final int[] meters;
     private final int[] seconds;
 
-    private TravelMatrix(RoadGraph graph, int[] vertices, int[] meters, int[] seconds) {
+    private TravelMatrix(RoadGraph graph, int[] sources, int[] targets, int[] meters, int[] seconds) {
         this.graph = graph;
-        this.vertices = vertices;
-        this.size = vertices.length;
+        this.sources = sources;
+        this.targets = targets;
+        this.size = sources.length;
         this.meters = meters;
         this.seconds = seconds;
     }
@@ -49,11 +52,15 @@ public final class TravelMatrix {
      * número de hilos.
      */
     public static TravelMatrix compute(RoadGraph graph, int[] vertices, int threads) {
-        TravelMatrix matrix = computeAllowingUnreachable(graph, vertices, threads);
+        return compute(graph, vertices, vertices, threads);
+    }
+
+    public static TravelMatrix compute(RoadGraph graph, int[] sources, int[] targets, int threads) {
+        TravelMatrix matrix = computeAllowingUnreachable(graph, sources, targets, threads);
         for (int i = 0; i < matrix.meters.length; i++) {
             if (matrix.meters[i] == UNREACHABLE) {
-                throw new IllegalStateException("no hay camino de " + vertices[i / vertices.length] + " a "
-                        + vertices[i % vertices.length] + ": el grafo debería ser fuertemente conexo");
+                throw new IllegalStateException("no hay camino de " + sources[i / sources.length] + " a "
+                        + targets[i % targets.length] + ": el grafo debería ser fuertemente conexo");
             }
         }
         return matrix;
@@ -61,23 +68,35 @@ public final class TravelMatrix {
 
     /** Como {@link #compute}, sobre un grafo con vías cerradas: lo que da {@link #closing}, calculado de cero. */
     public static TravelMatrix computeAllowingUnreachable(RoadGraph graph, int[] vertices, int threads) {
+        return computeAllowingUnreachable(graph, vertices, vertices, threads);
+    }
+
+    public static TravelMatrix computeAllowingUnreachable(RoadGraph graph, int[] sourceVertices,
+            int[] targetVertices, int threads) {
         if (threads < 1) {
             throw new IllegalArgumentException("threads debe ser al menos 1: " + threads);
         }
-        if (vertices.length > MAX_SIZE) {
-            throw new IllegalArgumentException(vertices.length + " puntos; el máximo es " + MAX_SIZE);
+        if (sourceVertices.length != targetVertices.length) {
+            throw new IllegalArgumentException(sourceVertices.length + " salidas y " + targetVertices.length
+                    + " llegadas: cada punto tiene una de cada una");
         }
-        for (int v : vertices) {
-            if (v < 0 || v >= graph.vertexCount()) {
-                throw new IllegalArgumentException("vértice fuera del grafo: " + v);
+        if (sourceVertices.length > MAX_SIZE) {
+            throw new IllegalArgumentException(sourceVertices.length + " puntos; el máximo es " + MAX_SIZE);
+        }
+        for (int[] vertices : List.of(sourceVertices, targetVertices)) {
+            for (int v : vertices) {
+                if (v < 0 || v >= graph.vertexCount()) {
+                    throw new IllegalArgumentException("vértice fuera del grafo: " + v);
+                }
             }
         }
-        int n = vertices.length;
-        int[] targets = vertices.clone();
+        int n = sourceVertices.length;
+        int[] sources = sourceVertices.clone();
+        int[] targets = targetVertices.clone();
         int[] meters = new int[n * n];
         int[] seconds = new int[n * n];
         parallel(graph, n, threads, n, (worker, i) -> {
-            worker.forward().distances(targets[i], targets, worker.row, worker.rowSeconds);
+            worker.forward().distances(sources[i], targets, worker.row, worker.rowSeconds);
             System.arraycopy(worker.row, 0, meters, i * n, n);
             System.arraycopy(worker.rowSeconds, 0, seconds, i * n, n);
         });
@@ -86,7 +105,7 @@ public final class TravelMatrix {
                 seconds[i] = UNREACHABLE;
             }
         }
-        return new TravelMatrix(graph, targets, meters, seconds);
+        return new TravelMatrix(graph, sources, targets, meters, seconds);
     }
 
     /**
@@ -115,9 +134,9 @@ public final class TravelMatrix {
             int k = task / 2;
             int e = closed.get(k);
             if (task % 2 == 0) {
-                worker.backward().distances(graph.source(e), vertices, inMeters[k], inSeconds[k]);
+                worker.backward().distances(graph.source(e), sources, inMeters[k], inSeconds[k]);
             } else {
-                worker.forward().distances(graph.target(e), vertices, outMeters[k], outSeconds[k]);
+                worker.forward().distances(graph.target(e), targets, outMeters[k], outSeconds[k]);
             }
         });
 
@@ -185,13 +204,13 @@ public final class TravelMatrix {
         // Dos fases, para que una celda en una fila y una columna elegidas no se escriba desde dos hilos a la vez.
         parallel(after, n, threads, rows.size(), (worker, task) -> {
             int i = rows.get(task);
-            worker.forward().distances(vertices[i], vertices, worker.row, worker.rowSeconds);
+            worker.forward().distances(sources[i], targets, worker.row, worker.rowSeconds);
             System.arraycopy(worker.row, 0, newMeters, i * n, n);
             System.arraycopy(worker.rowSeconds, 0, newSeconds, i * n, n);
         });
         parallel(after, n, threads, columns.size(), (worker, task) -> {
             int j = columns.get(task);
-            worker.backward().distances(vertices[j], vertices, worker.row, worker.rowSeconds);
+            worker.backward().distances(targets[j], sources, worker.row, worker.rowSeconds);
             for (int i = 0; i < n; i++) {
                 newMeters[i * n + j] = worker.row[i];
                 newSeconds[i * n + j] = worker.rowSeconds[i];
@@ -206,7 +225,7 @@ public final class TravelMatrix {
                 changed++;
             }
         }
-        return new Repair(new TravelMatrix(after, vertices, newMeters, newSeconds), arcs, affectedPairs, changed,
+        return new Repair(new TravelMatrix(after, sources, targets, newMeters, newSeconds), arcs, affectedPairs, changed,
                 rows.size(), columns.size(), System.nanoTime() - start);
     }
 
@@ -214,8 +233,12 @@ public final class TravelMatrix {
         return graph;
     }
 
-    public int vertex(int i) {
-        return vertices[i];
+    public int source(int i) {
+        return sources[i];
+    }
+
+    public int target(int i) {
+        return targets[i];
     }
 
     public boolean reachable(int from, int to) {

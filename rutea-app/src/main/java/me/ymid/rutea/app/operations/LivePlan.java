@@ -322,15 +322,16 @@ final class LivePlan {
                 continue;
             }
             RoadGraph graph = closing.travel().graph();
-            int here = at == 0 ? vertex(from) : arcs.get(at - 1).graph().target(arcs.get(at - 1).edge());
+            int here = at == 0 ? travel.source(from) : arcs.get(at - 1).graph().target(arcs.get(at - 1).edge());
+            int target = travel.target(to);
             ShortestPaths search = search(graph);
-            search.distances(here, new int[] {vertex(to)});
-            if (search.distance(vertex(to)) == ShortestPaths.UNREACHABLE) {
+            search.distances(here, new int[] {target});
+            if (search.distance(target) == ShortestPaths.UNREACHABLE) {
                 // El destino quedó aislado con el camión ya en camino: llega.
                 continue;
             }
             List<AreaPlanner.Arc> rest = new ArrayList<>(arcs.subList(0, at));
-            for (int edge : search.pathEdges(vertex(to))) {
+            for (int edge : search.pathEdges(target)) {
                 rest.add(new AreaPlanner.Arc(graph, edge));
             }
             arcs = rest;
@@ -353,16 +354,13 @@ final class LivePlan {
 
     private List<AreaPlanner.Arc> path(RoadGraph graph, int from, int to) {
         ShortestPaths search = search(graph);
-        search.distances(vertex(from), new int[] {vertex(to)});
+        int target = scenario.travel().target(to);
+        search.distances(scenario.travel().source(from), new int[] {target});
         List<AreaPlanner.Arc> arcs = new ArrayList<>();
-        for (int edge : search.pathEdges(vertex(to))) {
+        for (int edge : search.pathEdges(target)) {
             arcs.add(new AreaPlanner.Arc(graph, edge));
         }
         return arcs;
-    }
-
-    private int vertex(int place) {
-        return scenario.travel().vertex(place);
     }
 
     private int networkAt(long seconds) {
