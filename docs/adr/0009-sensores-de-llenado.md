@@ -16,7 +16,7 @@ No hay inventario de contenedores con su tamaño, ni densidad de residuos suelto
 3. **Despacho automático.** Cuando un contenedor llega al 100 % antes de que un camión llegue a él, el servidor lo reporta como desborde con causa "sensor" y lo despacha con la regla de ADR 0006. Uno lleno antes del turno se despacha a las 18:00.
 4. **Ningún patrón por zona.** Sin la tabla por estrato, un patrón por zona sería inventado.
 
-Medido con `mvn -pl rutea-app exec:java@sensors` (semilla 1, los 806 contenedores de Suba, CSV en `docs/benchmarks/f5-sensors/`). Contenedores que se desbordan antes de su visita del plan, sin despachar nada:
+Medido con `mvn -pl rutea-tools -am compile exec:java@sensors` (semilla 1, los 806 contenedores de Suba, CSV en `docs/benchmarks/f5-sensors/`). Contenedores que se desbordan antes de su visita del plan, sin despachar nada:
 
 | Día | kg/m³ | 3.200 L | 2.400 L | 1.100 L | Mezcla |
 |---|---:|---:|---:|---:|---:|

@@ -11,7 +11,7 @@ Un contenedor desbordado (por un reporte o, más adelante, por un sensor) tiene 
 
 Un desborde agrega una **recogida extra** y nunca mueve las visitas del plan, porque el contenedor se vuelve a llenar. Se queda con la visita del plan si ningún desvío llega antes. Si no, se desvía el compactador en servicio que **llega primero**, con cupo en el viaje y margen en el turno, y solo después de un lugar del que todavía no ha salido. Si ninguno puede, sale una reserva. Si el camión desviado se avería antes de llegar, la recogida extra se vuelve a despachar.
 
-Se midieron las dos reglas para elegir el camión desviado, con 500 desbordes al azar sobre el plan de 9 compactadores de Suba (`mvn -pl rutea-app exec:java@overflows`, semilla 1):
+Se midieron las dos reglas para elegir el camión desviado, con 500 desbordes al azar sobre el plan de 9 compactadores de Suba (`mvn -pl rutea-tools -am compile exec:java@overflows`, semilla 1):
 
 | Regla | Reporte → recogida P50 | P95 | km agregados |
 |---|---:|---:|---:|

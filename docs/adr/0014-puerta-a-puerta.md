@@ -37,7 +37,7 @@ Un tramo mide 76 m en promedio: más o menos una cuadra. Con un cliente por tram
 
 ## Medición
 
-`mvn -pl rutea-app exec:java@door-to-door` (2026-10-29; i5-14400F, 16 hilos, Java 21.0.13; ALNS con semilla 7 y 2000 iteraciones; CSV en `docs/benchmarks/f8-door-to-door/`). Una recolección de toda Suba: 940,6 t/día por los días entre dos pasadas, con 3 pasadas por semana (`PENDIENTE_VERIFICAR`), son 2.194,8 t, 3,163 kg por metro de calle local. Compactadores de 8 t. Base y portería, las del cargue lateral de 2026. El costo incluye lo que se recorre recogiendo. La zona chica son los tramos a menos de 900 m del centro de las calles locales de Suba.
+`mvn -pl rutea-tools -am compile exec:java@door-to-door` (2026-10-29; i5-14400F, 16 hilos, Java 21.0.13; ALNS con semilla 7 y 2000 iteraciones; CSV en `docs/benchmarks/f8-door-to-door/`). Una recolección de toda Suba: 940,6 t/día por los días entre dos pasadas, con 3 pasadas por semana (`PENDIENTE_VERIFICAR`), son 2.194,8 t, 3,163 kg por metro de calle local. Compactadores de 8 t. Base y portería, las del cargue lateral de 2026. El costo incluye lo que se recorre recogiendo. La zona chica son los tramos a menos de 900 m del centro de las calles locales de Suba.
 
 | Zona | Trozo máx. | Clientes | m por trozo | Matriz | ALNS | km | Viajes |
 |---|---:|---:|---:|---:|---:|---:|---:|

@@ -217,6 +217,7 @@ Rutea/
 ├── rutea-sim/         # Speed-up clock, timed routes and fill sensors
 ├── rutea-app/         # Spring Boot: planning, REST API, WebSocket, persistence
 ├── rutea-bench/       # Timefold and JMH; never part of the solver
+├── rutea-tools/       # Data extractors, instance exporters and phase benchmarks
 ├── web/               # React + TypeScript + MapLibre + deck.gl (Vite)
 ├── data/
 │   ├── cvrplib/       # X instances by Uchoa et al. with their BKS

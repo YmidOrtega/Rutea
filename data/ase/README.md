@@ -5,7 +5,7 @@ Los contenedores negros que cada operador publica "en campo" en su capa pública
 Los archivos no se versionan en git. Las capas no declaran licencia (`PENDIENTE_VERIFICAR`). El extracto en uso va como copia fechada en el release [`data-bogota-20261029`](https://github.com/YmidOrtega/Rutea/releases/tag/data-bogota-20261029), de donde los toma `docker compose up`, verificados contra [`data/bogota/SHA256SUMS`](../bogota/SHA256SUMS). La versión vigente de cada capa se descarga con:
 
 ```bash
-mvn -pl rutea-app exec:java@operator-containers
+mvn -pl rutea-tools -am compile exec:java@operator-containers
 ```
 
 El comando escribe un CSV por ASE (`code,lat_e7,lon_e7,liters,locality,route,shift`, ordenado por código) y `fuentes.csv`, con la URL, el filtro, la fecha de última edición de la capa, la fecha de descarga y el SHA-256 de cada archivo. También comprueba que cada contenedor caiga dentro de su ASE. La localidad, la microrruta y el turno van como los escribe el operador; la localidad del catálogo se asigna por polígono. La capa del ASE 4 no trae el turno.

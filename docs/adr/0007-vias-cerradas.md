@@ -17,7 +17,7 @@ R05 (Decreto 1077 de 2015, art. 2.3.2.2.2.3.34) pide avisar con tres días cualq
 4. **Contenedores aislados.** Las visitas pendientes a contenedores que quedan sin camino de ida o de vuelta salen del plan, y se informan. Se rechaza un cierre que aísle la base o la portería.
 5. **Reordenar lo que falta, solo en los camiones afectados.** Se midieron dos políticas: solo desviar (mismo orden de paradas) y desviar y además reordenar las paradas que faltan de cada viaje, con la búsqueda local del solver sobre la red nueva. Los camiones que el cierre no cambia conservan su orden.
 
-Medido con 500 cierres (`mvn -pl rutea-app exec:java@closures`, semilla 1, i5-14400F, 16 hilos, Java 21.0.12; CSV en `docs/benchmarks/f5-closures/`). Cada cierre cae en una calle que le falta recorrer a un compactador en servicio, porque un cierre al azar casi nunca toca una ruta:
+Medido con 500 cierres (`mvn -pl rutea-tools -am compile exec:java@closures`, semilla 1, i5-14400F, 16 hilos, Java 21.0.12; CSV en `docs/benchmarks/f5-closures/`). Cada cierre cae en una calle que le falta recorrer a un compactador en servicio, porque un cierre al azar casi nunca toca una ruta:
 
 | Medida | P50 | P95 | P99 | Máx. |
 |---|---:|---:|---:|---:|

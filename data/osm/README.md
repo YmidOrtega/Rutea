@@ -20,7 +20,7 @@ sha256sum colombia-261019.osm.pbf
 
 El grafo de todo Bogotá (F7, ADR 0012) sale con `mvn -pl rutea-geo compile exec:java@bogota` en `bogota.rgraph` (7,5 MB). Tampoco se sube; está en el release de Bogotá (abajo).
 
-Del extracto también salen, con `mvn -pl rutea-app exec:java@sensitive-sites`, los sitios sensibles para R02 y R07 (`suba-sitios-sensibles.csv`, unos 100 KB; tampoco se sube). Los de todo el Distrito, para planificar cualquier selección de localidades, salen con `mvn -pl rutea-app exec:java@bogota-sensitive-sites` en `bogota-sitios-sensibles.csv` (490 KB; requiere `bogota.rgraph`).
+Del extracto también salen, con `mvn -pl rutea-tools -am compile exec:java@sensitive-sites`, los sitios sensibles para R02 y R07 (`suba-sitios-sensibles.csv`, unos 100 KB; tampoco se sube). Los de todo el Distrito, para planificar cualquier selección de localidades, salen con `mvn -pl rutea-tools -am compile exec:java@bogota-sensitive-sites` en `bogota-sitios-sensibles.csv` (490 KB; requiere `bogota.rgraph`).
 
 Geofabrik guarda los snapshots fechados por un tiempo limitado. Si este ya no está, descarga el más reciente, actualiza esta tabla y anota en el commit que cambió el extracto: el grafo, la matriz y las rutas cambian con él.
 

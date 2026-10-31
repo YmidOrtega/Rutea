@@ -18,9 +18,8 @@ Las cifras y sus fuentes están en [`docs/datos.md`](../../docs/datos.md). El `C
 Los `.vrp` no se suben al repo (pesan unos 3,4 MB y 0,5 MB). Se generan desde el grafo:
 
 ```bash
-mvn -pl rutea-geo compile exec:java                 # data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
-mvn -pl rutea-app -am install -DskipTests
-mvn -pl rutea-app exec:java@suba-instance           # data/suba/SubaBase-n807-s1.vrp y SubaNoche-n321-s1-f100.vrp
+mvn -pl rutea-geo compile exec:java                      # data/osm/suba.rgraph (requiere el extracto; ver data/osm/README.md)
+mvn -pl rutea-tools -am compile exec:java@suba-instance  # data/suba/SubaBase-n807-s1.vrp y SubaNoche-n321-s1-f100.vrp
 ```
 
 Con `-Dexec.args="<grafo> <dir> --seed <n>"` se genera otra ubicación de contenedores.
