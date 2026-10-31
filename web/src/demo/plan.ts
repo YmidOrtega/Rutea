@@ -53,8 +53,8 @@ export interface ComplianceCheck {
 
 /**
  * El turno de un compactador: base → viaje → descarga en el relleno → … → base. `tripLoadsKg[i]` es la carga
- * del viaje `i`. `times[i]`: segundos desde la salida hasta `path[i]`; en cada parada (contenedor o descarga)
- * el punto se repite con la hora en que el camión vuelve a arrancar.
+ * del viaje `i`. `times[i]`: segundos desde la salida hasta `path[i]`. `arrivals[k]`: la hora a la que llega a
+ * `stops[k]`, un contenedor o un trozo de calle.
  */
 export interface Route {
   id: string
@@ -65,8 +65,18 @@ export interface Route {
   durationSeconds: number
   tripLoadsKg: number[]
   stops: string[]
+  arrivals: number[]
   path: LonLat[]
   times: number[]
+}
+
+/** Un trozo de calle del puerta a puerta (ADR 0014), en el sentido en que se recoge; su carga sale de la población. */
+export interface Street {
+  id: string
+  route: string
+  kg: number
+  meters: number
+  path: LonLat[]
 }
 
 export interface Site {
@@ -78,6 +88,7 @@ export interface Site {
 export interface DemoPlan {
   meta: {
     zone: string
+    /** Si los contenedores son simulados; con false, son los del operador. */
     simulated: boolean
     network: string
     solver: string
@@ -100,6 +111,7 @@ export interface DemoPlan {
   routes: Route[]
   compliance: ComplianceCheck[]
   sectors: Sector[]
+  streets: Street[]
 }
 
 export interface Trip {

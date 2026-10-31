@@ -450,7 +450,7 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
 
     R05 (servicio restablecido en ≤ 3 h) se cumple en las 500. La fila de huérfanas del arnés todavía se llama «contenedores».
   - Pendiente: un cierre de vía que cae dentro de un trozo no lo parte; el trozo se sigue recogiendo entero.
-- [ ] El mapa elige la localidad y la franja con un clic, y la UI dice qué es real y qué es simulado. Hasta entonces, el modo en vivo de `web/` sigue pidiendo las rutas viejas de la operación única de Suba.
+- [x] Mapa (2026-10-30): en vivo, un clic sobre otra localidad urbana la elige, y un selector de cuatro posiciones elige la franja (LMV o MJS, día o noche). La elección queda en la dirección (`#vivo=11-LMVNoche`). Cada pedido y el WebSocket van a la operación elegida. Mientras el servidor la arma, el instrumento cuenta los segundos. Los trozos de calle se dibujan y se encienden con su primera visita, y el instrumento suma sus toneladas y sus km. El sello toma de `meta.network` qué es real y qué es simulado, y el tooltip dice si un contenedor es del operador o simulado (`meta.simulated`, ahora también en vivo). Revisado en Chrome en escritorio con Suba (LMV noche y MJS día), Fontibón, Usaquén y Sumapaz (rechazada por rural), sin errores en la consola. Sin la API sigue el plan estático de Suba.
 - [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
 
 **Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.

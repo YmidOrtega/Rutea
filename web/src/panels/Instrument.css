@@ -79,9 +79,11 @@
   box-shadow: 1px 0 0 0 var(--sodium);
 }
 
+/* Dos por fila: con el puerta a puerta son cuatro cifras y en una sola línea no caben en la consola */
 .instrument-figures {
-  display: flex;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
   margin: 0;
   white-space: nowrap;
 }

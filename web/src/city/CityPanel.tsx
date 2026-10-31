@@ -105,13 +105,13 @@ function useElapsed(since: number) {
 }
 
 /** Mientras se planifica, la lectura grande es el tiempo: es lo primero que se mira después del clic. */
-function PlanningReading({ since }: { since: number }) {
+export function PlanningReading({ since, label = 'Planificando' }: { since: number; label?: string }) {
   const seconds = useElapsed(since)
   return (
     <div className="instrument-reading" role="status">
       <span className="num instrument-clock">{decimal(seconds, 1)}</span>
       <span className="instrument-shift">
-        <span className="label">Planificando</span>
+        <span className="label">{label}</span>
         <span className="num">segundos</span>
       </span>
     </div>

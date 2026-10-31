@@ -1,6 +1,6 @@
 import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { TripsLayer } from '@deck.gl/geo-layers'
-import type { Container, DemoPlan, LonLat, Route, Site, Trip } from '../demo/plan'
+import type { Container, DemoPlan, LonLat, Route, Site, Street, Trip } from '../demo/plan'
 import type { CityRoute, Locality } from '../city/city'
 import { isReserveId, type ClosureEvent, type OverflowEvent } from '../operations/live'
 import { fillState, type VehicleTrack } from '../operations/telemetry'
@@ -14,8 +14,8 @@ import suba from './suba.json'
  */
 const FLAT = { depthCompare: 'always', depthWriteEnabled: false } as const
 
-/** Fuente y licencia en suba.json. */
-const SUBA = suba.geometry.coordinates[0] as LonLat[]
+/** Fuente y licencia en suba.json. Sin la API es el único borde que se conoce. */
+export const SUBA = [suba.geometry.coordinates[0] as LonLat[]]
 
 const SURROUNDINGS: LonLat[] = [
   [-75, 4],
@@ -25,18 +25,18 @@ const SURROUNDINGS: LonLat[] = [
   [-75, 4],
 ]
 
-export function zoneLayers(palette: Palette) {
+export function zoneLayers(outline: LonLat[][], palette: Palette) {
   return [
     new PolygonLayer<LonLat[][]>({
       id: 'zone-mask',
-      data: [[SURROUNDINGS, SUBA]],
+      data: [[SURROUNDINGS, ...outline]],
       getPolygon: (rings) => rings,
       getFillColor: [...palette.mapBg, 170],
       stroked: false,
     }),
     new PathLayer<LonLat[]>({
       id: 'zone-edge',
-      data: [SUBA],
+      data: outline,
       getPath: (ring) => ring,
       getColor: [...palette.fgMuted, 200],
       getWidth: 1.5,
@@ -202,6 +202,34 @@ export function containersLayer(
     updateTriggers: { getFillColor: minute, getLineColor: minute, getRadius: minute, getLineWidth: minute },
   })
 }
+
+/**
+ * El puerta a puerta: cada trozo de calle, más ancho que las rutas porque es lo que se recoge y no solo por donde se
+ * pasa, y más todavía ya recogido. Se enciende con su primera visita, como los contenedores. Solo los no aprovechables van casa por casa.
+ */
+export function streetsLayer(streets: Street[], firstVisit: Map<string, number>, seconds: number, palette: Palette) {
+  const minute = Math.floor(seconds / 60)
+  const edge = strokeColor(palette, 'NON_RECYCLABLE')
+  const collected = (street: Street) => (firstVisit.get(street.id) ?? Infinity) <= minute * 60
+  return new PathLayer<Street>({
+    id: 'streets',
+    data: streets,
+    getPath: (street) => street.path,
+    getColor: (street) => mix(palette.mapBg, edge, collected(street) ? STREET_COLLECTED : STREET_PENDING),
+    getWidth: (street) => (collected(street) ? 3 : 2),
+    widthUnits: 'pixels',
+    jointRounded: true,
+    capRounded: true,
+    pickable: true,
+    autoHighlight: true,
+    highlightColor: [...palette.fg, 255],
+    updateTriggers: { getColor: minute, getWidth: minute },
+    parameters: FLAT,
+  })
+}
+
+const STREET_PENDING = 0.25
+const STREET_COLLECTED = 0.75
 
 const collectedBy = (firstVisit: Map<string, number>, container: Container, seconds: number) =>
   (firstVisit.get(container.id) ?? Infinity) <= seconds

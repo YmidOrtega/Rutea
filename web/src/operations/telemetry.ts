@@ -1,4 +1,5 @@
 import type { LonLat, Trip, WasteStream } from '../demo/plan'
+import { liveApi, type LiveKey } from './key'
 
 /** El reloj de la simulación, del servidor: todos los clientes ven la misma hora. */
 export interface SimClock {
@@ -112,19 +113,19 @@ export const applySensors = (sensors: Sensors, message: SensorsMessage): Sensors
 
 export const emptySensors = (): Sensors => ({ readings: new Map(), liters: new Map() })
 
-export const fetchSensors = () =>
-  fetch('/api/sensors').then((response) => (response.ok ? (response.json() as Promise<SensorsMessage>) : null))
+export const fetchSensors = (key: LiveKey) =>
+  fetch(`${liveApi(key)}/sensors`).then((response) => (response.ok ? (response.json() as Promise<SensorsMessage>) : null))
 
 export type FillState = 'ok' | 'warn' | 'crit'
 
 /** Desde el 70 % conviene mirarlo; desde el 100 % está desbordado. */
 export const fillState = (percent: number): FillState => (percent >= 100 ? 'crit' : percent >= 70 ? 'warn' : 'ok')
 
-export const fetchTelemetry = () =>
-  fetch('/api/telemetry').then((response) => (response.ok ? (response.json() as Promise<TelemetryMessage>) : null))
+export const fetchTelemetry = (key: LiveKey) =>
+  fetch(`${liveApi(key)}/telemetry`).then((response) => (response.ok ? (response.json() as Promise<TelemetryMessage>) : null))
 
-export async function setClock(running: boolean, speed: number): Promise<TelemetryMessage> {
-  const response = await fetch('/api/clock', {
+export async function setClock(key: LiveKey, running: boolean, speed: number): Promise<TelemetryMessage> {
+  const response = await fetch(`${liveApi(key)}/clock`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ running, speed }),

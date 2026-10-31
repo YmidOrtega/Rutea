@@ -1,5 +1,6 @@
 import { km } from '../format'
 import { loadDemoPlan, type DemoPlan, type LonLat, type Route } from '../demo/plan'
+import { FIRST_KEY, liveApi, sameKey, type LiveKey } from './key'
 import { apiError, fetchSensors, fetchTelemetry, type SensorsMessage, type TelemetryMessage } from './telemetry'
 
 /** Una avería y su replanificación, como las difunde la API por WebSocket (R05, R08). */
@@ -77,12 +78,14 @@ export interface ShiftMessage {
   type: 'shift'
   shift: number
   area: number
+  locality: number
+  slot: string
   /** El último evento del turno; 0 si todavía no hay ninguno. */
   seq: number
 }
 
-export const fetchEvents = (after = 0) =>
-  fetch(`/api/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
+export const fetchEvents = (key: LiveKey, after = 0) =>
+  fetch(`${liveApi(key)}/events?after=${after}`).then((r) => (r.ok ? (r.json() as Promise<EventsPage>) : null))
 
 export interface LoadedPlan {
   plan: DemoPlan
@@ -94,37 +97,40 @@ export interface LoadedPlan {
   sensors: SensorsMessage | null
 }
 
-/** Recién arrancada, la API tarda unos 27 s en armar el plan. */
+/** La primera vez que se pide, Suba de noche, la franja más grande, tarda unos 23 s en armarse. */
 const API_TIMEOUT_MS = 60_000
 
-export async function loadPlan(): Promise<LoadedPlan> {
+/**
+ * La operación de `key`. Sin API queda el plan estático, que es solo de Suba; si la API responde que la franja no
+ * existe o le faltan datos, se dice eso y no se cambia por otro plan.
+ */
+export async function loadPlan(key: LiveKey): Promise<LoadedPlan> {
   const abort = new AbortController()
   const timer = setTimeout(() => abort.abort(), API_TIMEOUT_MS)
   try {
-    const response = await fetch('/api/plan', { signal: abort.signal })
-    if (response.ok) {
+    const response = await fetch(`${liveApi(key)}/plan`, { signal: abort.signal }).catch(() => null)
+    if (response?.ok) {
       const plan = (await response.json()) as DemoPlan
-      const [events, telemetry, sensors] = await Promise.all([
-        fetchEvents(),
-        fetchTelemetry(),
-        fetchSensors(),
-      ])
+      const [events, telemetry, sensors] = await Promise.all([fetchEvents(key), fetchTelemetry(key), fetchSensors(key)])
       return { plan, live: true, events, telemetry, sensors }
     }
-  } catch {
-    // Sin API: se sigue con el plan estático.
+    if (response && (response.status === 400 || response.status === 503)) throw await apiError(response)
   } finally {
     clearTimeout(timer)
   }
+  if (!sameKey(key, FIRST_KEY)) throw new Error('Sin la API solo está el plan de demo de Suba')
   return { plan: await loadDemoPlan(), live: false, events: null, telemetry: null, sensors: null }
 }
 
 /** La avería y, después, los desbordes que ese camión iba a recoger y ahora recoge otro. Todo a la hora del servidor. */
-export const requestBreakdown = (truck: string) => post<OperationEvent[]>('/api/breakdowns', { truck })
+export const requestBreakdown = (key: LiveKey, truck: string) =>
+  post<OperationEvent[]>(`${liveApi(key)}/breakdowns`, { truck })
 
-export const requestOverflow = (container: string) => post<OverflowEvent>('/api/overflows', { container })
+export const requestOverflow = (key: LiveKey, container: string) =>
+  post<OverflowEvent>(`${liveApi(key)}/overflows`, { container })
 
-export const requestClosure = ([lon, lat]: LonLat) => post<ClosureEvent>('/api/closures', { lon, lat })
+export const requestClosure = (key: LiveKey, [lon, lat]: LonLat) =>
+  post<ClosureEvent>(`${liveApi(key)}/closures`, { lon, lat })
 
 async function post<T extends object>(url: string, request: object): Promise<T> {
   const response = await fetch(url, {
@@ -145,7 +151,7 @@ export interface Listeners {
 }
 
 /** Escucha la operación; reconecta con espera creciente si se cae. Devuelve cómo cerrar. */
-export function listen(listeners: Listeners): () => void {
+export function listen(key: LiveKey, listeners: Listeners): () => void {
   let socket: WebSocket | null = null
   let retry = 1_000
   let closed = false
@@ -153,7 +159,7 @@ export function listen(listeners: Listeners): () => void {
   let opened = 0
   const connect = () => {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    socket = new WebSocket(`${scheme}://${window.location.host}/ws/events`)
+    socket = new WebSocket(`${scheme}://${window.location.host}/ws/live/${key.locality}/${key.slot}`)
     socket.onopen = () => {
       retry = 1_000
       opened++

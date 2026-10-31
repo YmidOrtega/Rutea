@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL, { type MapRef } from 'react-map-gl/maplibre'
 import type { PickingInfo } from '@deck.gl/core'
 import { DeckOverlay } from './map/DeckOverlay'
-import { DATA_ATTRIBUTION, initialViewState } from './map/view'
+import { DATA_ATTRIBUTION, initialViewState, livePadding } from './map/view'
 import { graphiteBasemap } from './map/basemap'
 import { readPalette } from './map/colors'
 import {
@@ -13,6 +13,8 @@ import {
   operationLayers,
   sectorLayer,
   staticLayers,
+  streetsLayer,
+  SUBA,
   tripsLayer,
   vehiclesLayer,
   zoneLayers,
@@ -28,6 +30,7 @@ import {
   type LonLat,
   type Sector,
   type Site,
+  type Street,
   type WasteStream,
 } from './demo/plan'
 import {
@@ -68,6 +71,7 @@ import { PlanPanel } from './panels/PlanPanel'
 import { Timeline } from './panels/Timeline'
 import { Instrument } from './panels/Instrument'
 import { collectedBy, firstVisit, progressOf } from './operations/progress'
+import { FIRST_KEY, hashOfKey, keyFromHash, sameKey, SLOTS, type LiveKey } from './operations/key'
 import { windowAt } from './demo/schedule'
 import { CityInstrument, CityPanel } from './city/CityPanel'
 import {
@@ -81,6 +85,7 @@ import {
   type Locality,
   type SelectionPlan,
 } from './city/city'
+import { decimal } from './format'
 import './App.css'
 
 const PLAYBACK_SPEED = 60
@@ -112,6 +117,9 @@ export default function App() {
   // El ref llega después de los efectos del primer render: encuadrar antes de que cargue no hace nada.
   const [mapReady, setMapReady] = useState(false)
 
+  const [liveKey, setLiveKey] = useState<LiveKey>(() => keyFromHash() ?? FIRST_KEY)
+  const [loadingSince, setLoadingSince] = useState<number | null>(() => performance.now())
+
   // La ciudad: elegir localidades y ver cada ASE con su flota. Necesita la API; el plan estático es solo Suba.
   const [mode, setMode] = useState<'live' | 'city'>(() => (selectionFromHash() === null ? 'live' : 'city'))
   const [localities, setLocalities] = useState<Locality[] | null>(null)
@@ -122,6 +130,26 @@ export default function App() {
   const [cityError, setCityError] = useState<string | null>(null)
   const planning = useRef<AbortController | null>(null)
 
+  const shift = useRef<number | null>(null)
+  const lastSeq = useRef(0)
+
+  const switchLive = (key: LiveKey) => {
+    setPlan(null)
+    setLive(false)
+    setEvents([])
+    setFeed(null)
+    setSensors(emptySensors())
+    setSelected(null)
+    setSector(null)
+    setClosing(false)
+    setEventError(null)
+    setError(null)
+    setTime(0)
+    lastSeq.current = 0
+    setLoadingSince(performance.now())
+    setLiveKey(key)
+  }
+
   useEffect(() => {
     void fetchLocalities().then(setLocalities)
     // Un enlace pegado en la misma pestaña cambia solo el hash: sin recargar, la selección también cambia.
@@ -129,17 +157,21 @@ export default function App() {
       const selection = selectionFromHash()
       setMode(selection === null ? 'live' : 'city')
       if (selection !== null) setChosen(new Set(selection))
+      const key = keyFromHash()
+      if (key) switchLive(key)
     }
     window.addEventListener('hashchange', follow)
     return () => window.removeEventListener('hashchange', follow)
   }, [])
 
+  // Sin la API el plan estático no es de ninguna franja: la dirección no dice una.
   useEffect(() => {
-    const hash = mode === 'city' ? hashOf([...chosen].sort((a, b) => a - b)) : ''
+    const hash =
+      mode === 'city' ? hashOf([...chosen].sort((a, b) => a - b)) : localities ? hashOfKey(liveKey) : ''
     if (hash !== window.location.hash) {
       window.history.replaceState(null, '', hash || window.location.pathname + window.location.search)
     }
-  }, [mode, chosen])
+  }, [mode, chosen, liveKey, localities])
 
   const toggleLocality = (number: number) =>
     setChosen((current) => {
@@ -199,24 +231,30 @@ export default function App() {
     })
   }, [mode, localities, cityPlan, cityDrawn, mapReady, reducedMotion])
 
+  // La vista inicial ya es Suba; otra localidad, o volver de la ciudad, se encuadra con su borde.
+  const framed = useRef<number | null>(FIRST_KEY.locality)
   const enterLive = () => {
     setMode('live')
-    const view = initialViewState()
-    map.current?.flyTo({
-      center: [view.longitude, view.latitude],
-      zoom: view.zoom,
-      pitch: view.pitch,
-      bearing: view.bearing,
+    framed.current = null
+  }
+  const liveLocality = localities?.find((locality) => locality.number === liveKey.locality) ?? null
+  const zoneOutline = liveLocality?.outline ?? SUBA
+
+  useEffect(() => {
+    if (mode !== 'live' || !liveLocality || !mapReady || !map.current) return
+    if (framed.current === liveLocality.number) return
+    framed.current = liveLocality.number
+    map.current.fitBounds(boundsOf(liveLocality.outline), {
+      padding: livePadding(),
+      pitch: 45,
+      bearing: -15,
       duration: reducedMotion ? 0 : 1200,
     })
-  }
+  }, [mode, liveLocality, mapReady, reducedMotion])
 
   useEffect(() => {
     void graphiteBasemap(palette).then(setBasemap)
   }, [palette])
-
-  const shift = useRef<number | null>(null)
-  const lastSeq = useRef(0)
 
   // Cada evento llega una vez por WebSocket y, a quien lo pidió, también en la respuesta: se cuenta una sola vez.
   const addEvent = useCallback((event: OperationEvent) => {
@@ -226,9 +264,15 @@ export default function App() {
     setVisible((current) => new Set([...current, ...reserve.map((route) => route.id)]))
   }, [])
 
+  const chooseKey = (key: LiveKey) => {
+    if (!sameKey(key, liveKey)) switchLive(key)
+  }
+
   useEffect(() => {
-    loadPlan()
+    let stale = false
+    loadPlan(liveKey)
       .then((loaded) => {
+        if (stale) return
         setPlan(loaded.plan)
         setLive(loaded.live)
         setVisible(new Set(loaded.plan.routes.map((route) => route.id)))
@@ -237,12 +281,16 @@ export default function App() {
         if (loaded.telemetry) setFeed(applyTelemetry(emptyFeed(loaded.telemetry.clock), loaded.telemetry))
         if (loaded.sensors) setSensors(applySensors(emptySensors(), loaded.sensors))
       })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)))
-  }, [addEvent])
+      .catch((cause: unknown) => !stale && setError(cause instanceof Error ? cause.message : String(cause)))
+      .finally(() => !stale && setLoadingSince(null))
+    return () => {
+      stale = true
+    }
+  }, [liveKey, addEvent])
 
   useEffect(() => {
     if (!live || !plan) return
-    return listen({
+    return listen(liveKey, {
       event: addEvent,
       telemetry: (message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)),
       sensors: (message) => setSensors((current) => applySensors(current, message)),
@@ -257,9 +305,9 @@ export default function App() {
         // Los reportes de telemetría y sensores traen solo lo que cambió: tras un corte o un turno nuevo, se rehacen.
         const snapshots = newShift || reconnected
         void Promise.all([
-          message.seq > lastSeq.current ? fetchEvents(lastSeq.current) : null,
-          snapshots ? fetchTelemetry() : null,
-          snapshots ? fetchSensors() : null,
+          message.seq > lastSeq.current ? fetchEvents(liveKey, lastSeq.current) : null,
+          snapshots ? fetchTelemetry(liveKey) : null,
+          snapshots ? fetchSensors(liveKey) : null,
         ]).then(([page, telemetry, readings]) => {
           if (page?.shift === shift.current) page.events.forEach(addEvent)
           if (telemetry) setFeed(applyTelemetry(emptyFeed(telemetry.clock), telemetry))
@@ -267,7 +315,7 @@ export default function App() {
         })
       },
     })
-  }, [live, plan, addEvent])
+  }, [live, plan, liveKey, addEvent])
 
   const request = (key: string, send: () => Promise<OperationEvent | OperationEvent[]>) => {
     setPending(key)
@@ -277,15 +325,15 @@ export default function App() {
       .catch((cause: unknown) => setEventError(cause instanceof Error ? cause.message : String(cause)))
       .finally(() => setPending(null))
   }
-  const breakdown = (truck: string) => request(truck, () => requestBreakdown(truck))
-  const overflow = (container: string) => request(container, () => requestOverflow(container))
+  const breakdown = (truck: string) => request(truck, () => requestBreakdown(liveKey, truck))
+  const overflow = (container: string) => request(container, () => requestOverflow(liveKey, container))
   const closure = (at: LonLat) => {
     setClosing(false)
-    request('closure', () => requestClosure(at))
+    request('closure', () => requestClosure(liveKey, at))
   }
   const controlClock = (running: boolean, speed: number) => {
     setEventError(null)
-    setClock(running, speed)
+    setClock(liveKey, running, speed)
       .then((message) => setFeed((current) => applyTelemetry(current ?? emptyFeed(message.clock), message)))
       .catch((cause: unknown) => setEventError(cause instanceof Error ? cause.message : String(cause)))
   }
@@ -354,11 +402,18 @@ export default function App() {
 
   const firstAt = useMemo(() => {
     const first = new Map<string, number>()
-    for (const visit of progress?.visits ?? []) if (!first.has(visit.container)) first.set(visit.container, visit.seconds)
+    for (const visit of progress?.visits ?? []) if (!first.has(visit.stop)) first.set(visit.stop, visit.seconds)
     return first
   }, [progress])
   const shown = useMemo(() => current?.plan.containers.filter((c) => visible.has(c.route)) ?? [], [current, visible])
-  const zone = useMemo(() => zoneLayers(palette), [palette])
+  const shownStreets = useMemo(
+    () => current?.plan.streets.filter((street) => visible.has(street.route)) ?? [],
+    [current, visible],
+  )
+  const zone = useMemo(() => {
+    const others = localities?.filter((locality) => !locality.rural && locality.number !== liveKey.locality) ?? []
+    return [...zoneLayers(zoneOutline, palette), ...localityLayers(others, new Set(), hovered, palette)]
+  }, [zoneOutline, localities, liveKey, hovered, palette])
   const planLayers = useMemo(
     () => [...zone, ...(current ? staticLayers(current.plan, visible, palette) : [])],
     [zone, current, visible, palette],
@@ -381,7 +436,12 @@ export default function App() {
     ],
     [current, visible, palette, orphans, overflowed, firstAt, selectedContainer, minute, selectedSector],
   )
-  const baseLayers = [...planLayers, containersLayer(shown, firstAt, time, palette), ...eventLayers]
+  const baseLayers = [
+    ...planLayers,
+    streetsLayer(shownStreets, firstAt, time, palette),
+    containersLayer(shown, firstAt, time, palette),
+    ...eventLayers,
+  ]
   const marks: VehicleMark[] = feed
     ? [...feed.vehicles.values()].map((vehicle) => ({ vehicle, position: positionAt(vehicle, time) }))
     : []
@@ -444,23 +504,27 @@ export default function App() {
         >
           <DeckOverlay
             layers={layers}
-            getTooltip={mode === 'city' ? cityTooltip : tooltipFor(current, live, sensors)}
+            getTooltip={mode === 'city' ? cityTooltip : tooltipFor(current, live, sensors, firstAt)}
             getCursor={({ isHovering }) => (closing && mode === 'live' ? 'crosshair' : isHovering ? 'pointer' : 'grab')}
             onHover={(info) =>
-              mode === 'city' &&
               // Al salir de un polígono, deck.gl avisa con la capa pero sin objeto
               setHovered(
                 info.layer?.id === 'localities' && info.object ? (info.object as { locality: Locality }).locality.number : null,
               )
             }
             onClick={(info) => {
+              const locality = info.layer?.id === 'localities' && info.object ? (info.object as { locality: Locality }).locality : null
               if (mode === 'city') {
-                if (info.layer?.id === 'localities' && info.object)
-                  toggleLocality((info.object as { locality: Locality }).locality.number)
+                if (locality) toggleLocality(locality.number)
                 return
               }
               if (closing) {
                 if (info.coordinate) closure([info.coordinate[0], info.coordinate[1]])
+                return
+              }
+              if (locality) {
+                setHovered(null)
+                chooseKey({ ...liveKey, locality: locality.number })
                 return
               }
               setSelected(live && CONTAINER_LAYERS.includes(info.layer?.id ?? '') ? (info.object as Container).id : null)
@@ -472,7 +536,7 @@ export default function App() {
       <div className="console">
         <nav className="modes panel" aria-label="Modo">
           <button aria-pressed={mode === 'live'} onClick={enterLive}>
-            En vivo · Suba
+            En vivo · {liveLocality?.name ?? plan?.meta.zone ?? 'Suba'}
           </button>
           <button
             aria-pressed={mode === 'city'}
@@ -483,6 +547,21 @@ export default function App() {
             Ciudad
           </button>
         </nav>
+
+        {mode === 'live' && localities && (
+          <nav className="modes slots panel" aria-label="Franja del puerta a puerta">
+            {SLOTS.map(({ slot, label, title }) => (
+              <button
+                key={slot}
+                aria-pressed={liveKey.slot === slot}
+                title={title}
+                onClick={() => chooseKey({ ...liveKey, slot })}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {mode === 'city' && localities && (
           <>
@@ -503,13 +582,16 @@ export default function App() {
         )}
 
         {mode === 'live' && <Instrument
-          zone={plan?.meta.zone ?? 'Suba'}
+          zone={liveLocality?.name ?? plan?.meta.zone ?? 'Suba'}
+          provenance={plan?.meta.network ?? null}
           time={plan ? at(time) : null}
           shift={plan ? `${at(0)}–${at(plan.meta.shiftSeconds)}` : null}
           done={progress ? collectedBy(progress, time) : null}
           totalContainers={current?.plan.containers.length ?? 0}
           totalKg={progress?.kgBefore[progress.kgBefore.length - 1] ?? 0}
+          totalMeters={progress?.metersBefore[progress.metersBefore.length - 1] ?? 0}
           onStreet={onStreet}
+          planningSince={loadingSince}
         />}
 
         {mode === 'live' && current && progress && (
@@ -598,11 +680,14 @@ export default function App() {
 
       {error && mode === 'live' && (
         <div className="status panel" role="alert">
-          <strong>No se pudo cargar el plan de demo.</strong>
+          <strong>No se pudo cargar la operación.</strong>
           <span className="num">{error}</span>
-          <span>
-            Genéralo con <code className="num">pnpm demo:data</code>.
-          </span>
+          {!localities && (
+            <span>
+              Arranca la API (<code className="num">mvn -pl rutea-app spring-boot:run</code>) o genera el plan de demo
+              con <code className="num">pnpm demo:data</code>.
+            </span>
+          )}
         </div>
       )}
     </main>
@@ -669,26 +754,37 @@ function cityTooltip({ object, layer }: PickingInfo) {
   return null
 }
 
-function tooltipFor(current: CurrentPlan | null, live: boolean, sensors: Sensors) {
-  return (info: PickingInfo) => (current ? tooltip(info, current, live, sensors) : null)
+function tooltipFor(current: CurrentPlan | null, live: boolean, sensors: Sensors, firstAt: Map<string, number>) {
+  return (info: PickingInfo) => {
+    if (info.layer?.id === 'localities' && info.object) {
+      const { locality } = info.object as { locality: Locality }
+      return {
+        className: 'tooltip',
+        style: TOOLTIP_STYLE,
+        html: `<strong>${locality.name}</strong><span>Clic para verla en vivo</span>`,
+      }
+    }
+    return current ? tooltip(info, current, live, sensors, firstAt) : null
+  }
 }
 
-function tooltip({ object, layer }: PickingInfo, current: CurrentPlan, live: boolean, sensors: Sensors) {
-  if (!object || ![...CONTAINER_LAYERS, 'sites', 'vehicles', ...CLOSURE_LAYERS].includes(layer?.id ?? '')) return null
+function tooltip(
+  { object, layer }: PickingInfo,
+  current: CurrentPlan,
+  live: boolean,
+  sensors: Sensors,
+  firstAt: Map<string, number>,
+) {
+  if (!object || ![...CONTAINER_LAYERS, 'streets', 'sites', 'vehicles', ...CLOSURE_LAYERS].includes(layer?.id ?? ''))
+    return null
   // deck.gl aplica estilos en línea a su tooltip; se reemplazan con los tokens
   return {
     className: 'tooltip',
-    style: {
-      background: 'var(--panel)',
-      color: 'var(--fg)',
-      border: '1px solid var(--line)',
-      borderRadius: '0',
-      padding: '8px 10px',
-      fontFamily: 'var(--font-ui)',
-      fontSize: 'var(--text-13)',
-    },
+    style: TOOLTIP_STYLE,
     html:
-      layer?.id === 'sites'
+      layer?.id === 'streets'
+        ? streetHtml(object as Street, current, firstAt)
+        : layer?.id === 'sites'
         ? siteHtml(object as Site)
         : layer?.id === 'vehicles'
           ? vehicleHtml(object as VehicleMark)
@@ -713,13 +809,21 @@ function containerHtml(container: Container, current: CurrentPlan, live: boolean
   const rules = container.rules.map((rule) => `<span class="rule">${rule}</span>`).join('')
   const hint = live && container.stream === 'NON_RECYCLABLE' && !overflow ? '<span>Clic para reportar un desborde</span>' : ''
   return `<strong class="num">${container.id}</strong>
-    <span>${STREAM_NAMES[container.stream]} · simulado</span>
+    <span>${STREAM_NAMES[container.stream]} · ${current.plan.meta.simulated ? 'simulado' : 'del operador'}</span>
     <span class="num">${container.kg} kg por recolección</span>
     ${fillHtml(sensors.readings.get(container.id), sensors.liters.get(container.id))}
     <span class="num">Vehículo ${container.route} · llega a las ${at(container.visitSeconds)}</span>
     ${orphan}${spilled}${cutOff}${rules}${hint}`
 }
 
+function streetHtml(street: Street, current: CurrentPlan, firstAt: Map<string, number>): string {
+  const arrival = firstAt.get(street.id)
+  const at = arrival === undefined ? null : clock(secondsOfDay(current.plan.meta.shiftStart) + arrival)
+  return `<strong class="num">${street.id}</strong>
+    <span>Puerta a puerta · carga estimada por población</span>
+    <span class="num">${decimal(street.kg)} kg en ${decimal(street.meters)} m de calle</span>
+    <span class="num">Vehículo ${street.route}${at ? ` · llega a las ${at}` : ' · sin visita en el plan vigente'}</span>`
+}
 
 function fillHtml(percent: number | undefined, liters: number | undefined): string {
   if (percent === undefined || liters === undefined) return ''
