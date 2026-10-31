@@ -13,7 +13,7 @@ import {
   operationLayers,
   sectorLayer,
   staticLayers,
-  streetsLayer,
+  streetsLayers,
   SUBA,
   tripsLayer,
   vehiclesLayer,
@@ -436,7 +436,7 @@ export default function App() {
   )
   const baseLayers = [
     ...planLayers,
-    streetsLayer(shownStreets, firstAt, time, palette),
+    ...streetsLayers(shownStreets, firstAt, time, palette),
     containersLayer(shown, firstAt, time, palette),
     ...eventLayers,
   ]
@@ -453,7 +453,7 @@ export default function App() {
     const selector = localityLayers(localities, chosen, hovered, palette)
     if (!cityDrawn) return selector
     // Sin línea de tiempo: el plan de la ciudad se mira entero, con cada contenedor ya encendido.
-    const lit = new Map(cityDrawn.containers.map((container) => [container.id, 0]))
+    const lit = new Map(cityDrawn.containers.map((container) => [container.id, -Infinity]))
     return [
       ...selector,
       cityRoutesLayer(cityDrawn.routes, palette),
