@@ -456,6 +456,10 @@ public record AreaScenario(ServiceArea area, Operation operation, RoadGraph grap
         return isChunk(node) ? chunk(node).meters() : 0;
     }
 
+    public String stopId(int node) {
+        return isChunk(node) ? "T-" + (node - containers.size()) : containers.get(node - 1).id();
+    }
+
     public boolean isChunk(int node) {
         return node > containers.size() && node < gate();
     }

@@ -18,7 +18,8 @@ import me.ymid.rutea.geo.RoadGraph;
  */
 public final class StreetChunks {
 
-    public record Chunk(int[] arcs, int entry, int exit, int meters) {
+    /** Tras un cierre de vía el grafo renumera sus arcos: los de un trozo son del grafo en que se cortó. */
+    public record Chunk(RoadGraph graph, int[] arcs, int entry, int exit, int meters) {
     }
 
     private StreetChunks() {
@@ -69,7 +70,7 @@ public final class StreetChunks {
             }
             arcs[backward] = first;
             System.arraycopy(ahead, 0, arcs, backward + 1, forward);
-            chunks.add(new Chunk(arcs, graph.source(head), graph.target(last), meters));
+            chunks.add(new Chunk(graph, arcs, graph.source(head), graph.target(last), meters));
         }
         return chunks;
     }

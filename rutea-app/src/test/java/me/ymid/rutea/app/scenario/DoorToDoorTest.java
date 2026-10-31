@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import me.ymid.rutea.app.planning.AreaPlanner;
+import me.ymid.rutea.app.planning.DemoPlan;
 import me.ymid.rutea.app.planning.ShiftScheduler;
 import me.ymid.rutea.app.scenario.DoorToDoor.Days;
 import me.ymid.rutea.app.scenario.DoorToDoor.Slot;
@@ -26,6 +29,8 @@ import me.ymid.rutea.geo.SampleTown;
 import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.Solution;
+import me.ymid.rutea.solver.SolverSettings;
+import me.ymid.rutea.solver.alns.AlnsSolver;
 
 class DoorToDoorTest {
 
@@ -209,6 +214,20 @@ class DoorToDoorTest {
             assertThat(truck.meters()).isEqualTo((long) instance.distance(0, node) + instance.distance(node, 0)
                     + scenario.returnMeters());
         }
+    }
+
+    @Test
+    void aDrawnTruckDrivesEveryChunkItCollects() {
+        AreaScenario scenario = scenario(List.of(container("oeste", 20, 300)));
+        Solution solution = new AlnsSolver().solve(scenario.instance(),
+                new SolverSettings(1, Duration.ofMinutes(1), 200));
+
+        // Dibujar falla si un camión no mide lo mismo, en metros y segundos, que su asignación.
+        DemoPlan plan = AreaPlanner.plan(scenario, solution, "alns", 1, 200);
+
+        assertThat(plan.routes().stream().flatMap(route -> route.stops().stream()).toList())
+                .hasSize(scenario.instance().size() - 1).doesNotHaveDuplicates().contains("oeste", "T-1");
+        assertThat(plan.containers()).extracting(DemoPlan.Container::id).containsExactly("oeste");
     }
 
     @Test
