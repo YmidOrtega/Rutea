@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,13 +19,6 @@ import me.ymid.rutea.geo.RoadGraphFile;
 import me.ymid.rutea.solver.Instance;
 import me.ymid.rutea.solver.cvrplib.CvrplibWriter;
 
-/**
- * Exporta en formato CVRPLIB la recolección de no aprovechables de una localidad sobre el grafo de Bogotá: sus
- * contenedores de cargue lateral y el puerta a puerta, una instancia por grupo de días ({@link DoorToDoor}).
- *
- * <p>Uso: {@code ExportLocalityInstances <bogota.rgraph> <dir-contenedores> <dir-salida> [n.º de localidad...]};
- * sin localidades, Suba.
- */
 public final class ExportLocalityInstances {
 
     private ExportLocalityInstances() {
@@ -59,13 +53,13 @@ public final class ExportLocalityInstances {
         for (Locality locality : localities) {
             ServiceArea area = ServiceAreas.split(List.of(locality)).keySet().iterator().next();
             SideLoading.Area sideLoading = SideLoading.of(area);
-            List<Container> containers = new ArrayList<>();
+            Map<SideLoading.Shift, List<Container>> containers = new LinkedHashMap<>();
             String suffix;
             String origin;
             if (sideLoading.planned().isPresent()) {
                 SideLoading.Planned planned = sideLoading.planned().get();
-                containers.addAll(AreaScenario.plannedContainers(stored.graph(), area, List.of(locality),
-                        planned.count(), planned.liters(), fill, seed));
+                containers.put(sideLoading.shifts().getFirst(), AreaScenario.plannedContainers(stored.graph(), area,
+                        List.of(locality), planned.count(), planned.liters(), fill, seed));
                 suffix = String.format(Locale.ROOT, "-s%d-f%d", seed, Math.round(fill * 100));
                 origin = String.format(Locale.ROOT, "simulados de la cantidad oficial de %s (semilla %d)",
                         area.name(), seed);
@@ -74,8 +68,8 @@ public final class ExportLocalityInstances {
                         .filter(candidate -> candidate.area() == area.number()).findFirst().orElseThrow();
                 List<OperatorContainers.Container> real = OperatorContainers.read(containersDir.resolve(layer.file()));
                 for (SideLoading.Shift shift : sideLoading.shifts()) {
-                    containers.addAll(AreaScenario.realContainers(stored.graph(), area, shift, List.of(locality), real,
-                            fill));
+                    containers.put(shift, AreaScenario.realContainers(stored.graph(), area, shift, List.of(locality),
+                            real, fill));
                 }
                 suffix = String.format(Locale.ROOT, "-f%d", Math.round(fill * 100));
                 origin = "\"en campo\" de la capa pública del operador (" + layer.file() + ")";
@@ -84,20 +78,20 @@ public final class ExportLocalityInstances {
                     containers, suffix);
             System.out.printf(Locale.ROOT, "%s: %.1f t/día, %.1f de ellas en %d contenedores; %.3f kg por metro de"
                     + " calle local%n", locality.name(), plan.kgPerDay() / 1000, plan.containerKgPerDay() / 1000,
-                    containers.size(), plan.kgPerMeter());
-            for (DoorToDoor.Day day : plan.days()) {
-                write(stored, area, plan, day, origin, fill, outDir);
+                    containers.values().stream().mapToInt(List::size).sum(), plan.kgPerMeter());
+            for (DoorToDoor.Turn turn : plan.turns()) {
+                write(stored, area, plan, turn, origin, fill, outDir);
             }
         }
     }
 
-    private static void write(RoadGraphFile.Stored stored, ServiceArea area, DoorToDoor.Plan plan, DoorToDoor.Day day,
+    private static void write(RoadGraphFile.Stored stored, ServiceArea area, DoorToDoor.Plan plan, DoorToDoor.Turn turn,
             String origin, double fill, Path outDir) throws IOException {
-        Instance instance = day.instance();
-        long chunkMeters = day.chunks().stream().mapToLong(StreetChunks.Chunk::meters).sum();
+        Instance instance = turn.instance();
+        long chunkMeters = turn.chunks().stream().mapToLong(StreetChunks.Chunk::meters).sum();
         List<String> sectors = new ArrayList<>();
-        for (Map.Entry<String, DoorToDoor.Days> entry : plan.calendar().entrySet()) {
-            if (entry.getValue() == day.days()) {
+        for (Map.Entry<String, DoorToDoor.Slot> entry : plan.calendar().entrySet()) {
+            if (entry.getValue().equals(turn.slot())) {
                 sectors.add(entry.getKey());
             }
         }
@@ -111,8 +105,8 @@ public final class ExportLocalityInstances {
                 + " depósito sale de la base de %s (fila 1) y llega a la portería de Doña Juana (columna 1); el regreso"
                 + " a la base no entra; distancias en metros por la red vial del extracto OSM con SHA-256 %s; cifras y"
                 + " fuentes en docs/datos.md. Datos © colaboradores de OpenStreetMap, ODbL 1.0",
-                plan.locality().name(), area.number(), day.days().label(), day.containers().size(), origin,
-                fill * 100, day.chunks().size(), DoorToDoor.MAX_CHUNK_METERS, chunkMeters / 1000.0,
+                plan.locality().name(), area.number(), turn.slot().label(), turn.containers().size(), origin,
+                fill * 100, turn.chunks().size(), DoorToDoor.MAX_CHUNK_METERS, chunkMeters / 1000.0,
                 String.join(", ", sectors), plan.kgPerMeter(), plan.kgPerDay() / 1000,
                 plan.containerKgPerDay() / 1000, DoorToDoor.COLLECTIONS_PER_WEEK, area.base().locality(),
                 RoadGraphFile.hex(stored.sourceSha256()));
@@ -123,7 +117,7 @@ public final class ExportLocalityInstances {
             total += instance.demand(node);
         }
         System.out.printf(Locale.ROOT, "  %s: %d contenedores, %d trozos (%.1f km), %.1f t, matriz en %d ms, %,d"
-                + " bytes%n", file, day.containers().size(), day.chunks().size(), chunkMeters / 1000.0, total / 1000.0,
-                day.matrixNanos() / 1_000_000, Files.size(file));
+                + " bytes%n", file, turn.containers().size(), turn.chunks().size(), chunkMeters / 1000.0, total / 1000.0,
+                turn.matrixNanos() / 1_000_000, Files.size(file));
     }
 }

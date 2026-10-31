@@ -17,11 +17,6 @@ import me.ymid.rutea.geo.ShortestPaths;
 import me.ymid.rutea.solver.DistanceMatrix;
 import me.ymid.rutea.solver.Instance;
 
-/**
- * La recolección de no aprovechables de una localidad: sus contenedores y el puerta a puerta por sus calles locales
- * (ADR 0014), partida en los grupos de días en que pasa el camión. Cada UPZ, el sector en que se publican los horarios
- * (R04), es de un solo grupo, así que el calendario que sale se publica tal cual. Cada grupo es una instancia CVRP.
- */
 public final class DoorToDoor {
 
     /** {@code PENDIENTE_VERIFICAR}: veces por semana que el puerta a puerta pasa por cada calle. */
@@ -36,7 +31,13 @@ public final class DoorToDoor {
      */
     public static final int COMPACTOR_KG = SideLoading.SIDE_LOADER_KG;
 
-    /** Con {@link #COLLECTIONS_PER_WEEK} pasadas en seis días de servicio, cada calle es de uno de dos grupos. */
+    /**
+     * Turnos del puerta a puerta: los de las microrrutas domiciliarias de 3 veces por semana que publica el ASE 1,
+     * 06:00–16:00 y 18:00–04:00 (capa de microrrutas del operador; los mismos de {@link SideLoading#ASE_1_DAY} y
+     * {@link SideLoading#ASE_1_NIGHT}). {@code PENDIENTE_VERIFICAR} en las demás ASE, que no los publican.
+     */
+    public static final List<SideLoading.Shift> SHIFTS = List.of(SideLoading.ASE_1_DAY, SideLoading.ASE_1_NIGHT);
+
     public enum Days {
         MON_WED_FRI("LMV", "lunes, miércoles y viernes"),
         TUE_THU_SAT("MJS", "martes, jueves y sábado");
@@ -58,53 +59,58 @@ public final class DoorToDoor {
         }
     }
 
-    /** El sector de un punto: con datos reales, {@code Sectors.of(area)::locate}. */
+    public record Slot(Days days, SideLoading.Shift shift) {
+
+        public static final List<Slot> ALL = all();
+
+        private static List<Slot> all() {
+            List<Slot> slots = new ArrayList<>();
+            for (Days days : Days.values()) {
+                for (SideLoading.Shift shift : SHIFTS) {
+                    slots.add(new Slot(days, shift));
+                }
+            }
+            return List.copyOf(slots);
+        }
+
+        public String code() {
+            return days.code() + shift.name();
+        }
+
+        public String label() {
+            return String.format(Locale.ROOT, "%s, turno de %s desde las %s", days.label(),
+                    shift.name().equals("Dia") ? "día" : shift.name().toLowerCase(Locale.ROOT), shift.start());
+        }
+    }
+
     @FunctionalInterface
     public interface SectorOf {
         String at(int latE7, int lonE7);
     }
 
-    /**
-     * Un grupo de días: nodo 0 es la base y la portería, después van los contenedores y después los trozos.
-     *
-     * @param matrixNanos calcular la matriz
-     */
-    public record Day(Days days, List<Container> containers, List<StreetChunks.Chunk> chunks, Instance instance,
+    public record Turn(Slot slot, List<Container> containers, List<StreetChunks.Chunk> chunks, Instance instance,
             long matrixNanos) {
 
-        public Day {
+        public Turn {
             containers = List.copyOf(containers);
             chunks = List.copyOf(chunks);
         }
     }
 
-    /**
-     * @param kgPerDay lo que le toca a la localidad por población ({@link BogotaFigures#kgPerDay})
-     * @param containerKgPerDay lo que recogen sus contenedores, repartido en la semana
-     * @param kgPerMeter carga de cada metro de calle local en una pasada: el resto, por los días entre dos pasadas
-     * @param calendar el grupo de días de cada sector
-     * @param days un grupo por instancia; falta el que no tiene nada que recoger
-     */
     public record Plan(Locality locality, double kgPerDay, double containerKgPerDay, double kgPerMeter,
-            Map<String, Days> calendar, List<Day> days) {
+            Map<String, Slot> calendar, List<Turn> turns) {
 
         public Plan {
             calendar = Map.copyOf(calendar);
-            days = List.copyOf(days);
+            turns = List.copyOf(turns);
         }
     }
 
     private DoorToDoor() {
     }
 
-    /**
-     * Con la base del operador de la ASE y la portería de Doña Juana.
-     *
-     * @param containers los de la localidad en todos sus turnos de cargue lateral
-     * @param suffix lo que dice el nombre de la instancia sobre los contenedores, p. ej. {@code -s7-f100}
-     */
     public static Plan plan(RoadGraph graph, ServiceAreas.ServiceArea area, Locality locality, SectorOf sectors,
-            List<Container> containers, String suffix) {
+            Map<SideLoading.Shift, List<Container>> containers, String suffix) {
         if (!area.localities().contains(locality)) {
             throw new IllegalArgumentException(locality.name() + " no es de " + area.name());
         }
@@ -114,12 +120,9 @@ public final class DoorToDoor {
                 BogotaFigures.kgPerDay(locality), suffix);
     }
 
-    /**
-     * Los contenedores que se recogen seis veces por semana van en los dos grupos; los de tres, en el de su sector,
-     * como las calles.
-     */
     static Plan plan(RoadGraph graph, Locality locality, Localities localities, SectorOf sectors,
-            List<Container> containers, int containersPerWeek, int depot, int gate, double kgPerDay, String suffix) {
+            Map<SideLoading.Shift, List<Container>> containers, int containersPerWeek, int depot, int gate,
+            double kgPerDay, String suffix) {
         if (locality.rural()) {
             throw new IllegalArgumentException(locality.name() + " es rural: no tiene puerta a puerta");
         }
@@ -127,6 +130,17 @@ public final class DoorToDoor {
             throw new IllegalArgumentException("contenedores " + containersPerWeek + " veces por semana no caben en"
                     + " los grupos de días del puerta a puerta");
         }
+        List<Container> all = new ArrayList<>();
+        List<SideLoading.Shift> containerShift = new ArrayList<>();
+        containers.forEach((shift, list) -> {
+            SideLoading.Shift turn = SHIFTS.stream().filter(candidate -> candidate.name().equals(shift.name()))
+                    .findFirst().orElseThrow(() -> new IllegalArgumentException("el turno " + shift.name()
+                            + " de los contenedores no es de día ni de noche"));
+            for (Container container : list) {
+                all.add(container);
+                containerShift.add(turn);
+            }
+        });
         IntPredicate streets = shape -> graph.shapeInLocality(shape)
                 && localities.ofShape(graph, shape).equals(locality);
         List<StreetChunks.Chunk> chunks = StreetChunks.of(graph, streets, MAX_CHUNK_METERS);
@@ -135,7 +149,7 @@ public final class DoorToDoor {
         }
 
         long containerKg = 0;
-        for (Container container : containers) {
+        for (Container container : all) {
             containerKg += container.kg();
         }
         double containerKgPerDay = containerKg * containersPerWeek / 7.0;
@@ -150,75 +164,68 @@ public final class DoorToDoor {
         double kgPerMeter = (kgPerDay - containerKgPerDay) * 7 / COLLECTIONS_PER_WEEK / meters;
 
         String[] chunkSector = new String[chunks.size()];
-        String[] containerSector = new String[containers.size()];
+        String[] containerSector = new String[all.size()];
         Map<String, Long> metersBySector = new TreeMap<>();
         for (int i = 0; i < chunks.size(); i++) {
             int entry = chunks.get(i).entry();
             chunkSector[i] = sectors.at(graph.latE7(entry), graph.lonE7(entry));
             metersBySector.merge(chunkSector[i], (long) chunks.get(i).meters(), Long::sum);
         }
-        for (int i = 0; i < containers.size(); i++) {
-            containerSector[i] = sectors.at(containers.get(i).latE7(), containers.get(i).lonE7());
+        for (int i = 0; i < all.size(); i++) {
+            containerSector[i] = sectors.at(all.get(i).latE7(), all.get(i).lonE7());
             metersBySector.merge(containerSector[i], 0L, Long::sum);
         }
-        Map<String, Days> calendar = calendar(metersBySector);
+        Map<String, Slot> calendar = calendar(metersBySector);
 
-        List<Day> days = new ArrayList<>();
-        for (Days group : Days.values()) {
-            List<Container> dayContainers = new ArrayList<>();
-            for (int i = 0; i < containers.size(); i++) {
-                if (containersPerWeek == 2 * COLLECTIONS_PER_WEEK || calendar.get(containerSector[i]) == group) {
-                    dayContainers.add(containers.get(i));
+        List<Turn> turns = new ArrayList<>();
+        for (Slot slot : Slot.ALL) {
+            List<Container> slotContainers = new ArrayList<>();
+            for (int i = 0; i < all.size(); i++) {
+                boolean onTheseDays = containersPerWeek == 2 * COLLECTIONS_PER_WEEK
+                        || calendar.get(containerSector[i]).days() == slot.days();
+                if (onTheseDays && containerShift.get(i).equals(slot.shift())) {
+                    slotContainers.add(all.get(i));
                 }
             }
-            List<StreetChunks.Chunk> dayChunks = new ArrayList<>();
+            List<StreetChunks.Chunk> slotChunks = new ArrayList<>();
             for (int i = 0; i < chunks.size(); i++) {
-                if (calendar.get(chunkSector[i]) == group) {
-                    dayChunks.add(chunks.get(i));
+                if (calendar.get(chunkSector[i]).equals(slot)) {
+                    slotChunks.add(chunks.get(i));
                 }
             }
-            if (dayContainers.isEmpty() && dayChunks.isEmpty()) {
+            if (slotContainers.isEmpty() && slotChunks.isEmpty()) {
                 continue;
             }
             // El sufijo -n<nodos> es el mismo de las instancias X: el arnés ordena por él.
-            String name = locality.name().replace(" ", "") + group.code() + "-n"
-                    + (dayContainers.size() + dayChunks.size() + 1) + suffix;
+            String name = locality.name().replace(" ", "") + slot.code() + "-n"
+                    + (slotContainers.size() + slotChunks.size() + 1) + suffix;
             long started = System.nanoTime();
-            Instance instance = instance(graph, dayContainers, dayChunks, depot, gate, COMPACTOR_KG, kgPerMeter,
+            Instance instance = instance(graph, slotContainers, slotChunks, depot, gate, COMPACTOR_KG, kgPerMeter,
                     name);
-            days.add(new Day(group, dayContainers, dayChunks, instance, System.nanoTime() - started));
+            turns.add(new Turn(slot, slotContainers, slotChunks, instance, System.nanoTime() - started));
         }
-        return new Plan(locality, kgPerDay, containerKgPerDay, kgPerMeter, calendar, days);
+        return new Plan(locality, kgPerDay, containerKgPerDay, kgPerMeter, calendar, turns);
     }
 
-    /**
-     * Reparte los sectores entre los grupos de días para que queden parejos en metros de calle: del más largo al más
-     * corto, cada uno al grupo que lleva menos. Determinista: a igual longitud, por código de sector.
-     */
-    static Map<String, Days> calendar(Map<String, Long> metersBySector) {
+    static Map<String, Slot> calendar(Map<String, Long> metersBySector) {
         List<Map.Entry<String, Long>> sectors = new ArrayList<>(metersBySector.entrySet());
         sectors.sort(Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()));
-        Days[] groups = Days.values();
-        long[] load = new long[groups.length];
-        Map<String, Days> calendar = new TreeMap<>();
+        List<Slot> slots = Slot.ALL;
+        long[] load = new long[slots.size()];
+        Map<String, Slot> calendar = new TreeMap<>();
         for (Map.Entry<String, Long> sector : sectors) {
             int lightest = 0;
-            for (int g = 1; g < groups.length; g++) {
+            for (int g = 1; g < slots.size(); g++) {
                 if (load[g] < load[lightest]) {
                     lightest = g;
                 }
             }
             load[lightest] += sector.getValue();
-            calendar.put(sector.getKey(), groups[lightest]);
+            calendar.put(sector.getKey(), slots.get(lightest));
         }
         return calendar;
     }
 
-    /**
-     * Nodo 0 es la base de ida y la portería de vuelta, como en el cargue lateral. Un contenedor se visita en su
-     * vértice. Llegar a un trozo cuesta el camino hasta su entrada más lo que mide recorrerlo recogiendo; de él se sale
-     * por su último vértice. Un trozo carga sus metros por {@code kgPerMeter}, y al menos 1 kg.
-     */
     public static Instance instance(RoadGraph graph, List<Container> containers, List<StreetChunks.Chunk> chunks,
             int depot, int gate, int capacity, double kgPerMeter, String name) {
         int n = containers.size() + chunks.size() + 1;

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import me.ymid.rutea.app.scenario.DoorToDoor.Days;
+import me.ymid.rutea.app.scenario.DoorToDoor.Slot;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.domain.WasteStream;
@@ -28,8 +29,11 @@ class DoorToDoorTest {
 
     private static final Locality SUBA = ServiceAreas.locality(11).orElseThrow();
 
-    /** Oeste y este del pueblo, partidos por la longitud del paso 5. */
-    private static final DoorToDoor.SectorOf HALVES = (lat, lon) -> lon < -740_000_000 + 50_000 ? "1" : "2";
+    private static final DoorToDoor.SectorOf QUADRANTS = (lat, lon) -> (lat < 47_000_000 + 50_000 ? "1" : "2")
+            + (lon < -740_000_000 + 50_000 ? "1" : "2");
+
+    private static final SideLoading.Shift DAY = SideLoading.ASE_1_DAY;
+    private static final SideLoading.Shift NIGHT = SideLoading.ASE_1_NIGHT;
 
     private static final double KG_PER_DAY = 1_500;
 
@@ -45,58 +49,82 @@ class DoorToDoorTest {
     }
 
     @Test
-    void sectorsGoLongestFirstToTheLighterGroup() {
-        Map<String, Days> calendar = DoorToDoor.calendar(Map.of("a", 500L, "b", 400L, "c", 300L, "d", 200L));
+    void thereIsADayAndANightShiftOnEachGroupOfDays() {
+        assertThat(Slot.ALL).containsExactly(new Slot(Days.MON_WED_FRI, DAY), new Slot(Days.MON_WED_FRI, NIGHT),
+                new Slot(Days.TUE_THU_SAT, DAY), new Slot(Days.TUE_THU_SAT, NIGHT));
+        assertThat(Slot.ALL).extracting(Slot::code).containsExactly("LMVDia", "LMVNoche", "MJSDia", "MJSNoche");
+    }
 
-        assertThat(calendar).containsExactlyInAnyOrderEntriesOf(Map.of("a", Days.MON_WED_FRI, "b", Days.TUE_THU_SAT,
-                "c", Days.TUE_THU_SAT, "d", Days.MON_WED_FRI));
+    @Test
+    void sectorsGoLongestFirstToTheLighterSlot() {
+        Map<String, Slot> calendar = DoorToDoor.calendar(
+                Map.of("a", 500L, "b", 400L, "c", 300L, "d", 200L, "e", 150L, "f", 100L));
+
+        List<Slot> slots = Slot.ALL;
+        assertThat(calendar).containsExactlyInAnyOrderEntriesOf(Map.of("a", slots.get(0), "b", slots.get(1), "c",
+                slots.get(2), "d", slots.get(3), "e", slots.get(3), "f", slots.get(2)));
     }
 
     @Test
     void equalSectorsAreSplitByCodeAndAlwaysTheSameWay() {
         assertThat(DoorToDoor.calendar(Map.of("2", 100L, "1", 100L)))
-                .containsExactlyInAnyOrderEntriesOf(Map.of("1", Days.MON_WED_FRI, "2", Days.TUE_THU_SAT));
+                .containsExactlyInAnyOrderEntriesOf(Map.of("1", Slot.ALL.get(0), "2", Slot.ALL.get(1)));
     }
 
     @Test
-    void everyStreetChunkIsCollectedOnTheDaysOfItsSector() {
-        DoorToDoor.Plan plan = plan(List.of(), DoorToDoor.COLLECTIONS_PER_WEEK);
+    void everyStreetChunkIsCollectedInTheSlotOfItsSector() {
+        DoorToDoor.Plan plan = plan(Map.of(), DoorToDoor.COLLECTIONS_PER_WEEK);
 
         int chunks = 0;
-        for (DoorToDoor.Day day : plan.days()) {
-            for (StreetChunks.Chunk chunk : day.chunks()) {
-                String sector = HALVES.at(graph.latE7(chunk.entry()), graph.lonE7(chunk.entry()));
-                assertThat(plan.calendar().get(sector)).isEqualTo(day.days());
+        for (DoorToDoor.Turn turn : plan.turns()) {
+            for (StreetChunks.Chunk chunk : turn.chunks()) {
+                String sector = QUADRANTS.at(graph.latE7(chunk.entry()), graph.lonE7(chunk.entry()));
+                assertThat(plan.calendar().get(sector)).isEqualTo(turn.slot());
             }
-            chunks += day.chunks().size();
+            chunks += turn.chunks().size();
         }
         assertThat(chunks).isEqualTo(StreetChunks.of(graph, shape -> true, DoorToDoor.MAX_CHUNK_METERS).size());
-        assertThat(plan.days()).extracting(DoorToDoor.Day::days).containsExactly(Days.values());
+        // Una franja sin calles ni contenedores no sale: en el pueblo, un cuadrante no tiene entradas de trozo.
+        List<Slot> slots = plan.turns().stream().map(DoorToDoor.Turn::slot).toList();
+        assertThat(slots).hasSizeGreaterThan(1).doesNotHaveDuplicates();
+        assertThat(Slot.ALL).containsSubsequence(slots);
     }
 
     @Test
-    @DisplayName("Los contenedores de seis pasadas por semana van todos los días; los de tres, en los de su UPZ (R03,"
-            + " R04)")
-    void containersFollowTheirFrequency() {
-        List<Container> containers = List.of(container("oeste", 20, 300), container("este", 22, 300));
+    @DisplayName("Los contenedores van en su turno: los de seis pasadas por semana, los dos grupos de días; los de"
+            + " tres, en el de su UPZ (R03, R04)")
+    void containersFollowTheirShiftAndFrequency() {
+        Container day = container("dia", 20, 300);
+        Container night = container("noche", 22, 300);
+        Map<SideLoading.Shift, List<Container>> containers = Map.of(DAY, List.of(day), NIGHT, List.of(night));
 
         DoorToDoor.Plan daily = plan(containers, 2 * DoorToDoor.COLLECTIONS_PER_WEEK);
-        assertThat(daily.days()).allSatisfy(day -> assertThat(day.containers()).isEqualTo(containers));
+        assertThat(daily.turns()).allSatisfy(turn -> assertThat(turn.containers())
+                .containsExactly(turn.slot().shift().equals(DAY) ? day : night));
 
         DoorToDoor.Plan thrice = plan(containers, DoorToDoor.COLLECTIONS_PER_WEEK);
-        for (DoorToDoor.Day day : thrice.days()) {
-            for (Container container : day.containers()) {
-                assertThat(thrice.calendar().get(HALVES.at(container.latE7(), container.lonE7())))
-                        .isEqualTo(day.days());
+        for (DoorToDoor.Turn turn : thrice.turns()) {
+            for (Container container : turn.containers()) {
+                assertThat(thrice.calendar().get(QUADRANTS.at(container.latE7(), container.lonE7())).days())
+                        .isEqualTo(turn.slot().days());
+                assertThat(turn.slot().shift()).isEqualTo(container == day ? DAY : NIGHT);
             }
         }
-        assertThat(thrice.days()).flatExtracting(DoorToDoor.Day::containers)
-                .containsExactlyInAnyOrderElementsOf(containers);
+        assertThat(thrice.turns()).flatExtracting(DoorToDoor.Turn::containers).containsExactlyInAnyOrder(day, night);
+    }
+
+    @Test
+    void containersOfAShiftThatIsNeitherDayNorNightAreRejected() {
+        SideLoading.Shift evening = new SideLoading.Shift("Tarde", "", "14:00", 8 * 3600);
+
+        assertThatThrownBy(() -> plan(Map.of(evening, List.of(container("tarde", 20, 300))),
+                DoorToDoor.COLLECTIONS_PER_WEEK)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void theStreetsCarryWhatTheContainersLeaveForTheDaysBetweenTwoPasses() {
-        List<Container> containers = List.of(container("oeste", 20, 300), container("este", 22, 300));
+        Map<SideLoading.Shift, List<Container>> containers = Map.of(DAY,
+                List.of(container("oeste", 20, 300), container("este", 22, 300)));
         int perWeek = 2 * DoorToDoor.COLLECTIONS_PER_WEEK;
 
         DoorToDoor.Plan plan = plan(containers, perWeek);
@@ -104,13 +132,13 @@ class DoorToDoorTest {
         assertThat(plan.containerKgPerDay()).isCloseTo(600.0 * perWeek / 7, within(1e-9));
         double expected = (KG_PER_DAY - plan.containerKgPerDay()) * 7 / DoorToDoor.COLLECTIONS_PER_WEEK;
         double streets = 0;
-        for (DoorToDoor.Day day : plan.days()) {
-            Instance instance = day.instance();
-            for (int node = day.containers().size() + 1; node < instance.size(); node++) {
+        for (DoorToDoor.Turn turn : plan.turns()) {
+            Instance instance = turn.instance();
+            for (int node = turn.containers().size() + 1; node < instance.size(); node++) {
                 streets += instance.demand(node);
             }
         }
-        int chunks = plan.days().stream().mapToInt(day -> day.chunks().size()).sum();
+        int chunks = plan.turns().stream().mapToInt(turn -> turn.chunks().size()).sum();
         assertThat(streets).isCloseTo(expected, within(0.5 * chunks));
     }
 
@@ -143,10 +171,10 @@ class DoorToDoorTest {
     @Test
     void rejectsARuralLocalityAndAFrequencyOutsideTheDayGroups() {
         Locality sumapaz = ServiceAreas.locality(20).orElseThrow();
-        assertThatThrownBy(() -> DoorToDoor.plan(graph, sumapaz, AreaScenarioFixture.SUBA_TOWN, HALVES, List.of(),
+        assertThatThrownBy(() -> DoorToDoor.plan(graph, sumapaz, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, Map.of(),
                 DoorToDoor.COLLECTIONS_PER_WEEK, depot, gate, KG_PER_DAY, "")).isInstanceOf(
                         IllegalArgumentException.class);
-        assertThatThrownBy(() -> plan(List.of(), 2)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> plan(Map.of(), 2)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -155,7 +183,7 @@ class DoorToDoorTest {
         for (int i = 0; i < 10; i++) {
             heavy.add(container("c" + i, 20, 300));
         }
-        assertThatThrownBy(() -> plan(heavy, 2 * DoorToDoor.COLLECTIONS_PER_WEEK))
+        assertThatThrownBy(() -> plan(Map.of(DAY, heavy), 2 * DoorToDoor.COLLECTIONS_PER_WEEK))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -173,8 +201,8 @@ class DoorToDoorTest {
         assertThat(BogotaFigures.kgPerDay(SUBA) / 1000).isCloseTo(940.6, within(0.05));
     }
 
-    private static DoorToDoor.Plan plan(List<Container> containers, int perWeek) {
-        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, HALVES, containers, perWeek, depot, gate,
+    private static DoorToDoor.Plan plan(Map<SideLoading.Shift, List<Container>> containers, int perWeek) {
+        return DoorToDoor.plan(graph, SUBA, AreaScenarioFixture.SUBA_TOWN, QUADRANTS, containers, perWeek, depot, gate,
                 KG_PER_DAY, "");
     }
 
