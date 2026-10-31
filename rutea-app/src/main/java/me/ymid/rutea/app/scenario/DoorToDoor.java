@@ -10,6 +10,8 @@ import java.util.OptionalDouble;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 
+import me.ymid.rutea.app.planning.AreaPlanner;
+import me.ymid.rutea.app.planning.Sectors;
 import me.ymid.rutea.app.scenario.ServiceAreas.Locality;
 import me.ymid.rutea.app.scenario.SimulatedContainers.Container;
 import me.ymid.rutea.geo.RoadGraph;
@@ -140,6 +142,25 @@ public final class DoorToDoor {
     public static ServiceAreas.Operation operation(Slot slot) {
         return new ServiceAreas.Operation(OptionalDouble.empty(), COLLECTIONS_PER_WEEK, slot.shift().start(),
                 slot.shift().seconds(), COMPACTOR_KG, List.of(), SideLoading.MAX_TRIPS_PER_TRUCK);
+    }
+
+    public record Live(Plan plan, AreaScenario scenario) {
+    }
+
+    /**
+     * Lo que recoge una localidad en una franja, con los contenedores de sus instancias (ver {@link #containers}) y
+     * las UPZ como sectores.
+     *
+     * @throws IllegalArgumentException si la localidad no recoge nada en esa franja
+     */
+    public static Live live(RoadGraph graph, Locality locality, Slot slot,
+            Map<Integer, List<OperatorContainers.Container>> real) {
+        ServiceAreas.ServiceArea area = ServiceAreas.split(List.of(locality)).keySet().iterator().next();
+        Plan plan = plan(graph, area, locality, Sectors.of(area)::locate, containers(graph, area, locality, real,
+                SideLoading.MEAN_FILL, AreaPlanner.DEFAULT_SEED), "");
+        Turn turn = plan.turns().stream().filter(candidate -> candidate.slot().equals(slot)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(locality.name() + " no recoge nada " + slot.label()));
+        return new Live(plan, scenario(graph, area, plan, turn));
     }
 
     public static AreaScenario scenario(RoadGraph graph, ServiceAreas.ServiceArea area, Plan plan, Turn turn) {

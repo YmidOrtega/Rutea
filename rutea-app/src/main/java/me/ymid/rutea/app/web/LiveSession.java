@@ -23,12 +23,10 @@ import me.ymid.rutea.app.persistence.Command;
 import me.ymid.rutea.app.persistence.OperationLog;
 import me.ymid.rutea.app.planning.AreaPlanner;
 import me.ymid.rutea.app.planning.DemoPlan;
-import me.ymid.rutea.app.planning.Sectors;
 import me.ymid.rutea.app.planning.ShiftScheduler;
 import me.ymid.rutea.app.scenario.AreaScenario;
 import me.ymid.rutea.app.scenario.BogotaFigures;
 import me.ymid.rutea.app.scenario.DoorToDoor;
-import me.ymid.rutea.app.scenario.ServiceAreas;
 import me.ymid.rutea.app.scenario.ServiceAreas.ServiceArea;
 import me.ymid.rutea.app.scenario.SideLoading;
 import me.ymid.rutea.app.scenario.SimulatedContainers;
@@ -113,16 +111,8 @@ final class LiveSession {
 
     /** @throws IllegalArgumentException si la localidad no recoge nada en esa franja */
     static LiveSession start(LiveKey key, BogotaData.Loaded data, OperationLog log) {
-        ServiceArea area = ServiceAreas.split(List.of(key.locality())).keySet().iterator().next();
-        RoadGraph graph = data.graph();
-        DoorToDoor.Plan doorToDoor = DoorToDoor.plan(graph, area, key.locality(), Sectors.of(area)::locate,
-                DoorToDoor.containers(graph, area, key.locality(), data.real(), SideLoading.MEAN_FILL,
-                        AreaPlanner.DEFAULT_SEED), "");
-        DoorToDoor.Turn turn = doorToDoor.turns().stream().filter(candidate -> candidate.slot().equals(key.slot()))
-                .findFirst().orElseThrow(() -> new IllegalArgumentException(key.locality().name()
-                        + " no recoge nada " + key.slot().label()));
-        AreaScenario scenario = DoorToDoor.scenario(graph, area, doorToDoor, turn).withSites(data.sites());
-        return new LiveSession(key, scenario, doorToDoor, log);
+        DoorToDoor.Live live = DoorToDoor.live(data.graph(), key.locality(), key.slot(), data.real());
+        return new LiveSession(key, live.scenario().withSites(data.sites()), live.plan(), log);
     }
 
     private DemoPlan.Meta meta(DemoPlan.Meta drawn, DoorToDoor.Plan doorToDoor) {

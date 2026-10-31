@@ -87,10 +87,11 @@ mvn -pl rutea-app exec:java@side-loading     # toneladas que cubre el cargue lat
 mvn -pl rutea-app exec:java@locality-instances  # contenedores y puerta a puerta de una localidad (Suba sin argumentos), una instancia por franja (grupo de días y turno) con las UPZ repartidas → data/bogota/<Localidad><LMV|MJS><Dia|Noche>-n*.vrp
 mvn -pl rutea-app exec:java@door-to-door     # puerta a puerta en Suba: calles locales agrupadas en trozos de 150 a 1.200 m, clientes, matriz, ALNS y km frente a los tramos sueltos (ADR 0014) → docs/benchmarks/f8-door-to-door/*.csv
 mvn -pl rutea-app exec:java@breakdowns       # 500 averías simuladas y latencia de replanificar → docs/benchmarks/f5-breakdowns/*.csv
+mvn -pl rutea-app exec:java@locality-breakdowns  # las mismas 500 averías en la operación en vivo de Suba, LMV de noche, con puerta a puerta → docs/benchmarks/f8-breakdowns/*.csv
 mvn -pl rutea-app exec:java@overflows        # 500 desbordes simulados: quién los recoge y en cuánto → docs/benchmarks/f5-overflows/*.csv
 mvn -pl rutea-app exec:java@closures         # 500 cierres de vía: reparar la matriz y replanificar → docs/benchmarks/f5-closures/*.csv
 mvn -pl rutea-app exec:java@sensors          # desbordes según densidad, tamaño y día, con y sin sensores → docs/benchmarks/f5-sensors/*.csv
-mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan de cualquier selección de localidades (GET /api/areas), reloj, eventos y posiciones por WebSocket (requiere los datos de data/osm y data/ase)
+mvn -pl rutea-app spring-boot:run            # API en http://localhost:8080: plan de cualquier selección de localidades (GET /api/areas) y operación en vivo por localidad y franja (/api/live/{n}/{franja}, WebSocket /ws/live/{n}/{franja}) (requiere los datos de data/osm y data/ase)
 
 # Frontend
 cd web && pnpm install

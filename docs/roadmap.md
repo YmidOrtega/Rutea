@@ -435,7 +435,22 @@ Decidido el 2026-10-29: "En vivo" deja de ser solo Suba y pasa a ser la localida
     | `SubaMJSNoche-n1068-s7-f100` | 320 | 747 | 13,5 s | 3.768,1 | 77 |
 
     Un día de Suba pasa de 49,4 s a dos instancias de 13,4 y 15,4 s, que se resuelven en paralelo. Los km casi no cambian: lunes, miércoles y viernes, 7.026,5 frente a 7.029,4; martes, jueves y sábado, 7.007,6 frente a 6.952,1 (+0,8 %).
-- [ ] "En vivo" para cualquier localidad: el servidor arma su plan y su operación (averías, desbordes, cierres, sensores y telemetría) para la localidad elegida. El mapa la elige con un clic. La UI dice qué es real y qué es simulado.
+- [x] El servidor arma la operación en vivo de cualquier localidad urbana en cualquier franja (2026-10-30): plan, averías, desbordes, cierres, sensores, telemetría y reloj, en `/api/live/{localidad}/{franja}` y `/ws/live/{localidad}/{franja}` (contrato en `docs/api.md`).
+  - Cada localidad y franja es una operación aparte, con su reloj, sus eventos y su turno guardado: dos clientes en localidades distintas no se pisan. El servidor guarda las últimas 4.
+  - Los trozos de calle son paradas: el camión entra por un extremo, los recorre a 6 km/h (`PENDIENTE_VERIFICAR`) y sale por el otro, y así se dibujan. Solo los contenedores se desbordan y tienen sensor; una avería o un cierre afectan los dos.
+  - Armar una operación (matriz, ALNS con semilla 7 y 2.000 iteraciones, dibujo), medido en la app: Suba de noche, 23,0 s; cada franja de Chapinero, de 2,8 a 3,4 s.
+  - **Averías en Suba, LMV de noche** (1.031 paradas: 320 contenedores y 711 trozos; 28 camiones), 500 averías y 20 de calentamiento, semilla 7, 300 iteraciones por replanificación (`exec:java@locality-breakdowns`; i5-14400F, 16 hilos, Java 21.0.13; CSV en `docs/benchmarks/f8-breakdowns/`):
+
+    | Medida | P50 | P95 | P99 | Máx. |
+    |---|---:|---:|---:|---:|
+    | Latencia de replanificar, solo reserva (ms) | 3,9 | 34,0 | 41,7 | 50,9 |
+    | Latencia, reasignar + reserva (ms) | 2,6 | 22,7 | 29,4 | 38,7 |
+    | Paradas huérfanas (contenedores y trozos) | 13 | 39 | 48 | 55 |
+    | Avería → reserva en la primera huérfana (min) | 44,3 | 64,5 | 69,8 | 76,7 |
+
+    R05 (servicio restablecido en ≤ 3 h) se cumple en las 500. La fila de huérfanas del arnés todavía se llama «contenedores».
+  - Pendiente: un cierre de vía que cae dentro de un trozo no lo parte; el trozo se sigue recogiendo entero.
+- [ ] El mapa elige la localidad y la franja con un clic, y la UI dice qué es real y qué es simulado. Hasta entonces, el modo en vivo de `web/` sigue pidiendo las rutas viejas de la operación única de Suba.
 - [ ] Suba en vivo con el puerta a puerta, frente a su plan de F3 a F6 (base de 2022, congelada): la diferencia, medida y publicada.
 
 **Criterio de cierre:** se elige cualquier localidad urbana y su operación en vivo arranca con contenedores y puerta a puerta, con un plan factible según el `Evaluator`. Una avería se replanifica con su latencia P99 medida. Cada cifra tiene fuente o está marcada `PENDIENTE_VERIFICAR`.

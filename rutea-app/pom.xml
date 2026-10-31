@@ -233,6 +233,24 @@
             </configuration>
           </execution>
           <execution>
+            <id>locality-breakdowns</id>
+            <configuration>
+              <mainClass>me.ymid.rutea.app.operations.BreakdownBenchmark</mainClass>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/data/osm/bogota.rgraph</argument>
+                <argument>${maven.multiModuleProjectDirectory}/docs/benchmarks/f8-breakdowns</argument>
+                <argument>--locality</argument>
+                <argument>11</argument>
+                <argument>--slot</argument>
+                <argument>LMVNoche</argument>
+                <argument>--seed</argument>
+                <argument>7</argument>
+                <argument>--containers</argument>
+                <argument>${maven.multiModuleProjectDirectory}/data/ase</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>overflows</id>
             <configuration>
               <mainClass>me.ymid.rutea.app.operations.OverflowBenchmark</mainClass>
