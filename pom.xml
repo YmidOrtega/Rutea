@@ -28,7 +28,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <spring-boot.version>4.1.2</spring-boot.version>
-    <timefold.version>2.7.1</timefold.version>
+    <timefold.version>2.8.0</timefold.version>
     <jmh.version>1.37</jmh.version>
 
     <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
